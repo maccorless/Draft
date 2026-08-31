@@ -30,6 +30,8 @@ These come from the PRD and must hold in any implementation:
 7. **Auto-Agent is explicit and simple.** Team control mode (`MANUAL` / `AUTO_AGENT`) is separate from connection state. Disconnect of ALL of a team's sessions (multi-window counts as one identity) starts a grace timer before Auto-Agent takeover; reconnection never auto-resumes manual control. All transitions broadcast and are audited.
 8. **Starter-first roster assignment** is deterministic: lowest priority-number eligible unfilled starter slot, then bench. Never reshuffle prior assignments (PRD §7).
 9. **External data populates the draft; it does not operate it.** Player data, projections, AAVs, and tiers are imported pre-draft into a frozen versioned Draft Dataset; the live auction must run even if sources are down.
+10. **Rollback is bounded, not arbitrary.** A draft has exactly one timeline, never branching. An already-awarded pick can be corrected in place only if the winning team has made no acquisition since (no conflict); otherwise the commissioner must undo the most recently resolved picks in strict reverse order (rollback). There is no jump-to-any-checkpoint mechanism (PRD §31, data-model.md §17.5).
+11. **Multi-draft isolation.** One deployment may host multiple concurrently RUNNING drafts across different leagues. All state, timers, and broadcasts are keyed by `draft_id`; never a module-level singleton.
 
 ## Key Domain Concepts
 
@@ -47,11 +49,11 @@ These come from the PRD and must hold in any implementation:
 
 ## Stack (chosen — see `BUILD_PLAN.md`)
 
-Node + TypeScript (Fastify) backend, plain `ws` WebSockets, Postgres, React + Vite + TypeScript frontend, Zod for shared client/server validation. Monorepo: `server/`, `web/`, `shared-types/`. Single process holds authoritative in-memory draft state; every accepted mutation commits to Postgres before broadcast; recovery is snapshot + event replay.
+Node + TypeScript (Fastify) backend, plain `ws` WebSockets with a sequence-numbered envelope defined from Phase 0, Postgres, React + Vite + TypeScript frontend, Zod for shared client/server validation. Monorepo: `server/`, `web/`, `shared-types/`. State-stored (not event-sourced): Postgres rows are live authority; the `DraftEvent` log is for audit and WS reconnect replay, not arbitrary state reconstruction — rollback is bounded to "undo the last N picks," not arbitrary-point, so this is sufficient (see constraint 10 above).
 
 ## Build Sequence
 
-Follow `BUILD_PLAN.md` phase by phase, in order. Phases 0–8 and 10 (scaffold through Auto-Agent, plus commissioner corrections/rollback) are **core and sequential** — they share one authoritative state machine and must be built as one continuous effort, not fanned out to parallel agents. Phases 2b, 9, 11, 12, and the frontend screens are **parallelizable** once the core API/schema is frozen and tested. Each core phase should pass its relevant `PRD.md` §44 acceptance scenarios and `data-model.md` §21 invariants before starting the next.
+Follow `BUILD_PLAN.md` phase by phase, in order: 0 Scaffold+Protocol → 1 Auth+Config → 2a Dataset+CSV adapter → 3 Auction Core (nomination + PlayerAuction FSM + bid atomicity + resolution/ledger/roster, kept as one phase deliberately) → 4 Session/Reconnect+Multi-Draft → 5 Auto-Agent → 7 Corrections/Rollback. These share one authoritative state machine and must be built as one continuous effort, not fanned out to parallel agents. Phases 2b, 6, 8, 9, and the frontend screens are **parallelizable** once the core API/schema is frozen and tested. Each core phase should pass its relevant `PRD.md` §44 acceptance scenarios and `data-model.md` §21 invariants before starting the next.
 
 ## When Code Exists
 

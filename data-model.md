@@ -19,6 +19,9 @@
 9. Roster assignments represent starter-slot fulfillment during the draft, not weekly lineup optimization.
 10. Team control state (Manual/Auto-Agent) is part of live draft state.
 11. Multi-window sessions belong to one team identity.
+12. Rollback undoes the most recently resolved PlayerAuctions in strict reverse order; there is no arbitrary-point timeline branching. A single already-awarded pick may be corrected in place only when nothing depends on it yet (§17.5).
+13. MVP authentication is password-based (site/league/team), not account-based; `User`/`Membership` model a future email-based identity layer.
+14. Server state is isolated per `draft_id`; a deployment may host multiple concurrently RUNNING drafts across different leagues.
 
 ---
 
@@ -75,7 +78,6 @@ LIVE DRAFT
 
 RECOVERY / CONTROL
   CommissionerAction
-  DraftCheckpoint
   DraftTimeline
 
 WHAMMY EXECUTION
@@ -86,6 +88,8 @@ POST-DRAFT / TRANSFER
   ProviderTeamMapping
   ExportJob
   ReconciliationItem
+  DraftSummaryReport
+  ReportDeliveryAttempt
 ```
 
 ---
@@ -100,6 +104,8 @@ League:
   name: string
   season: int
   commissioner_user_id: uuid FK(User)
+  commissioner_password_hash: string
+  logo_asset_uri: string nullable
   roster_configuration_id: uuid FK(RosterConfiguration)
   scoring_configuration_id: uuid FK(ScoringConfiguration)
   auction_configuration_id: uuid FK(AuctionConfiguration)
@@ -112,10 +118,12 @@ League:
 ```yaml
 User:
   id: uuid PK
-  email: string unique
+  email: string nullable unique
   display_name: string
   created_at: timestamp
 ```
+
+**MVP note:** password-based login (§3.6) does not require `email`; a `User` row may be created lazily on first authenticated session. `email` becomes required once magic-link authentication (future) is enabled.
 
 ### 3.3 Team
 
@@ -124,6 +132,7 @@ Team:
   id: uuid PK
   league_id: uuid FK(League)
   name: string
+  team_password_hash: string
   starting_budget_override_minor: int nullable
   draft_order: int
   status: enum[ACTIVE, INACTIVE]
@@ -162,6 +171,12 @@ TeamMedia:
 - audio must be MP3 or explicitly supported audio MIME;
 - playback is capped at 5000 ms;
 - media is presentation-only.
+
+### 3.6 Authentication (MVP)
+
+Not a domain entity: the site-wide password is deployment/server configuration (a single hashed secret), not a database row.
+
+Login sequence: site password → select League → (Commissioner: enter `commissioner_password_hash` match) or (Owner: select Team → enter `team_password_hash` match). A successful login issues a signed session token carrying `{role, league_id, team_id?}`, used for API and WebSocket authentication. No separate session table is required for MVP; `DraftClientSession` (§11.3) tracks live draft connections specifically, not general auth state.
 
 ---
 
@@ -569,6 +584,7 @@ Draft:
   id: uuid PK
   league_id: uuid FK(League)
   draft_dataset_id: uuid FK(DraftDataset)
+  scheduled_start_at: timestamp nullable
   status: enum[UPCOMING, RUNNING, PAUSED, COMPLETE]
   current_nomination_team_id: uuid FK(Team) nullable
   current_player_auction_id: uuid FK(PlayerAuction) nullable
@@ -798,6 +814,8 @@ BudgetLedgerEntry:
     ACQUISITION,
     ACQUISITION_REVERSAL,
     COMMISSIONER_ADJUSTMENT,
+    CORRECTION,
+    CORRECTION_REVERSAL,
     WHAMMY,
     ROLLBACK_COMPENSATION
   ]
@@ -834,26 +852,10 @@ DraftEvent:
 DraftTimeline:
   id: uuid PK
   draft_id: uuid FK(Draft)
-  parent_timeline_id: uuid FK(DraftTimeline) nullable
-  based_on_event_sequence: bigint nullable
-  created_by_user_id: uuid FK(User)
-  reason: string
-  active: bool
   created_at: timestamp
 ```
 
-### 17.3 DraftCheckpoint
-
-```yaml
-DraftCheckpoint:
-  id: uuid PK
-  draft_id: uuid FK(Draft)
-  timeline_id: uuid FK(DraftTimeline)
-  event_sequence: bigint
-  player_auction_id: uuid FK(PlayerAuction) nullable
-  label: string
-  created_at: timestamp
-```
+**MVP note:** exactly one `DraftTimeline` exists per `Draft`, created when the draft starts. Rollback and correction append events and compensating ledger/roster/acquisition rows to this same timeline; they never branch. There is no `DraftCheckpoint` entity — see §17.5.
 
 ### 17.4 CommissionerAction
 
@@ -869,6 +871,16 @@ CommissionerAction:
   event_sequence: bigint
   created_at: timestamp
 ```
+
+### 17.5 Rollback and Correction Model
+
+MVP uses a single append-only `DraftTimeline` per `Draft`. There is no branching and no arbitrary-point state reconstruction.
+
+**Single-pick correction (no conflict).** Applies when the winning team of the target `Acquisition` has made no other active `Acquisition` with a later resolution sequence. The correction reverses that one acquisition's `BudgetLedgerEntry` (reason `CORRECTION_REVERSAL`) and `RosterEntry`, then applies the corrected values (reason `CORRECTION`). No other team's state changes.
+
+**Rollback (conflict, or N picks).** Applies otherwise, or when more than one pick must be undone. Undo proceeds strictly in reverse resolution order: for each `Acquisition` being undone, mark it `active = false`, append a `BudgetLedgerEntry` (reason `ROLLBACK_COMPENSATION`), deactivate its `RosterEntry`, restore `NominatorMatchRight` state for that `PlayerAuction`, and — once the last (earliest) undone pick is reached — move the `Draft`'s nomination cursor back to that team's turn. The player returns to available.
+
+Undo points are implicit: every `AWARDED` `PlayerAuction`, ordered by resolution time, is itself an undo boundary. No separate checkpoint entity is required.
 
 ---
 
@@ -977,6 +989,32 @@ ReconciliationItem:
   confirmed_at: timestamp nullable
 ```
 
+### 19.5 DraftSummaryReport
+
+```yaml
+DraftSummaryReport:
+  id: uuid PK
+  draft_id: uuid FK(Draft)
+  generated_at: timestamp
+  league_summary_json: json
+  team_report_json: json
+```
+
+### 19.6 ReportDeliveryAttempt
+
+```yaml
+ReportDeliveryAttempt:
+  id: uuid PK
+  draft_summary_report_id: uuid FK(DraftSummaryReport)
+  team_id: uuid FK(Team) nullable
+  recipient_email: string
+  status: enum[PENDING, SENT, FAILED, SKIPPED_EMAIL_DISABLED]
+  sent_at: timestamp nullable
+  error_detail: string nullable
+```
+
+`team_id` null identifies the commissioner/league-wide copy.
+
 ---
 
 ## 20. Mermaid ERD
@@ -1065,9 +1103,8 @@ erDiagram
     TEAM ||--o{ BUDGET_LEDGER_ENTRY : has
 
     DRAFT ||--o{ DRAFT_EVENT : emits
-    DRAFT ||--o{ DRAFT_TIMELINE : versions
+    DRAFT ||--|| DRAFT_TIMELINE : has
     DRAFT_TIMELINE ||--o{ DRAFT_EVENT : contains
-    DRAFT_TIMELINE ||--o{ DRAFT_CHECKPOINT : checkpoints
     DRAFT ||--o{ COMMISSIONER_ACTION : audits
 
     LEAGUE ||--o| WHAMMY_CONFIGURATION : configures
@@ -1078,6 +1115,9 @@ erDiagram
     DRAFT ||--o{ DRAFT_TEAM_EVALUATION : evaluates
     DRAFT ||--o{ EXPORT_JOB : exports
     EXPORT_JOB ||--o{ RECONCILIATION_ITEM : contains
+    DRAFT ||--o| DRAFT_SUMMARY_REPORT : produces
+    DRAFT_SUMMARY_REPORT ||--o{ REPORT_DELIVERY_ATTEMPT : deliveries
+    TEAM ||--o{ REPORT_DELIVERY_ATTEMPT : receives
 ```
 
 ---
@@ -1105,6 +1145,10 @@ invariants:
   - "Reconnection after Auto-Agent takeover does not automatically resume MANUAL."
   - "Auto-Agent mode changes are broadcast and auditable."
   - "Nomination audio plays at most once per Team+Draft and for no more than 5 seconds."
-  - "Rollback creates/switches timeline state; it does not delete historical events."
+  - "Rollback and correction append compensating events and ledger/roster rows to the single active DraftTimeline; historical events are never deleted or mutated."
+  - "Single-pick correction is permitted only when the winning team has no later active acquisition; otherwise rollback of the intervening picks is required."
+  - "Rollback always undoes the most recently resolved PlayerAuctions first, in strict reverse order; it cannot skip to an arbitrary earlier pick without undoing everything after it."
+  - "Each server process may host multiple concurrently RUNNING Drafts across different Leagues; all draft state, timers, and broadcasts are isolated per draft_id."
+  - "Passwords (site, league, team) are stored hashed, never in plaintext."
   - "Displayed remaining budget reconciles to active ledger state."
 ```

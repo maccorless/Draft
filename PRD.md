@@ -128,6 +128,10 @@ All critical player, projection, tier, AAV, and roster-rule data must be importe
 - Post-draft analytics and rankings.
 - ESPN roster-transfer assistance.
 - Canonical CSV/JSON draft exports.
+- Site/league/team password authentication (MVP); email magic-link authentication (future).
+- Commissioner-configured scheduled draft start date/time, visible to all participants.
+- Simultaneous multi-league drafting within the same deployment.
+- Post-draft summary report (per-team and league-wide), with optional email delivery.
 
 ### 3.2 Explicitly out of scope
 
@@ -194,6 +198,18 @@ Optional presentation/event role.
 
 Can operate presentation surfaces without automatically receiving commissioner roster/budget mutation privileges.
 
+### 4.4 Access and Authentication
+
+MVP authentication is intentionally simple and self-hosted, not account-based:
+
+- A single site-wide password gates entry to the application.
+- After the site password, a user selects a League, then selects a Team from that league's team list, then enters that team's password to act as that team's Owner.
+- A separate league-level password grants Commissioner access to that league.
+- The Commissioner sets the league password, league name, league logo, and each team's password during League setup.
+- There is no self-service account creation or password reset in MVP; all credentials are configured by the commissioner.
+- Passwords are stored hashed (e.g. bcrypt), never in plaintext, even for MVP.
+- A future version adds email-based magic-link authentication (e.g. via SendGrid) as an alternative to password entry.
+
 ---
 
 ## 5. League and Team Configuration
@@ -244,6 +260,14 @@ The optional team MP3:
 - should be broadcast to presentation/draft clients that permit audio.
 
 If the uploaded file is longer than five seconds, playback stops at five seconds. The source file does not need to be physically trimmed.
+
+### 5.2 Draft Scheduling
+
+The commissioner may configure a scheduled draft start date and time for a League's Draft.
+
+- The scheduled start time is visible to all owners and the commissioner from the moment it is set, wherever draft status is shown (pre-draft lobby, Draft Room header, War Room).
+- Setting or changing the scheduled start time does not automatically start the draft. The commissioner must still explicitly start the draft (UPCOMING → RUNNING); the scheduled time is informational only.
+- If no scheduled start time is set, the interface displays "Not yet scheduled."
 
 ---
 
@@ -953,11 +977,9 @@ Commissioner can:
 - bid for an owner;
 - switch team Manual/Auto-Agent control;
 - adjust budget;
-- return player;
-- correct winner;
-- correct purchase price;
-- manually assign player;
-- rollback to checkpoint.
+- return player (currently open auction only);
+- correct winner, correct purchase price, or manually assign player — unrestricted for the currently open auction, or for an already-awarded pick only when no conflict exists (§31);
+- rollback the most recent N resolved picks, in order (§31).
 
 Material corrections require a reason and immutable audit entry.
 
@@ -965,20 +987,28 @@ Material corrections require a reason and immutable audit entry.
 
 ## 31. Commissioner Correction and Rollback
 
-Correction never erases history.
+Correction never erases history. Every correction and rollback appends new events, ledger entries, and roster changes; nothing is deleted or overwritten. A draft has a single, continuously growing timeline — there is no branching or arbitrary point-in-time reconstruction.
 
-Rollback uses immutable history plus versioned current timelines.
+### 31.1 Two correction paths
 
-A rollback can restore:
+**Single-pick correction (no conflict).** An already-awarded pick may be corrected directly (winner, price, or player) only if the winning team has made no further acquisitions since that pick. The correction reverses that one pick's ledger and roster effects and applies the corrected ones in place. No other team or pick is touched.
 
-- players;
-- budgets;
-- roster entries;
-- nomination order;
-- Match state;
+**Rollback (conflict, or multiple picks).** If the winning team has drafted again since the pick in question, or the commissioner wants to undo more than one pick, the only path is rollback: undo the most recently resolved picks in reverse order, one at a time, back through and including the target pick. The commissioner cannot reach into the middle of the draft and touch only one pick while leaving later picks untouched — correcting an old pick with downstream picks means undoing everything back to it, then re-drafting those slots.
+
+A rollback restores, for each undone pick:
+
+- the player (returned to available);
+- the winning team's budget (via a reversing ledger entry);
+- the roster entry (removed);
+- the nomination order (cursor returns to that team's turn once the earliest undone pick is reached);
+- Match state for that PlayerAuction;
 - team-completion state;
-- Whammy financial effects;
+- Whammy financial effects tied to that pick's sequence, if any;
 - relevant Auto-Agent state where defined.
+
+### 31.2 Conflict definition
+
+A pick has a conflict, for correction purposes, if the winning team has completed any acquisition after it. Player-identity conflicts (the corrected player is no longer available, or the released player was independently reacquired) are validated at correction/rollback time regardless of the above.
 
 The original events remain visible as superseded history.
 
@@ -1114,6 +1144,18 @@ Provide a separately labeled depth-oriented metric whose exact formula is versio
 Compare purchase prices with a selected static AAV source.
 
 Label clearly as AAV efficiency, not owner skill.
+
+### 36.4 Draft Summary Report
+
+On draft completion, the system generates a Draft Summary Report with two views:
+
+- **Owner view**: for the requesting team, full pick list (player, price, slot assigned), total spend, remaining budget, and the team's metrics from §36.1–36.3.
+- **League summary view**: all teams' spend, roster completion, and evaluation metrics side by side; overall league spending vs. the selected AAV source.
+
+Delivery:
+
+- The report is always viewable and downloadable in-app (per team, and league-wide for the commissioner) once the draft is COMPLETE.
+- If external email delivery is enabled (commissioner-configured, dependent on a future email-provider integration), the system emails each owner their own Owner view and emails the commissioner the League summary view. Email delivery failure never removes in-app report availability.
 
 ---
 
@@ -1254,6 +1296,10 @@ Commissioner preflight validates:
 - p99 < 750 ms;
 - committed bid → other-client broadcast p95 < 500 ms.
 
+### Multi-tenancy and concurrency
+
+The system supports multiple simultaneous live drafts across different leagues within the same deployment (MVP target: at least two concurrent RUNNING drafts). Each draft's state, timers, nomination order, and client connections are fully isolated from every other draft; no shared mutable state crosses draft boundaries.
+
 ### Recovery
 
 - reconnect to usable state < 5 seconds under normal infrastructure;
@@ -1308,7 +1354,7 @@ MVP should contain the capabilities required to run the intended real league.
 - broadcast Auto-Agent transition;
 - basic Auto-Agent valuation configuration;
 - commissioner pause/correction;
-- rollback/checkpoints;
+- single-pick correction and rollback of recent picks;
 - immutable budget/event history;
 - full bid telemetry;
 - ephemeral close card;
@@ -1393,8 +1439,8 @@ And Match is consumed.
 ### Rollback
 
 Given multiple completed Player Auctions  
-When commissioner rolls back to an earlier checkpoint  
-Then subsequent active-state effects are compensated/superseded  
+When commissioner rolls back the most recent N picks  
+Then each undone pick's budget, roster, and nomination-order effects are compensated in reverse order  
 And original history remains queryable.
 
 ### Multi-window
@@ -1403,6 +1449,44 @@ Given same owner opens Draft View and War Room
 When state changes  
 Then both converge to same authoritative sequence  
 And they count as one team identity for disconnect behavior.
+
+### Single-pick correction without conflict
+
+Given Team A's most recent acquisition is pick #12  
+And no acquisition since #12 belongs to Team A  
+When commissioner corrects the price of pick #12  
+Then only pick #12's ledger and roster entries change  
+And no other team or pick is affected.
+
+### Single-pick correction with conflict
+
+Given Team A acquired a player at pick #12  
+And Team A has since acquired another player at pick #30  
+When commissioner attempts to directly correct pick #12  
+Then the system rejects direct correction  
+And offers rollback of the most recent picks back through #12.
+
+### Concurrent multi-league drafts
+
+Given League Alpha and League Beta each have a RUNNING draft  
+When bids are placed simultaneously in both drafts  
+Then each draft's state, timers, and broadcasts remain independent  
+And no event from one draft is visible in the other.
+
+### Scheduled draft start visibility
+
+Given commissioner sets a scheduled start date/time for the draft  
+Then all connected owners see the scheduled start time  
+And the draft does not automatically transition to RUNNING at that time  
+And commissioner must still explicitly start the draft.
+
+### Draft summary report
+
+Given a draft reaches COMPLETE  
+Then an Owner-view report is available for each team  
+And a League-summary report is available to the commissioner  
+And if external email delivery is enabled, each owner and the commissioner receive their respective report by email  
+And email failure does not remove in-app report availability.
 
 ---
 
@@ -1421,3 +1505,5 @@ And they count as one team identity for disconnect behavior.
 11. Auto-Agent state is explicit, visible, and auditable.
 12. Disconnect recovery must respect multi-window ownership.
 13. Entertainment features must never compromise auction correctness.
+14. Corrections are surgical when they can be, sequential when they can't.
+15. Multiple leagues can draft at once without interfering with each other.

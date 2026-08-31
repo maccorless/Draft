@@ -212,12 +212,13 @@ flowchart TD
     F --> G[Debit BudgetLedger]
     G --> H[Assign RosterEntry using starter-first algorithm]
     H --> I[Update DraftTeamState]
-    I --> J[Create checkpoint]
-    J --> K[Emit PLAYER_AWARDED event]
+    I --> K[Emit PLAYER_AWARDED event]
     K --> L[Commit]
     L --> M[Broadcast acquisition + ephemeral close card]
     M --> N[Advance nomination order]
 ```
+
+This resolution is itself the undo boundary rollback walks backward through — no separate checkpoint entity is created (§17.5 of `data-model.md`).
 
 ---
 
@@ -407,27 +408,24 @@ No deadline silently expires while paused.
 
 ```mermaid
 flowchart TD
-    A[Commissioner selects correction] --> B[Enter required reason]
-    B --> C[Preview financial/roster consequences]
-    C --> D{Confirm?}
+    A[Commissioner selects a pick to correct] --> B{Target PlayerAuction still OPEN?}
+    B -->|Yes| G[Apply as live control: reassign winner/price/manual award]
+    B -->|No, already AWARDED| C{Winning team has any Acquisition after this one?}
 
-    D -->|No| X[Cancel]
-    D -->|Yes| E[Append CommissionerAction]
-    E --> F[Append compensating/replacement domain events]
-    F --> G[Update active materialized state]
-    G --> H[Commit]
-    H --> I[Broadcast corrected state]
+    C -->|No conflict| D[Enter required reason]
+    D --> E[Preview financial/roster consequences for this one team]
+    E --> F{Confirm?}
+    F -->|No| X[Cancel]
+    F -->|Yes| H[Append CommissionerAction]
+    H --> I[Reverse this Acquisition's ledger + roster effects]
+    I --> J[Apply corrected values]
+    J --> K[Commit]
+    K --> L[Broadcast corrected state]
+
+    C -->|Conflict| M[Redirect to Rollback Flow, target = this pick]
 ```
 
-Examples:
-
-- reassign winner;
-- change price;
-- return player;
-- adjust budget;
-- manual award.
-
-Never mutate historical bid attempts.
+Correction (no-conflict path) touches only the one team and one pick. Live-control edits to the currently open auction are unrestricted (nothing has resolved yet). Never mutate historical BidAttempts.
 
 ---
 
@@ -435,18 +433,25 @@ Never mutate historical bid attempts.
 
 ```mermaid
 flowchart TD
-    A[Commissioner opens rollback] --> B[Show checkpoints]
-    B --> C[Select checkpoint]
-    C --> D[Preview affected PlayerAuctions / acquisitions / budgets / rosters / Whammys]
+    A[Commissioner opens rollback] --> B[Show most recent resolved PlayerAuctions, newest first]
+    B --> C[Select how many picks back to undo, or a target pick]
+    C --> D[Preview affected PlayerAuctions / acquisitions / budgets / rosters / Whammys for every pick that will be undone]
     D --> E[Enter reason + confirm]
-    E --> F[Create new DraftTimeline based on checkpoint sequence]
-    F --> G[Rebuild/materialize state at checkpoint]
-    G --> H[Append rollback/correction events on new timeline]
-    H --> I[Mark new timeline active]
-    I --> J[Broadcast authoritative restored state]
+    E --> F[Undo picks in reverse resolution order, one at a time]
+
+    F --> G[Void Acquisition]
+    G --> H[Append ROLLBACK_COMPENSATION ledger entry]
+    H --> I[Deactivate RosterEntry]
+    I --> J[Restore NominatorMatchRight state]
+    J --> K{More picks left to undo?}
+    K -->|Yes| F
+    K -->|No| L[Restore nomination cursor to the earliest undone pick's team]
+
+    L --> M[Commit]
+    M --> N[Broadcast authoritative restored state]
 ```
 
-Historical prior timeline remains queryable.
+There is one timeline per Draft; rollback never branches it. All undone picks' original events remain in the event log as superseded history. Undoing N picks always undoes the N most recently resolved picks — a commissioner cannot cherry-pick an earlier pick and leave later ones untouched; see §14 for when a single already-awarded pick can be corrected directly instead.
 
 ---
 
@@ -516,6 +521,7 @@ draft_completion_invariants:
 ## 19. Suggested Event Types
 
 ```text
+DRAFT_SCHEDULED_START_SET
 DRAFT_STARTED
 DRAFT_PAUSED
 DRAFT_RESUMED
@@ -544,30 +550,76 @@ WHAMMY_APPLIED
 WHAMMY_REJECTED
 
 COMMISSIONER_CORRECTION
+PICK_CORRECTED
 ROLLBACK_REQUESTED
-TIMELINE_CREATED
-TIMELINE_ACTIVATED
+ROLLBACK_PICK_UNDONE
+ROLLBACK_COMPLETED
 
 DRAFT_COMPLETED
 EXPORT_GENERATED
 ESPN_RECONCILIATION_UPDATED
+DRAFT_SUMMARY_REPORT_GENERATED
+DRAFT_SUMMARY_REPORT_EMAILED
 ```
 
 ---
 
 ## 20. Recommended Implementation Order
 
+See `BUILD_PLAN.md` for the authoritative phased build plan with acceptance criteria. Summary:
+
 ```text
-1. League / roster / scoring configuration
-2. Player master + DraftDataset + AAV ingestion
-3. Draft + DraftTeamState + nomination order
-4. PlayerAuction state machine
-5. BidAttempt atomicity / timers / stale-state protection
-6. Acquisition + BudgetLedger + starter-first RosterEntry
-7. Client session/reconnect model
-8. Manual/Auto-Agent control transitions
-9. Owner private strategy data
-10. Commissioner corrections + checkpoint/timeline rollback
-11. Whammy framework
-12. Analytics / ESPN reconciliation / presentation polish
+0. Project scaffold + WS protocol envelope (sequence numbers, versioning) from day one
+1. Authentication (site/league/team password) + league/roster/scoring configuration + draft scheduling
+2. Player master + DraftDataset + CSV ingestion adapter (additional adapters later, parallelizable)
+3. Auction Core, as one unit: Draft/DraftTeamState/nomination order (incl. Nomination Queue schema)
+   + PlayerAuction state machine + BidAttempt atomicity/timers/stale-state protection
+   + Acquisition/BudgetLedger/starter-first RosterEntry
+4. Client session/reconnect model, including multi-draft isolation (§23)
+5. Manual/Auto-Agent control transitions (incl. AutoAgentConfiguration schema)
+6. Owner private strategy data: Watch List, Do Not Draft, Target Values CRUD/UI (parallelizable)
+7. Commissioner corrections + rollback (§14, §15) — single-pick correction and LIFO undo-N
+8. Whammy framework (parallelizable)
+9. Analytics / Draft Summary Report / ESPN reconciliation / presentation polish (parallelizable)
 ```
+
+---
+
+## 21. Draft Start Scheduling
+
+```mermaid
+flowchart TD
+    A[Commissioner sets/changes scheduled_start_at] --> B[Persist on Draft]
+    B --> C[Broadcast DRAFT_SCHEDULED_START_SET to all connected clients]
+    C --> D[Display scheduled time wherever draft status appears]
+    D --> E{Commissioner clicks Start Draft?}
+    E -->|No| D
+    E -->|Yes| F[Normal DRAFT_STARTED transition, per §1]
+```
+
+The scheduled time is informational only; it never auto-starts the draft in MVP. If unset, clients display "Not yet scheduled."
+
+---
+
+## 22. Draft Summary Report Generation
+
+```mermaid
+flowchart TD
+    A[Draft Completion Flow reaches Finalize Draft] --> B[Generate DraftTeamEvaluation per team]
+    B --> C[Generate DraftSummaryReport: league_summary_json + team_report_json]
+    C --> D{External email delivery enabled?}
+    D -->|No| E[Report available in-app only]
+    D -->|Yes| F[Create ReportDeliveryAttempt per team + commissioner]
+    F --> G[Send email]
+    G --> H{Sent OK?}
+    H -->|Yes| I[Mark SENT]
+    H -->|No| J[Mark FAILED; report remains available in-app]
+```
+
+Email delivery failure never removes or blocks in-app report access.
+
+---
+
+## 23. Multi-Draft Isolation
+
+The server process may host more than one RUNNING Draft at a time, across different Leagues (MVP target: at least two concurrently). All in-memory state, timers, nomination cursors, and WebSocket broadcast groups are keyed by `draft_id`; no module-level singleton may hold draft state. A client connects to exactly one draft's event stream at a time (selected during the League/Team login flow, PRD.md §4.4).

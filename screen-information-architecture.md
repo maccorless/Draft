@@ -6,6 +6,37 @@
 
 ---
 
+# 0. Access / Login Flow
+
+## Primary user question
+
+> How do I get into my league's draft?
+
+Steps:
+
+1. **Site password.** Single shared password gates the whole application.
+2. **League select.** Choose from leagues the site password grants visibility into.
+3. **Role select.** Commissioner (enter league password) or Team/Owner (continue to team select).
+4. **Team select** (Owner path only). Choose team from the league's team list.
+5. **Team password.** Enter the selected team's password.
+
+On success, the session carries role + league + team identity for the rest of the app (Draft Room, War Room, Commissioner Console).
+
+Keep this flow minimal: no account creation, no password reset, no email step in MVP. A future version replaces password entry with an emailed magic link.
+
+## 0.1 Pre-Draft Lobby (after login, before draft starts)
+
+Shown to owners once authenticated but before the commissioner starts the draft.
+
+Show:
+
+- league name/logo;
+- scheduled draft start date/time (or "Not yet scheduled");
+- own team name/icon;
+- readiness/status messaging from the commissioner if provided.
+
+---
+
 ## 1. Screen Architecture Principles
 
 The product should distinguish three jobs:
@@ -492,9 +523,10 @@ Persistent areas:
 
 All-team grid with editable controls behind explicit commissioner action.
 
-### 9.4 Rollback
+### 9.4 Correction and Rollback
 
-Checkpoint list with preview.
+- **Correct this pick**: available on any already-awarded pick; if the winning team has drafted again since, the UI explains why direct correction is blocked and offers "Rollback last N picks" instead.
+- **Rollback**: pick a target pick or a number of picks (N); preview every pick, team, and budget/roster effect that undoing back through it will touch; confirm undoes them in order, most recent first.
 
 ### 9.5 Whammy
 
@@ -716,3 +748,26 @@ The next visual mockup should emphasize these more strongly than the prior versi
 7. **AAV as reference, not recommendation**
 
 The design should avoid treating every feature as equal visual weight.
+
+---
+
+# 18. Draft Summary Report
+
+## Primary user question
+
+> How did my draft go, and how did the whole league do?
+
+Shown once the draft reaches COMPLETE. Two views:
+
+### Owner view
+
+- full pick list: player, price, slot assigned;
+- total spend, remaining budget;
+- DraftTeamEvaluation metrics (projected drafted-starter points, roster depth, AAV efficiency).
+
+### League summary view (commissioner, and optionally all owners)
+
+- all teams' spend, roster completion, and evaluation metrics side by side;
+- league-wide spend vs. selected AAV source.
+
+Both views are viewable and downloadable in-app regardless of email configuration. If external email delivery is enabled, the Owner view is emailed to each owner and the League summary view is emailed to the commissioner; email failure never removes in-app access.
