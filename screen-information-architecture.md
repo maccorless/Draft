@@ -16,11 +16,11 @@ Steps:
 
 1. **Site password.** Single shared password gates the whole application.
 2. **League select.** Choose from leagues the site password grants visibility into.
-3. **Role select.** Commissioner (enter league password) or Team/Owner (continue to team select).
+3. **Role select.** Commissioner (enter league password), Host (enter host password, if the commissioner configured one), or Team/Owner (continue to team select).
 4. **Team select** (Owner path only). Choose team from the league's team list.
 5. **Team password.** Enter the selected team's password.
 
-On success, the session carries role + league + team identity for the rest of the app (Draft Room, War Room, Commissioner Console).
+On success, the session carries role + league + team identity (a Commissioner who also owns a team gets both in one session — see PRD §4.4) for the rest of the app (Draft Room, War Room, Commissioner Console). The session token persists client-side (draft-day lifetime): a refresh or return visit while authenticated routes straight back in — to the Draft Room if the draft is RUNNING, to this login flow only if the token is missing or expired. Two devices logged in as the same team (e.g. laptop + phone) both count as that team's connected sessions under the existing multi-window disconnect logic (§10 of `state-machine-flows.md`) — there is no separate "which device" concept.
 
 Keep this flow minimal: no account creation, no password reset, no email step in MVP. A future version replaces password entry with an emailed magic link.
 
@@ -31,9 +31,17 @@ Shown to owners once authenticated but before the commissioner starts the draft.
 Show:
 
 - league name/logo;
-- scheduled draft start date/time (or "Not yet scheduled");
+- scheduled draft start date/time, or "Not yet scheduled," or — once that time has passed — "Waiting for commissioner to start" so the room knows the app isn't broken;
 - own team name/icon;
 - readiness/status messaging from the commissioner if provided.
+
+The lobby is not a dead end: it carries tabs to the owner's private prep tools, live even in `UPCOMING` state — Watch List, Nomination Queue, Target Values, Do Not Draft, Auto-Agent configuration, and team icon/audio upload (§7 of this document). This is where the product's stated "owner preparation is an advantage" principle actually gets exercised before the draft starts.
+
+## 0.2 Commissioner Setup
+
+Reachable from the moment a commissioner session exists, through `UPCOMING` and (for anything that isn't frozen) into `RUNNING`.
+
+Covers everything in PRD §5–§9, §41: league name/logo/passwords (including generating them, §4.4), roster/scoring/auction configuration, scheduled start time, dataset import and match/ambiguity review, AAV source selection, Whammy configuration, team creation and per-team password/media, and the pre-draft readiness checklist. A commissioner who also owns a team (§0, PRD §4.4) reaches both this and the Pre-Draft Lobby's owner tools from the same session.
 
 ---
 
@@ -514,10 +522,7 @@ Persistent areas:
 - bid for team;
 - put team in Auto-Agent;
 - resume manual control;
-- return player;
-- change winner;
-- change price;
-- manual award.
+- return player, change winner, change price, manual award — all for the **currently open** auction only, unrestricted since nothing has resolved yet.
 
 ### 9.3 Budget / Roster
 
@@ -525,8 +530,10 @@ All-team grid with editable controls behind explicit commissioner action.
 
 ### 9.4 Correction and Rollback
 
-- **Correct this pick**: available on any already-awarded pick; if the winning team has drafted again since, the UI explains why direct correction is blocked and offers "Rollback last N picks" instead.
-- **Rollback**: pick a target pick or a number of picks (N); preview every pick, team, and budget/roster effect that undoing back through it will touch; confirm undoes them in order, most recent first.
+For an **already-awarded** pick, two different controls depending on what's wrong:
+
+- **Correct price**: the only in-place fix. The preview leads with the plain numbers before any confirm — old vs. new price, this team's budget delta, resulting remaining budget and max legal bid — and states directly whether the fix stays legal for this team's later picks. If it doesn't (or if what's wrong isn't the price — winner or player), the UI explains that plainly and offers rollback instead; it does not silently fail.
+- **Rollback**: pick a target pick or a number of picks (N). The draft pauses automatically if it wasn't already. The preview leads with the plain-language cost — "This will undo picks #18 through #10 (8 players). Those players return to the pool." — before showing the detailed per-pick, per-team budget/roster/Whammy effects, so the commissioner isn't surprised by the scale after confirming. Confirm undoes them in order, most recent first, as one operation. Immediately after, a **re-apply assist** lists the just-undone picks in their original order, each one click from being re-awarded exactly as before via manual award, with the erroneous one editable first — this is what keeps "fix one old pick" from turning into re-running a live auction for 8 players.
 
 ### 9.5 Whammy
 
@@ -757,7 +764,7 @@ The design should avoid treating every feature as equal visual weight.
 
 > How did my draft go, and how did the whole league do?
 
-Shown once the draft reaches COMPLETE. Two views:
+Shown once the draft reaches COMPLETE — Draft Room and War Room clients transition here automatically, and an owner who authenticates after the draft has ended lands here directly rather than at the Pre-Draft Lobby (§0.1), which is UPCOMING-only. Two views:
 
 ### Owner view
 
@@ -765,9 +772,10 @@ Shown once the draft reaches COMPLETE. Two views:
 - total spend, remaining budget;
 - DraftTeamEvaluation metrics (projected drafted-starter points, roster depth, AAV efficiency).
 
-### League summary view (commissioner, and optionally all owners)
+### League summary view
 
 - all teams' spend, roster completion, and evaluation metrics side by side;
 - league-wide spend vs. selected AAV source.
+- Visible to every owner, not commissioner-only — nothing in it wasn't already broadcast live during the draft (purchase prices, the Draft Board). No toggle, no configuration; it's just public within the league by default.
 
-Both views are viewable and downloadable in-app regardless of email configuration. If external email delivery is enabled, the Owner view is emailed to each owner and the League summary view is emailed to the commissioner; email failure never removes in-app access.
+Both views are viewable and downloadable in-app regardless of email configuration. If external email delivery is enabled, the Owner view is emailed to each owner and the League summary view is emailed to the commissioner — only for owners whose email the commissioner entered during setup (§0.2); email failure never removes in-app access.

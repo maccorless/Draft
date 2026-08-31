@@ -196,18 +196,20 @@ Can:
 
 Optional presentation/event role.
 
-Can operate presentation surfaces without automatically receiving commissioner roster/budget mutation privileges.
+Can operate presentation surfaces without automatically receiving commissioner roster/budget mutation privileges. Authenticates with a separate, optional host password (§4.4) — never with the commissioner password, which would over-grant mutation rights.
 
 ### 4.4 Access and Authentication
 
 MVP authentication is intentionally simple and self-hosted, not account-based:
 
 - A single site-wide password gates entry to the application.
-- After the site password, a user selects a League, then selects a Team from that league's team list, then enters that team's password to act as that team's Owner.
-- A separate league-level password grants Commissioner access to that league.
-- The Commissioner sets the league password, league name, league logo, and each team's password during League setup.
+- After the site password, a user selects a League, then either enters that league's Commissioner password, enters an optional Host password, or selects a Team from that league's team list and enters that team's password to act as that team's Owner.
+- **Commissioner who also owns a team:** the commissioner may designate one team as their own during setup. Their commissioner login then grants a single combined session with both commissioner console access and normal owner bidding rights for that team — no second login or window required. This matters because in a real private league, the person running the draft is almost always also drafting a team.
+- The Commissioner sets the league password, host password (optional), league name, league logo, and each team's password during League setup. The setup UI generates these passwords by default (shown once for the commissioner to distribute); manual override is allowed.
 - There is no self-service account creation or password reset in MVP; all credentials are configured by the commissioner.
 - Passwords are stored hashed (e.g. bcrypt), never in plaintext, even for MVP.
+- Session tokens expire (~48 hours) and carry a revocation epoch: changing a password, or an explicit commissioner "invalidate this team's session" action, immediately invalidates every previously issued token for that scope. This is the recovery path if a device is lost or a password leaks mid-draft.
+- All traffic (HTTP and WebSocket) uses TLS in any non-localhost deployment.
 - A future version adds email-based magic-link authentication (e.g. via SendGrid) as an alternative to password entry.
 
 ---
@@ -977,9 +979,9 @@ Commissioner can:
 - bid for an owner;
 - switch team Manual/Auto-Agent control;
 - adjust budget;
-- return player (currently open auction only);
-- correct winner, correct purchase price, or manually assign player — unrestricted for the currently open auction, or for an already-awarded pick only when no conflict exists (§31);
-- rollback the most recent N resolved picks, in order (§31).
+- return player, correct winner, or manually assign player (currently open auction only — unrestricted, since nothing has resolved yet);
+- correct the purchase price of an already-awarded pick, in place, when the fix stays legal for that team's later picks (§31);
+- rollback the most recent N resolved picks, in order, to fix anything else about an already-awarded pick (§31).
 
 Material corrections require a reason and immutable audit entry.
 
@@ -987,13 +989,13 @@ Material corrections require a reason and immutable audit entry.
 
 ## 31. Commissioner Correction and Rollback
 
-Correction never erases history. Every correction and rollback appends new events, ledger entries, and roster changes; nothing is deleted or overwritten. A draft has a single, continuously growing timeline — there is no branching or arbitrary point-in-time reconstruction.
+Correction never erases history. Every correction and rollback appends new rows and events; nothing is deleted, overwritten, or mutated in place. A draft has a single, continuously growing history — there is no branching or arbitrary point-in-time reconstruction.
 
 ### 31.1 Two correction paths
 
-**Single-pick correction (no conflict).** An already-awarded pick may be corrected directly (winner, price, or player) only if the winning team has made no further acquisitions since that pick. The correction reverses that one pick's ledger and roster effects and applies the corrected ones in place. No other team or pick is touched.
+**Price-only correction (in-place).** The only correction ever made in place. It applies to any already-awarded pick, no matter how many picks that team has made since — the gate is legality, not chronology: the system replays the team's ledger forward from that pick at the corrected price, and only allows the in-place fix if every later pick by that team stays legal (budget and roster-reserve rules) under it. If the replay fails, direct correction is refused and the commissioner is routed to rollback instead. Only that one team's ledger and roster entry change; no other team or pick is touched.
 
-**Rollback (conflict, or multiple picks).** If the winning team has drafted again since the pick in question, or the commissioner wants to undo more than one pick, the only path is rollback: undo the most recently resolved picks in reverse order, one at a time, back through and including the target pick. The commissioner cannot reach into the middle of the draft and touch only one pick while leaving later picks untouched — correcting an old pick with downstream picks means undoing everything back to it, then re-drafting those slots.
+**Rollback (winner/player changes, or when the replay above fails).** Any change to *who* won a pick or *which player* was awarded always goes through rollback, never in place — those changes can cascade into roster-slot and budget legality for other picks in ways that aren't safe to patch surgically. Rollback undoes the most recently resolved picks in reverse order, one at a time, back through and including the target pick, as a single all-or-nothing operation — the draft must be paused first. The commissioner cannot reach into the middle of the draft and touch only one pick while leaving later picks untouched; fixing an old pick with picks after it means undoing everything back to it. To make that fast rather than painful, once the rollback completes the commissioner is offered a **re-apply assist**: each undone pick, in its original order, one click away from being re-awarded exactly as before (with the erroneous one editable first) — turning "undo 8 picks to fix one" into roughly a minute of clicking rather than a live re-auction of 8 players.
 
 A rollback restores, for each undone pick:
 
@@ -1001,14 +1003,14 @@ A rollback restores, for each undone pick:
 - the winning team's budget (via a reversing ledger entry);
 - the roster entry (removed);
 - the nomination order (cursor returns to that team's turn once the earliest undone pick is reached);
-- Match state for that PlayerAuction;
+- Match state for that PlayerAuction (a re-nominated slot gets a fresh Match right; nothing carries forward);
 - team-completion state;
 - Whammy financial effects tied to that pick's sequence, if any;
 - relevant Auto-Agent state where defined.
 
-### 31.2 Conflict definition
+### 31.2 Why chronology isn't the gate
 
-A pick has a conflict, for correction purposes, if the winning team has completed any acquisition after it. Player-identity conflicts (the corrected player is no longer available, or the released player was independently reacquired) are validated at correction/rollback time regardless of the above.
+An earlier version of this design allowed in-place correction of any pick type as long as the winning team hadn't drafted again since. That check was incomplete: it only ever examined the outgoing team, not a proposed incoming team on a winner change, which could silently create an illegal budget or roster state for the incoming team with nothing catching it. Restricting in-place correction to price-only, gated by an explicit legality replay, closes that gap without needing to validate a second team's full feasibility inline — and price is the dominant real-world correction anyway (a typo'd amount), so this covers the common case cheaply while sending the genuinely complex cases through the already-robust rollback machinery.
 
 The original events remain visible as superseded history.
 
@@ -1150,12 +1152,12 @@ Label clearly as AAV efficiency, not owner skill.
 On draft completion, the system generates a Draft Summary Report with two views:
 
 - **Owner view**: for the requesting team, full pick list (player, price, slot assigned), total spend, remaining budget, and the team's metrics from §36.1–36.3.
-- **League summary view**: all teams' spend, roster completion, and evaluation metrics side by side; overall league spending vs. the selected AAV source.
+- **League summary view**: all teams' spend, roster completion, and evaluation metrics side by side; overall league spending vs. the selected AAV source. Visible to every owner, not just the commissioner — every figure in it (purchase prices, rosters) was already broadcast live during the draft, so the summary exposes nothing new.
 
 Delivery:
 
-- The report is always viewable and downloadable in-app (per team, and league-wide for the commissioner) once the draft is COMPLETE.
-- If external email delivery is enabled (commissioner-configured, dependent on a future email-provider integration), the system emails each owner their own Owner view and emails the commissioner the League summary view. Email delivery failure never removes in-app report availability.
+- Every owner can view and download their own Owner view; every owner can also view and download the League summary view; the commissioner can view and download both for every team. All available in-app once the draft is COMPLETE.
+- If external email delivery is enabled (commissioner-configured, dependent on a future email-provider integration, and only for owners whose email the commissioner has entered), the system emails each owner their own Owner view and emails the commissioner the League summary view. Email delivery failure never removes in-app report availability.
 
 ---
 
@@ -1354,7 +1356,7 @@ MVP should contain the capabilities required to run the intended real league.
 - broadcast Auto-Agent transition;
 - basic Auto-Agent valuation configuration;
 - commissioner pause/correction;
-- single-pick correction and rollback of recent picks;
+- price-only in-place correction and rollback of recent picks;
 - immutable budget/event history;
 - full bid telemetry;
 - ephemeral close card;
@@ -1450,21 +1452,30 @@ When state changes
 Then both converge to same authoritative sequence  
 And they count as one team identity for disconnect behavior.
 
-### Single-pick correction without conflict
+### Price-only correction, legal replay
 
 Given Team A's most recent acquisition is pick #12  
-And no acquisition since #12 belongs to Team A  
+And correcting pick #12's price still leaves every later pick by Team A legal  
 When commissioner corrects the price of pick #12  
 Then only pick #12's ledger and roster entries change  
 And no other team or pick is affected.
 
-### Single-pick correction with conflict
+### Price-only correction, illegal replay
 
 Given Team A acquired a player at pick #12  
-And Team A has since acquired another player at pick #30  
-When commissioner attempts to directly correct pick #12  
+And Team A has since spent down such that correcting #12's price would make a later pick illegal  
+When commissioner attempts to directly correct pick #12's price  
 Then the system rejects direct correction  
 And offers rollback of the most recent picks back through #12.
+
+### Winner-change correction always requires rollback
+
+Given pick #12 was mis-awarded to Team A  
+And Team B (the intended winner) has acquired players at picks #20 and #25 since  
+When commissioner attempts to change pick #12's winner to Team B  
+Then the system refuses direct correction regardless of Team A's subsequent activity  
+And requires rollback of the most recent picks back through #12  
+And offers the re-apply assist to re-award #13 through #25 after #12 is corrected.
 
 ### Concurrent multi-league drafts
 
