@@ -11,6 +11,7 @@ Pre-implementation. This repo currently contains only design documents; there is
 - `state-machine-flows.md` — agent-consumable behavioral spec: state machines, bid decision flow, event types, and a recommended implementation order (section 20)
 - `screen-information-architecture.md` — UX/IA spec for each screen
 - `DataModel.png` — data model diagram (rendered image of the model in `data-model.md`)
+- `BUILD_PLAN.md` — chosen stack, phased build sequence, and which phases are core/sequential vs. safe to parallelize across agents
 
 ## What This Is
 
@@ -44,10 +45,14 @@ These come from the PRD and must hold in any implementation:
 - Use the entity names and field shapes in `data-model.md` (e.g. `PlayerAuction`, `BidAttempt`, `DraftTeamState`, `BudgetLedgerEntry`). Money fields are `*_minor` integers; durations are `*_ms`.
 - Before implementing any draft/auction behavior, check it against the invariants list in `data-model.md` §21.
 
-## Implementation Order
+## Stack (chosen — see `BUILD_PLAN.md`)
 
-When building begins, follow the sequence in `state-machine-flows.md` §20: configuration → data ingestion → draft/nomination → PlayerAuction state machine → bid atomicity → acquisition/ledger/roster → sessions/reconnect → Auto-Agent → owner strategy data → corrections/rollback → Whammy → analytics/ESPN.
+Node + TypeScript (Fastify) backend, plain `ws` WebSockets, Postgres, React + Vite + TypeScript frontend, Zod for shared client/server validation. Monorepo: `server/`, `web/`, `shared-types/`. Single process holds authoritative in-memory draft state; every accepted mutation commits to Postgres before broadcast; recovery is snapshot + event replay.
+
+## Build Sequence
+
+Follow `BUILD_PLAN.md` phase by phase, in order. Phases 0–8 and 10 (scaffold through Auto-Agent, plus commissioner corrections/rollback) are **core and sequential** — they share one authoritative state machine and must be built as one continuous effort, not fanned out to parallel agents. Phases 2b, 9, 11, 12, and the frontend screens are **parallelizable** once the core API/schema is frozen and tested. Each core phase should pass its relevant `PRD.md` §44 acceptance scenarios and `data-model.md` §21 invariants before starting the next.
 
 ## When Code Exists
 
-Update this file with build, test, and lint commands once the stack is chosen and scaffolded. None exist yet; do not assume any.
+Update this file with actual build, test, and lint commands once Phase 0 (scaffold) lands. None exist yet; do not assume any.
