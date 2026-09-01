@@ -1,0 +1,333 @@
+# module-map.yaml
+# Fantasy Football Auction Draft Platform — module breakdown
+# Written by: /aah-architecture · Iteration 1 · 2026-08-31
+# Consumed by: /aah-plan (feature decomposition + wave computation)
+
+modules:
+
+  - id: MOD-000
+    name: walking-skeleton
+    description: >
+      All non-demoable infrastructure: monorepo scaffold, shared-types package, WS envelope
+      protocol, auth (site/league/team passwords + HMAC JWTs + auth_epoch revocation),
+      league/team/roster/auction configuration CRUD, Drizzle schema + migrations,
+      Railway CI/CD pipeline, and crash-recovery (RUNNING → PAUSED on restart).
+    demo_criteria: "Server boots, /health responds 200, tsc --noEmit passes, Vitest passes"
+    smoke_test: "npm run build && curl http://localhost:3000/health"
+    layers:
+      scaffold:
+        - npm workspaces monorepo (server/, web/, shared-types/)
+        - TypeScript 5.x configs for all three packages
+        - Vitest test runner configuration
+        - railway.toml (two-service: Node.js + Railway Postgres)
+        - GitHub Actions CI (tsc + Vitest on PR; Railway deploy on merge to main)
+      protocol:
+        - WS envelope schema in shared-types ({seq, draft_id, event_type, payload, server_time})
+        - AUTH message (first WS message; carries JWT + league_id)
+        - Zod validators for all WS message types
+      db:
+        - Drizzle schema for all entities (League, Team, Membership, User, Draft, PlayerAuction, BidAttempt, DraftEvent, DraftTeamState, Acquisition, RosterEntry, BudgetLedgerEntry, RosterConfiguration, RosterSlotDefinition, AuctionConfiguration, ScoringConfiguration, AutoAgentConfig, DraftDataset, Player)
+        - Drizzle migrations pipeline (generate + run)
+        - postgres.js connection pool (max 10)
+        - Env checker: validates DATABASE_URL + JWT_SECRET at boot (ERR_CDR_78_EX_CONFIG)
+      api:
+        - Fastify server with Pino logger + pino-opentelemetry-transport
+        - @fastify/jwt plugin; auth_epoch re-read from DB in preHandler hook on every command
+        - @node-rs/bcrypt for password hashing (work factor 12)
+        - @fastify/rate-limit on auth routes (in-memory, 5 failures/IP/min)
+        - League CRUD (POST /leagues, GET /leagues/:id)
+        - Team CRUD (POST /leagues/:id/teams, GET /leagues/:id/teams)
+        - RosterConfiguration + RosterSlotDefinition endpoints
+        - AuctionConfiguration endpoints (anti-snipe extension configurable per league)
+        - Login endpoints (site, league, commissioner, team)
+        - Draft creation endpoint (POST /leagues/:id/drafts)
+      crash_recovery:
+        - On startup: query all Draft rows with status=RUNNING; update to PAUSED + emit DRAFT_PAUSED event
+      ui:
+        - Lobby screen (league join, team selection, password entry)
+        - Commissioner Console scaffold (empty screens; navigation)
+    depends_on: []
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-001
+    name: player-dataset-management
+    description: >
+      Commissioner imports player data from CSV (Phase 2a reference adapter), resolves player
+      matching ambiguities, and freezes a DraftDataset. The draft can only start once a dataset
+      is FROZEN and associated with the draft.
+    demo_criteria: >
+      Commissioner uploads a CSV, sees matched and ambiguous players, resolves ambiguities,
+      freezes the dataset, and the draft shows as ready to start.
+    smoke_test: >
+      POST /leagues/:id/draft-dataset (CSV upload) → GET /draft-dataset/:id (check status=VALIDATED)
+      → POST /draft-dataset/:id/resolve-ambiguity → POST /draft-dataset/:id/freeze
+      → GET /draft-dataset/:id (status=FROZEN)
+    layers:
+      db:
+        - DraftDataset lifecycle columns (status: DRAFT | VALIDATED | FROZEN, frozen_at)
+        - DatasetImport (import job rows with match/ambiguity counts)
+        - Player master table and PlayerDatasetEntry join
+      api:
+        - POST /leagues/:id/draft-dataset (multipart CSV upload; worker_threads parsing)
+        - GET /draft-dataset/:id/ambiguities (list unresolved player matches)
+        - POST /draft-dataset/:id/resolve-ambiguity (commissioner resolves one)
+        - POST /draft-dataset/:id/freeze (validate all resolved; set FROZEN)
+        - GET /leagues/:id/players (list frozen dataset players with AAV + projections)
+      ui:
+        - Dataset import screen (CSV upload dropzone, progress indicator)
+        - Ambiguity resolution UI (side-by-side player match candidates; confirm/override)
+        - Dataset status indicator in Commissioner Console
+    depends_on: [MOD-000]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-002
+    name: live-auction-core
+    description: >
+      The real-time auction engine: nomination turn rotation, PlayerAuction FSM, per-draft
+      serialized command queue, bid pipeline with server_receipt_time stamping, anti-sniping,
+      winner resolution, starter-first roster assignment, and budget ledger entries.
+      This is the most complex and highest-risk module.
+    demo_criteria: >
+      Start a draft with a frozen dataset. All 12 teams join. A player is nominated, bids fly
+      from multiple teams (including +$1 relative bids), the anti-sniping timer extends on a
+      late bid, the player is awarded to the winner with the correct budget deducted, and the
+      next nomination turn begins. All connected clients see identical authoritative state.
+    smoke_test: >
+      Draft starts → nomination timer fires → BID_ACCEPTED events broadcast → PLAYER_AWARDED
+      event fires → DraftTeamState.remaining_budget decremented correctly → next nomination opens.
+      Verify via Vitest integration test running against a real Postgres instance.
+    layers:
+      db:
+        - DraftTeamState rows (one per team per draft; remaining_budget, roster counts)
+        - PlayerAuction rows (one per player per draft; FSM status, current_bid, current_leader)
+        - BidAttempt rows (all accepted + rejected attempts; append-only)
+        - DraftEvent rows (append-only audit log; sequence allocated in same transaction)
+        - Acquisition + RosterEntry rows (append-only; winner + slot assignment)
+        - BudgetLedgerEntry rows (append-only; debit on award)
+        - RosterSlot assignment logic (starter-first: lowest priority unfilled starter slot → bench)
+      api:
+        - POST /drafts/:id/start (commissioner only; sets status=RUNNING)
+        - WS command: NOMINATE_PLAYER (team nominates from their queue or commissioner nominates)
+        - WS command: BID_ABSOLUTE (explicit dollar amount)
+        - WS command: BID_RELATIVE (+$1 relative; carries expected_current_bid + auction_version for stale-state protection)
+        - WS command: PASS_NOMINATION (team passes their turn)
+        - WS broadcast: BID_ACCEPTED, BID_REJECTED, PLAYER_AWARDED, NOMINATION_STARTED, NOMINATION_TURN_CHANGED
+        - Per-draft serialized command queue (Map<draft_id, AsyncQueue>)
+        - server_receipt_time stamped as first line in WS message handler (before any await)
+        - Anti-sniping: if bid lands in final N seconds of Rebid timer → extend by configured seconds
+        - Auto-nominate: on empty queue + timer expiry → argmax(aav_minor) from frozen dataset
+        - bid_pipeline_duration_ms OTel histogram (p99 target: < 200ms)
+      ui:
+        - Draft Room screen (nomination timer, current bid display, bid controls, player card, roster sidebar)
+        - Draft Board screen (all players, status, award prices)
+        - Countdown timer (client-side from server deadline_ts; 100ms setInterval)
+    depends_on: [MOD-001]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-003
+    name: session-reconnect-multi-draft
+    description: >
+      WebSocket session management: snapshot-on-connect for reconnecting clients, multi-window
+      identity (one team_id, multiple ws connections share state), and multi-draft isolation
+      (routing layer + auth layer league_id mismatch rejection on every command).
+    demo_criteria: >
+      Owner closes their Draft Room tab and reopens it mid-auction — they immediately see exact
+      current state with no manual action. A command carrying a mismatched league_id is rejected
+      with AUTH_ERROR. Two concurrent drafts on different leagues don't bleed state.
+    smoke_test: >
+      1. Connect to draft A, disconnect, reconnect → receive full snapshot (DraftTeamState,
+         active PlayerAuction, DraftEvent tail). 2. Send a command with wrong league_id → server
+         returns AUTH_ERROR. 3. Two concurrent drafts in test → state is fully isolated.
+    layers:
+      api:
+        - DraftClientSession in-memory Map<draft_id, Map<team_id, Set<ws>>>
+        - AUTH WS handshake: verify JWT → re-read auth_epoch from DB → send full state snapshot
+        - Full state snapshot: current DraftTeamState[], active PlayerAuction, recent DraftEvent tail
+        - Multi-window: team_id key → Set of ws; broadcast fans out to all connections
+        - Per-command auth check: route to draft_id → verify token league_id == draft.league_id
+        - Auto-reconnect client: WS close → "Reconnecting..." banner → exponential backoff (1s, 2s, 4s, max 5s)
+        - On reconnect success + PAUSED draft: show "Draft paused — waiting for commissioner"
+      ui:
+        - Reconnect status banner (Draft Room + War Room)
+        - Commissioner Console: pause notification with PAUSED reason = SERVER_RESTART
+    depends_on: [MOD-002]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-004
+    name: auto-agent
+    description: >
+      Auto-Agent mode for disconnected teams: MANUAL ↔ AUTO_AGENT FSM, disconnect grace timer,
+      bidding cadence (triggers on auction open + every leadership change while below willingness
+      ceiling), and all transitions broadcast + audited.
+    demo_criteria: >
+      Disconnect a team's last connection. After the grace timer, TEAM_AUTO_AGENT_ENABLED event
+      broadcasts. The agent bids on the next opened auction up to the team's willingness ceiling.
+      Reconnect the team — manual control is NOT automatically restored (requires explicit action).
+    smoke_test: >
+      Vitest integration test: simulate disconnect → wait grace timer → assert AUTO_AGENT_ENABLED
+      event → assert agent bid on NOMINATION_STARTED → assert bid amount <= willingness ceiling.
+    layers:
+      db:
+        - AutoAgentConfig (per-team per-draft: willingness_pct, enabled, last_transition_at)
+        - DraftTeamState.control_mode (MANUAL | AUTO_AGENT)
+        - DraftEvent rows: TEAM_AUTO_AGENT_ENABLED, TEAM_AUTO_AGENT_DISABLED, TEAM_RECONNECTED
+      api:
+        - Disconnect detection: DraftClientSession monitors Set<ws> empty → start grace timer
+        - Grace timer fires: set control_mode = AUTO_AGENT; emit TEAM_AUTO_AGENT_ENABLED; broadcast
+        - Auto-Agent bidding: on NOMINATION_STARTED and on PLAYER_AWARDED (leadership change) → if below ceiling → BID_ABSOLUTE at max legal up to willingness ceiling
+        - WS command: SET_AUTO_AGENT_CONFIG (owner sets willingness_pct)
+        - WS command: RESUME_MANUAL (explicit owner action to restore manual control)
+      ui:
+        - Auto-Agent config panel in Draft Room (willingness percentage slider)
+        - "Auto-Agent active" status indicator (visible to all teams)
+        - "Resume manual control" button (only visible to the reconnected owner)
+    depends_on: [MOD-003]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-005
+    name: corrections-and-rollback
+    description: >
+      Commissioner tools for correcting draft outcomes: in-place price correction (gated by
+      ledger replay; rejected if any later pick by the team becomes illegal) and bounded rollback
+      (reverse resolution_sequence order for the most recent N picks, all-or-nothing, draft paused first).
+    demo_criteria: >
+      Commissioner corrects a pick's price — the ledger updates correctly and the correction is
+      rejected if it would make a later pick illegal. Commissioner rolls back the most recent pick —
+      the PlayerAuction returns to PENDING, roster slot is freed, budget is restored, and the draft
+      is paused. All clients see the corrected/rolled-back state.
+    smoke_test: >
+      Integration test: award 3 picks → correct price of pick 2 (valid) → assert ledger updated →
+      attempt price correction that would make pick 3 illegal → assert rejection → rollback pick 3
+      → assert PlayerAuction.status=PENDING, RosterEntry.active=false, budget restored.
+    layers:
+      db:
+        - Acquisition.active (bool; set false on supersede/rollback — never deleted)
+        - RosterEntry.active (bool; set false on rollback — never deleted)
+        - BudgetLedgerEntry compensating rows (on rollback: new row reversing the debit)
+        - DraftEvent rows: PRICE_CORRECTED, ROLLBACK_STARTED, ROLLBACK_COMPLETED, ACQUISITION_SUPERSEDED
+      api:
+        - POST /drafts/:id/correct-price (body: acquisition_id, new_price_minor)
+          Gated by ledger replay: replay team's ledger forward from pick's resolution_sequence under corrected price; reject if any later pick becomes illegal
+        - POST /drafts/:id/rollback (body: n_picks; default 1)
+          Draft must be PAUSED first; undo last N picks in strict reverse resolution_sequence order; single all-or-nothing transaction
+        - WS broadcast: PRICE_CORRECTED, ROLLBACK_COMPLETED events
+      ui:
+        - Commissioner Console: Correction panel (pick selector, new price input, ledger preview)
+        - Commissioner Console: Rollback panel (confirm dialog showing which picks will be undone)
+        - Draft Board: corrected/rolled-back picks highlighted
+    depends_on: [MOD-003]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-006
+    name: draft-completion-and-reports
+    description: >
+      Draft completion flow, post-draft report generation, ESPN-compatible roster worksheet export,
+      and SendGrid email delivery. Also covers Nominator Match (one-per-draft tie-at-current-price
+      right) and final auto-nomination on empty queue.
+    demo_criteria: >
+      All players are awarded. Draft status moves to COMPLETE. Commissioner exports the ESPN
+      roster entry worksheet (formatted XLSX/CSV). Owners receive a Draft Summary Report email
+      via SendGrid. Nominator Match fires correctly and is rejected for a second use.
+    smoke_test: >
+      Integration test: award all players → assert Draft.status=COMPLETE → GET /drafts/:id/report
+      → assert report contains all acquisitions → GET /drafts/:id/espn-worksheet → assert
+      entry-order format → assert SENDGRID stub called with correct addresses.
+    layers:
+      db:
+        - Draft.status=COMPLETE transition (all PlayerAuctions AWARDED)
+        - DraftSummaryReport (generated snapshot: team rosters, spend, remaining budget)
+        - NominatorMatch.used (bool per team per draft; set true on use; never reset)
+        - DraftEvent: NOMINATOR_MATCH_USED, NOMINATOR_MATCH_CONSUMED (second attempt rejection)
+      api:
+        - WS command: NOMINATOR_MATCH (one-per-auction tie at current price; first receipt wins via command queue)
+        - Draft completion detection: last PlayerAuction AWARDED → auto-transition to COMPLETE
+        - GET /drafts/:id/report (DraftSummaryReport JSON)
+        - GET /drafts/:id/espn-worksheet (formatted XLSX or CSV in ESPN entry-order format)
+        - POST /drafts/:id/send-report (triggers SendGrid email to all team owners)
+        - SendGrid integration (Phase 9 wire; stub returns 202 until wired)
+      ui:
+        - Draft Complete screen (final standings, team rosters, total spend)
+        - Export worksheet button (downloads ESPN-format file)
+        - "Send summary email" button (Commissioner Console)
+        - Nominator Match button in Draft Room (shown only if not yet used; disabled after use)
+    depends_on: [MOD-003]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-007
+    name: phase2b-data-adapters
+    description: >
+      Additional player data ingestion adapters for Phase 2b: ESPN AAV PDF (pdfjs-dist, worker_threads),
+      FantasyPros API, and Excel/XLSX (SheetJS, pre-formatted to CSV schema). All adapters feed
+      the same normalization pipeline as the Phase 2a CSV adapter.
+    demo_criteria: >
+      Commissioner imports player data from an ESPN PDF, a FantasyPros API pull, and an Excel
+      file. In each case, players appear in the dataset with correct AAV and projection data.
+    smoke_test: >
+      POST /leagues/:id/draft-dataset with ESPN PDF → assert players parsed → status=VALIDATED.
+      POST with Excel file → same. POST with FantasyPros API key → same.
+    layers:
+      api:
+        - server/src/player/adapters/espn-pdf.ts (pdfjs-dist; worker_threads; defensive parsing)
+        - server/src/player/adapters/fantasypros.ts (API fetch; normalize to standard schema)
+        - server/src/player/adapters/excel.ts (SheetJS xlsx; read rows; pass to normalization pipeline)
+        - All adapters implement the same PlayerAdapter interface as the CSV adapter
+      ui:
+        - Commissioner Console: adapter selector in Dataset Import screen (CSV / Excel / ESPN PDF / FantasyPros)
+    depends_on: [MOD-001]
+    cloud_services: [svc-002]
+
+  - id: MOD-008
+    name: owner-strategy-and-war-room
+    description: >
+      Owner private strategy tools (Target Values, Watch List, Nomination Queue management)
+      and the War Room screen (analytics + synchronized second-screen view). Owner Target Values
+      are never broadcast to other teams. Watch List never auto-nominates.
+    demo_criteria: >
+      Owner sets private Target Values for players. War Room shows live auction state synchronized
+      with the Draft Room. Watch List items appear in the owner's strategy panel but never
+      trigger automatic nomination.
+    smoke_test: >
+      POST /drafts/:id/target-values (owner only) → GET same → assert values not in WS broadcast.
+      Open War Room in second tab → assert it mirrors Draft Room state with <200ms lag.
+    layers:
+      db:
+        - OwnerTargetValue (per owner per player per draft; private; never broadcast)
+        - WatchListItem (per owner; manual only; never auto-nominates)
+        - NominationQueueItem (per owner; ordered; auto-nominates when it is the owner's turn)
+      api:
+        - POST/GET /drafts/:id/target-values (private to the requesting team's session)
+        - POST/DELETE /drafts/:id/watch-list (add/remove player from Watch List)
+        - POST/PUT/DELETE /drafts/:id/nomination-queue (manage queue order)
+        - War Room WS subscription: same DraftEvent stream as Draft Room; no extra endpoints
+      ui:
+        - War Room screen (live bid display, player tiers, historical bid analytics, budget tracker)
+        - Strategy panel: Target Values table, Watch List, Nomination Queue (Draft Room sidebar)
+    depends_on: [MOD-002]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-009
+    name: whammy
+    description: >
+      Optional commissioner-configured Whammy feature: random budget/entertainment events that
+      flow through the BudgetLedgerEntry system. Commissioner triggers Whammies manually from
+      the console.
+    demo_criteria: >
+      Commissioner fires a Whammy targeting a team. The team's budget changes by the Whammy
+      amount. A WHAMMY_APPLIED event broadcasts to all clients. The BudgetLedger shows the entry.
+    smoke_test: >
+      POST /drafts/:id/whammy (commissioner; body: team_id, amount_minor, description)
+      → assert BudgetLedgerEntry created → assert WHAMMY_APPLIED broadcast → assert
+      DraftTeamState.remaining_budget updated.
+    layers:
+      db:
+        - WhammyConfig (per-league: enabled, max_amount_minor, allowed_event_types)
+        - BudgetLedgerEntry with entry_type=WHAMMY
+        - DraftEvent: WHAMMY_APPLIED
+      api:
+        - POST /drafts/:id/whammy (commissioner only; validates against WhammyConfig constraints)
+        - WS broadcast: WHAMMY_APPLIED (team_id, amount_minor, description, new_budget)
+      ui:
+        - Commissioner Console: Whammy panel (team selector, amount, description; fire button)
+        - Draft Room: Whammy notification toast (brief; shows affected team + amount)
+    depends_on: [MOD-002]
+    cloud_services: [svc-001, svc-002]

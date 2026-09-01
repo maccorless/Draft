@@ -1,0 +1,28 @@
+# cloud-readiness.yaml
+# Railway-equivalent stub — substitutes for /aah-access (AWS-only harness tooling not applicable)
+# Railway injects service coordinates as environment variables at deploy time.
+# Real URIs are not static; they are resolved at runtime from these env vars.
+
+schema_version: "1.0"
+provider: railway
+validated_at: "2026-08-31"
+note: "Manually authored — /aah-access skipped (Railway deployment; harness aah-access targets AWS only)"
+
+services:
+  - id: svc-001
+    name: Node.js API Service
+    type: web
+    description: "Fastify HTTP + WebSocket server"
+    coordinate_type: env_var
+    coordinate_env: RAILWAY_PUBLIC_DOMAIN
+    coordinate_note: "Railway injects RAILWAY_PUBLIC_DOMAIN at deploy time; WS connects to wss://$RAILWAY_PUBLIC_DOMAIN"
+    status: pending_deploy
+
+  - id: svc-002
+    name: PostgreSQL Database
+    type: managed_postgres
+    description: "Railway-managed PostgreSQL 15; backups and point-in-time recovery included"
+    coordinate_type: env_var
+    coordinate_env: DATABASE_URL
+    coordinate_note: "Railway injects DATABASE_URL (postgres://...) into the Node service at deploy time"
+    status: pending_deploy

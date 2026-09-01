@@ -1,0 +1,22 @@
+# data-readiness.yaml
+# Railway-equivalent stub — substitutes for /aah-access (AWS-only harness tooling not applicable)
+
+schema_version: "1.0"
+provider: railway
+validated_at: "2026-08-31"
+note: "Manually authored — /aah-access skipped (Railway deployment)"
+
+data_services:
+  - id: ds-001
+    cloud_service_id: svc-002
+    name: PostgreSQL (Railway-managed)
+    engine: postgresql
+    version: "15"
+    coordinate_env: DATABASE_URL
+    connection_pool:
+      driver: postgres.js
+      max_connections: 10
+    migration_tool: drizzle-orm
+    backup: railway_automatic
+    status: pending_deploy
+    notes: "State-stored model: Postgres rows are live authority. DraftEvent log is audit + WS reconnect replay only. All money fields are *_minor integers. Append-only history: compensating rows, no hard deletes."
