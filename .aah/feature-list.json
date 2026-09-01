@@ -1,7 +1,7 @@
 {
   "features": [
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-000",
       "title": "Walking Skeleton: Scaffold, Auth, Protocol, and Boot",
       "module_ref": "MOD-000",
@@ -125,7 +125,7 @@
       "passes": false
     },
     {
-      "status": "pending",
+      "status": "implementing",
       "id": "F-MOD-001",
       "title": "League Setup, Dataset Import, and Draft Creation",
       "module_ref": "MOD-001",
