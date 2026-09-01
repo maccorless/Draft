@@ -31,6 +31,11 @@ export interface DraftRuntime {
 // the command level (draft.league_id check) — not just routing.
 const draftRuntimes = new Map<string, DraftRuntime>();
 
+// ─── Draft completion flag (keyed by draft_id) ───────────────────────────────
+// Tracks whether a draft just completed in a transaction, used for post-commit broadcast.
+// ponytail: short-lived flag; set inside tx scope, read immediately after commit.
+const draftCompletedMap = new Map<string, boolean>();
+
 export function getOrCreateRuntime(draftId: string): DraftRuntime {
   let rt = draftRuntimes.get(draftId);
   if (!rt) {
@@ -911,6 +916,33 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
          })}::jsonb,
          NOW())
     `;
+
+    // ─── Draft completion check (constraint: same transaction as last award) ──
+    // After marking this auction AWARDED, check if any remain non-AWARDED.
+    const [remaining] = await tx<[{ cnt: number }]>`
+      SELECT COUNT(*)::int AS cnt
+      FROM player_auctions
+      WHERE draft_id = ${draftId} AND status != 'AWARDED'
+    `;
+    if ((remaining?.cnt ?? 1) === 0) {
+      // All auctions awarded — complete the draft
+      await tx`
+        UPDATE drafts
+        SET status = 'COMPLETE', completed_at = NOW()
+        WHERE id = ${draftId}
+      `;
+      const completeSeq = await nextDraftEventSequence(tx, draftId);
+      await tx`
+        INSERT INTO draft_events
+          (draft_id, sequence, event_type, payload, created_at)
+        VALUES
+          (${draftId}, ${completeSeq}, 'DRAFT_COMPLETE',
+           ${JSON.stringify({ draft_id: draftId })}::jsonb,
+           NOW())
+      `;
+    }
+    // Store completion flag for post-commit broadcast (hoisting out of tx scope)
+    draftCompletedMap.set(draftId, (remaining?.cnt ?? 1) === 0);
   });
 
   broadcast(draftId, {
@@ -924,6 +956,12 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
       resolution_sequence: resolutionSequence!,
     },
   });
+
+  // Broadcast DRAFT_COMPLETE after commit if draft just completed
+  if (draftCompletedMap.get(draftId)) {
+    draftCompletedMap.delete(draftId);
+    broadcast(draftId, { type: 'DRAFT_COMPLETE', payload: { draft_id: draftId } });
+  }
 }
 
 // ─── Start/stop award timer for a draft ──────────────────────────────────────
@@ -945,4 +983,169 @@ export function stopAwardTimer(draftId: string): void {
     clearInterval(rt.awardTimer);
     rt.awardTimer = null;
   }
+}
+
+// ─── Nominator Match command ──────────────────────────────────────────────────
+
+export interface NominatorMatchResult {
+  accepted: boolean;
+  eventType: 'NOMINATOR_MATCH_USED' | 'NOMINATOR_MATCH_CONSUMED' | 'REJECTED';
+  reason?: string;
+  price_minor?: number;
+}
+
+/**
+ * Process NOMINATOR_MATCH WS command through the per-draft serialized queue.
+ *
+ * Valid use: timer running, requesting team does not lead, another team leads.
+ * - Sets NominatorMatch.used = true in same transaction as BidAttempt.
+ * - Records NOMINATOR_MATCH_USED DraftEvent.
+ * - Ties the current bid (does not raise it); new_leader = teamId.
+ *
+ * Invalid use (already used): appends NOMINATOR_MATCH_CONSUMED event.
+ * Other rejections: returns REJECTED with a reason, no state change.
+ */
+export async function processNominatorMatchCommand({
+  draftId,
+  teamId,
+  sql,
+}: {
+  draftId: string;
+  teamId: string;
+  sql: postgres.Sql;
+}): Promise<NominatorMatchResult> {
+  // Find the open player auction for this draft
+  const auctionRows = await sql<Array<{
+    id: string;
+    current_bid_minor: number;
+    current_leader_id: string | null;
+    rebid_deadline: Date | null;
+    nomination_deadline: Date | null;
+  }>>`
+    SELECT id, current_bid_minor, current_leader_id, rebid_deadline, nomination_deadline
+    FROM player_auctions
+    WHERE draft_id = ${draftId} AND status = 'OPEN'
+    LIMIT 1
+  `;
+
+  const auction = auctionRows[0];
+  if (!auction) {
+    return { accepted: false, eventType: 'REJECTED', reason: 'No active auction' };
+  }
+
+  // Timer must be active (rebid_deadline or nomination_deadline in the future)
+  const now = new Date();
+  const deadline = auction.rebid_deadline ?? auction.nomination_deadline;
+  if (!deadline || deadline <= now) {
+    return { accepted: false, eventType: 'REJECTED', reason: 'Timer not active' };
+  }
+
+  // Requesting team must not already lead
+  if (auction.current_leader_id === teamId) {
+    return { accepted: false, eventType: 'REJECTED', reason: 'Requesting team already leads' };
+  }
+
+  // Another team must currently lead (bid > 0 and a leader is set)
+  if (!auction.current_leader_id || auction.current_bid_minor === 0) {
+    return { accepted: false, eventType: 'REJECTED', reason: 'No competing bid to match' };
+  }
+
+  // Check NominatorMatch state for this team
+  const nmRows = await sql<Array<{ id: string; used: boolean }>>`
+    SELECT id, used FROM nominator_matches
+    WHERE draft_id = ${draftId} AND team_id = ${teamId}
+    LIMIT 1
+  `;
+  const nm = nmRows[0];
+
+  if (nm?.used) {
+    // Already consumed — record the rejected attempt and emit NOMINATOR_MATCH_CONSUMED
+    await sql.begin(async (tx) => {
+      await tx`
+        INSERT INTO bid_attempts
+          (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
+           server_receipt_time, accepted, rejection_reason)
+        VALUES
+          (${draftId}, ${auction.id}, ${teamId}, ${auction.current_bid_minor},
+           'NOMINATOR_MATCH', NOW(), false, 'NOMINATOR_MATCH_CONSUMED')
+      `;
+      const seq = await nextDraftEventSequence(tx, draftId);
+      await tx`
+        INSERT INTO draft_events
+          (draft_id, sequence, event_type, team_id, player_auction_id, payload, created_at)
+        VALUES
+          (${draftId}, ${seq}, 'NOMINATOR_MATCH_CONSUMED', ${teamId}, ${auction.id},
+           ${JSON.stringify({ team_id: teamId, player_auction_id: auction.id })}::jsonb,
+           NOW())
+      `;
+    });
+    return { accepted: false, eventType: 'NOMINATOR_MATCH_CONSUMED', reason: 'NOMINATOR_MATCH_CONSUMED' };
+  }
+
+  // Valid use — execute the match in one transaction
+  await sql.begin(async (tx) => {
+    // Record accepted BidAttempt with bid_type = NOMINATOR_MATCH
+    await tx`
+      INSERT INTO bid_attempts
+        (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
+         server_receipt_time, accepted)
+      VALUES
+        (${draftId}, ${auction.id}, ${teamId}, ${auction.current_bid_minor},
+         'NOMINATOR_MATCH', NOW(), true)
+    `;
+
+    // Transfer leadership to requesting team at the same price, bump version
+    await tx`
+      UPDATE player_auctions
+      SET current_leader_id = ${teamId}, auction_version = auction_version + 1
+      WHERE id = ${auction.id}
+    `;
+
+    // Set NominatorMatch.used = true, used_at = NOW()
+    if (nm) {
+      await tx`
+        UPDATE nominator_matches SET used = true, used_at = NOW() WHERE id = ${nm.id}
+      `;
+    } else {
+      await tx`
+        INSERT INTO nominator_matches (draft_id, team_id, used, used_at)
+        VALUES (${draftId}, ${teamId}, true, NOW())
+      `;
+    }
+
+    // Keep draft_team_states.nominator_match_used in sync
+    await tx`
+      UPDATE draft_team_states
+      SET nominator_match_used = true
+      WHERE draft_id = ${draftId} AND team_id = ${teamId}
+    `;
+
+    // Append NOMINATOR_MATCH_USED DraftEvent
+    const seq = await nextDraftEventSequence(tx, draftId);
+    await tx`
+      INSERT INTO draft_events
+        (draft_id, sequence, event_type, team_id, player_auction_id, payload, created_at)
+      VALUES
+        (${draftId}, ${seq}, 'NOMINATOR_MATCH_USED', ${teamId}, ${auction.id},
+         ${JSON.stringify({
+           team_id: teamId,
+           previous_leader_id: auction.current_leader_id,
+           price_minor: auction.current_bid_minor,
+           player_auction_id: auction.id,
+         })}::jsonb,
+         NOW())
+    `;
+  });
+
+  broadcast(draftId, {
+    type: 'NOMINATOR_MATCH_USED',
+    payload: {
+      player_auction_id: auction.id,
+      team_id: teamId,
+      previous_leader_id: auction.current_leader_id,
+      price_minor: auction.current_bid_minor,
+    },
+  });
+
+  return { accepted: true, eventType: 'NOMINATOR_MATCH_USED', price_minor: auction.current_bid_minor };
 }

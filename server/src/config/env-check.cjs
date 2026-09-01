@@ -8,7 +8,7 @@
  *   cp .env.example .env
  */
 
-const REQUIRED = ['DATABASE_URL', 'JWT_SECRET', 'NODE_ENV'];
+const REQUIRED = ['DATABASE_URL', 'JWT_SECRET', 'NODE_ENV', 'SENDGRID_API_KEY'];
 
 const missing = REQUIRED.filter((name) => !process.env[name]);
 

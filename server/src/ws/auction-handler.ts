@@ -24,6 +24,7 @@ import {
   processBidCommand,
   processNominateCommand,
   processPassNomination,
+  processNominatorMatchCommand,
   registerTeamSession,
   unregisterTeamSession,
   broadcast,
@@ -359,6 +360,32 @@ export async function registerAuctionWsHandler(
               return;
             }
             await setControlMode(draftId, teamId, 'MANUAL', 'owner', sql);
+          } else if (type === 'NOMINATOR_MATCH') {
+            // One-per-draft right to tie the current high bid (CLAUDE.md §Nominator Match)
+            const teamId = claims.team_id;
+            if (!teamId) {
+              socket.send(JSON.stringify({
+                type: 'ERROR',
+                payload: { code: 'NO_TEAM', reason: 'Commissioner cannot use Nominator Match' },
+              }));
+              return;
+            }
+            const result = await processNominatorMatchCommand({ draftId, teamId, sql });
+            if (result.accepted) {
+              // broadcast() already sent NOMINATOR_MATCH_USED to all clients
+              // The sender gets the same broadcast — no extra message needed
+            } else if (result.eventType === 'NOMINATOR_MATCH_CONSUMED') {
+              // The event was already broadcast-appended; tell sender explicitly
+              socket.send(JSON.stringify({
+                type: 'NOMINATOR_MATCH_CONSUMED',
+                payload: { code: 'NOMINATOR_MATCH_CONSUMED', reason: result.reason },
+              }));
+            } else {
+              socket.send(JSON.stringify({
+                type: 'ERROR',
+                payload: { code: 'NOMINATOR_MATCH_REJECTED', reason: result.reason },
+              }));
+            }
           } else {
             socket.send(JSON.stringify({
               type: 'ERROR',

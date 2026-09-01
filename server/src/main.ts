@@ -20,6 +20,7 @@ import { registerAuctionWsHandler } from './ws/auction-handler.js';
 import { registerSessionRoutes } from './session/routes.js';
 import { registerAutoAgentRoutes } from './auction/auto-agent-routes.js';
 import { registerCorrectionRoutes } from './draft/corrections.js';
+import { registerReportRoutes } from './draft/reports.js';
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
@@ -117,6 +118,7 @@ export async function buildServer() {
   await registerSessionRoutes(server, sql);
   await registerAutoAgentRoutes(server, sql);
   await registerCorrectionRoutes(server, sql);
+  await registerReportRoutes(server, sql);
 
   return server;
 }
