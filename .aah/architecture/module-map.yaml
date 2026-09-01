@@ -39,9 +39,9 @@ modules:
         - POST /auth/site (site password; returns league list)
         - POST /auth/league/:id (commissioner or team password; returns JWT)
         - Fastify server with Pino logger + pino-opentelemetry-transport
-        - @fastify/jwt plugin; auth_epoch re-read from DB in preHandler hook on every command
-        - @node-rs/bcrypt for password hashing (work factor 12)
-        - @fastify/rate-limit on auth routes (in-memory, 5 failures/IP/min)
+        - "@fastify/jwt plugin; auth_epoch re-read from DB in preHandler hook on every command"
+        - "@node-rs/bcrypt for password hashing (work factor 12)"
+        - "@fastify/rate-limit on auth routes (in-memory, 5 failures/IP/min)"
       crash_recovery:
         - On startup: query all Draft rows with status=RUNNING; update to PAUSED + emit DRAFT_PAUSED event
       ui:
@@ -187,8 +187,8 @@ modules:
         - WS command: RESUME_MANUAL (explicit owner action to restore manual control)
       ui:
         - Auto-Agent config panel in Draft Room (willingness percentage slider)
-        - "Auto-Agent active" status indicator (visible to all teams)
-        - "Resume manual control" button (only visible to the reconnected owner)
+        - Auto-Agent active status indicator (visible to all teams)
+        - Resume manual control button (only visible to the reconnected owner)
     depends_on: [MOD-003]
     cloud_services: [svc-001, svc-002]
 
@@ -214,10 +214,8 @@ modules:
         - BudgetLedgerEntry compensating rows (on rollback: new row reversing the debit)
         - DraftEvent rows: PRICE_CORRECTED, ROLLBACK_STARTED, ROLLBACK_APPLIED, ACQUISITION_SUPERSEDED
       api:
-        - POST /drafts/:id/corrections/price (body: acquisition_id, new_price_minor)
-          Gated by ledger replay: replay team's ledger forward from pick's resolution_sequence under corrected price; reject if any later pick becomes illegal
-        - POST /drafts/:id/rollback (body: count; default 1)
-          Draft must be PAUSED first; undo last N picks in strict reverse resolution_sequence order; single all-or-nothing transaction
+        - POST /drafts/:id/corrections/price — gated by ledger replay; reject if any later pick becomes illegal
+        - POST /drafts/:id/rollback (body: count; default 1) — draft must be PAUSED; undoes last N picks in reverse resolution_sequence order; all-or-nothing transaction
         - WS broadcast: PRICE_CORRECTED, ROLLBACK_APPLIED events
       ui:
         - Commissioner Console: Correction panel (pick selector, new price input, ledger preview)
@@ -256,7 +254,7 @@ modules:
       ui:
         - Draft Complete screen (final standings, team rosters, total spend)
         - Export worksheet button (downloads ESPN-format file)
-        - "Send summary email" button (Commissioner Console)
+        - Send summary email button (Commissioner Console)
         - Nominator Match button in Draft Room (shown only if not yet used; disabled after use)
     depends_on: [MOD-003]
     cloud_services: [svc-001, svc-002]

@@ -1,0 +1,507 @@
+generated_at: '2026-09-01T14:08:29.918522+00:00'
+project: Draft
+stack:
+  language: ''
+  framework: ''
+  domain: ''
+sources:
+- type: company
+  file: knowledge/BUILD_PLAN.md
+  name: Extracted from BUILD_PLAN.md
+  rules_loaded: 18
+  extraction: heuristic
+- type: company
+  file: knowledge/PRD.md
+  name: Extracted from PRD.md
+  rules_loaded: 46
+  extraction: heuristic
+- type: company
+  file: knowledge/data-model.md
+  name: Extracted from data-model.md
+  rules_loaded: 28
+  extraction: heuristic
+- type: company
+  file: knowledge/screen-information-architecture.md
+  name: Extracted from screen-information-architecture.md
+  rules_loaded: 19
+  extraction: heuristic
+- type: company
+  file: knowledge/state-machine-flows.md
+  name: Extracted from state-machine-flows.md
+  rules_loaded: 29
+  extraction: heuristic
+- type: industry-default
+  file: industry-defaults.yaml
+  rules_loaded: 22
+rules:
+- id: EXTRACTED-022
+  category: conventions
+  priority: critical
+  description: The server must never silently turn an entered `$47` into another amount.
+  source: company
+- id: EXTRACTED-046
+  category: conventions
+  priority: critical
+  description: Disconnect recovery must respect multi-window ownership. Entertainment
+    features must never compromise auction correctness.
+  source: company
+- id: TS-SEC-001
+  category: security
+  priority: critical
+  description: No hardcoded credentials, API keys, tokens, or secrets in source code
+    or client-side bundles.
+  remediation: Use environment variables with typed config objects, or a secrets manager.
+  source: industry-default
+- id: TS-SEC-002
+  category: security
+  priority: critical
+  description: 'Prevent XSS: never insert unsanitized user input into innerHTML or
+    dangerouslySetInnerHTML.'
+  remediation: Use textContent, sanitize with DOMPurify, or use framework-provided
+    escaping.
+  source: industry-default
+- id: RX-SEC-001
+  category: security
+  priority: critical
+  description: Never use dangerouslySetInnerHTML with unsanitized user input. If HTML
+    rendering is required, sanitize with DOMPurify first.
+  remediation: Use DOMPurify.sanitize(userInput) before passing to dangerouslySetInnerHTML,
+    or avoid it entirely.
+  source: industry-default
+- id: RX-SEC-002
+  category: security
+  priority: critical
+  description: Never store secrets, API keys, or tokens in client-side code, localStorage,
+    or sessionStorage. Use httpOnly cookies for auth tokens.
+  remediation: Move secrets to server-side. Store auth tokens in httpOnly, secure,
+    sameSite cookies.
+  source: industry-default
+- id: PG-SEC-001
+  category: security
+  priority: critical
+  description: Always use parameterized queries or ORM methods. Never concatenate
+    user input into SQL strings, even for table/column names.
+  remediation: Use bind parameters ($1, %s) or ORM query builders. For dynamic identifiers,
+    use a whitelist.
+  source: industry-default
+- id: EXTRACTED-001
+  category: authentication
+  priority: high
+  description: Postgres rows (`DraftTeamState`, `PlayerAuction`, `Acquisition`, `RosterEntry`,
+    ledger) are live authority; the `DraftEvent` log exists for audit and WebSocket
+    reconnect replay ("what did I miss"), not for reconstructing arbitrary past state
+    — bounded rollback means we never need to.
+  source: company
+- id: EXTRACTED-002
+  category: conventions
+  priority: high
+  description: '**DraftEvent and its row effects commit in the same transaction, always.**
+    Never a separate write.'
+  source: company
+- id: EXTRACTED-003
+  category: observability
+  priority: high
+  description: '`sequence` is allocated from a per-draft counter inside that transaction,
+    so the event log and the materialized rows can never diverge — this is what makes
+    reconnect replay trustworthy.'
+  source: company
+- id: EXTRACTED-004
+  category: conventions
+  priority: high
+  description: '**In-memory state updates only after commit succeeds.** On commit
+    failure, in-memory state is untouched and the command is rejected back to its
+    client — never partially applied.'
+  source: company
+- id: EXTRACTED-005
+  category: architecture
+  priority: high
+  description: On restart, any `Draft` found `RUNNING` is force-restored to `PAUSED`
+    (never resumed against an already-expired deadline, which would otherwise auto-award
+    the live auction to whoever led at crash time with no human check) — see `state-machine-flows.md`
+    §25.
+  source: company
+- id: EXTRACTED-006
+  category: architecture
+  priority: high
+  description: Restricting in-place correction to price (which never changes eligibility
+    or cascades to other teams) removes the need to validate a second team's feasibility
+    inline.
+  source: company
+- id: EXTRACTED-007
+  category: conventions
+  priority: high
+  description: All draft state, timers, nomination cursors, command queues, and WS
+    broadcast groups are keyed by `draft_id` — never a module-level singleton.
+  source: company
+- id: EXTRACTED-008
+  category: authentication
+  priority: high
+  description: '**Acceptance:** `npm run dev` starts server + web; web shows "connected";
+    two browser tabs can open two different fake `draft_id`s and receive independent
+    echoes; a socket that never sends `AUTH` is closed after ~5s; `npm test` runs;
+    typechecker runs clean.'
+  source: company
+- id: EXTRACTED-010
+  category: architecture
+  priority: high
+  description: Nomination audio flow (§12), presentation-only, never blocks the auction.
+    On process restart, any `RUNNING` Draft comes back `PAUSED`, never resumed against
+    a stale expired deadline (§25).
+  source: company
+- id: EXTRACTED-011
+  category: conventions
+  priority: high
+  description: '- **Bidding cadence (§24, corrects an earlier gap):** the trigger
+    is *not* "react to losing leadership" alone — that never fires for an agent that''s
+    never held the lead, so it would never place a first competing bid.'
+  source: company
+- id: EXTRACTED-012
+  category: conventions
+  priority: high
+  description: '**Acceptance:** an owner can maintain all four private lists from
+    the lobby before the draft starts, and continue to during the draft; Watch List
+    never triggers auto-nomination; Nomination Queue does.'
+  source: company
+- id: EXTRACTED-013
+  category: conventions
+  priority: high
+  description: A winner or player change, or a failed replay, always redirects to
+    rollback.
+  source: company
+- id: EXTRACTED-014
+  category: observability
+  priority: high
+  description: '- Whammy financial effects must be undoable generically by Phase 7''s
+    rollback (any ledger entry after the rollback''s target `resolution_sequence`
+    is reversed the same way any other entry is, purely by sequence — nothing Whammy-specific)
+    — verify this holds rather than adding Whammy-specific rollback logic.'
+  source: company
+- id: EXTRACTED-015
+  category: conventions
+  priority: high
+  description: '- Draft Summary Report generation (state-machine-flows.md §22, PRD
+    §36.4): league summary (visible to all owners, no toggle) + per-team `DraftTeamReport`
+    rows, always available in-app; emailed to each owner (`Team.owner_email`) and
+    the commissioner if external email delivery is enabled (stub the email-send interface
+    now, wire real SendGrid later — future integration per PRD §4.4).'
+  source: company
+- id: EXTRACTED-020
+  category: conventions
+  priority: high
+  description: '- never automatically nominates; - may be unordered or optionally
+    sorted; - may contain notes/targets; - allows `Nominate` when it is the owner''s
+    turn.'
+  source: company
+- id: EXTRACTED-021
+  category: conventions
+  priority: high
+  description: It is not required to begin at $1.
+  source: company
+- id: EXTRACTED-023
+  category: conventions
+  priority: high
+  description: '- available only while the normal bidding timer is active; - nominator
+    cannot already be high bidder; - another team must currently lead; - UI displays
+    exact action, e.g.'
+  source: company
+- id: EXTRACTED-024
+  category: conventions
+  priority: high
+  description: '- enabled/disabled; - informational-only/warning/enforcement; - late-bid
+    threshold; - number of qualifying late bids before penalty; - minimum remaining
+    time required while penalized; - penalty duration in subsequent Player Auctions.'
+  source: company
+- id: EXTRACTED-025
+  category: conventions
+  priority: high
+  description: Penalty must be visible to the affected owner and commissioner.
+  source: company
+- id: EXTRACTED-026
+  category: conventions
+  priority: high
+  description: '`maximum legal bid = remaining budget - mandatory reserve for other
+    required remaining roster spots`'
+  source: company
+- id: EXTRACTED-029
+  category: conventions
+  priority: high
+  description: It must not become an opaque strategic optimizer.
+  source: company
+- id: EXTRACTED-032
+  category: conventions
+  priority: high
+  description: It must not delay the next nomination.
+  source: company
+- id: EXTRACTED-033
+  category: conventions
+  priority: high
+  description: Correction never erases history.
+  source: company
+- id: EXTRACTED-034
+  category: conventions
+  priority: high
+  description: '**Rollback (winner/player changes, or when the replay above fails).**
+    Any change to *who* won a pick or *which player* was awarded always goes through
+    rollback, never in place — those changes can cascade into roster-slot and budget
+    legality for other picks in ways that aren''t safe to patch surgically.'
+  source: company
+- id: EXTRACTED-035
+  category: conventions
+  priority: high
+  description: Rollback undoes the most recently resolved picks in reverse order,
+    one at a time, back through and including the target pick, as a single all-or-nothing
+    operation — the draft must be paused first.
+  source: company
+- id: EXTRACTED-036
+  category: conventions
+  priority: high
+  description: Displayed remaining budget must reconcile with ledger state.
+  source: company
+- id: EXTRACTED-038
+  category: conventions
+  priority: high
+  description: Email delivery failure never removes in-app report availability.
+  source: company
+- id: EXTRACTED-040
+  category: conventions
+  priority: high
+  description: Client countdowns never determine the outcome.
+  source: company
+- id: EXTRACTED-041
+  category: conventions
+  priority: high
+  description: validate expected version where required; 7.
+  source: company
+- id: EXTRACTED-042
+  category: conventions
+  priority: high
+  description: 'A reconnecting owner must recover:'
+  source: company
+- id: EXTRACTED-043
+  category: conventions
+  priority: high
+  description: Owner should never need to guess whether a bid was accepted.
+  source: company
+- id: EXTRACTED-044
+  category: conventions
+  priority: high
+  description: MVP should contain the capabilities required to run the intended real
+    league.
+  source: company
+- id: EXTRACTED-045
+  category: conventions
+  priority: high
+  description: Given commissioner sets a scheduled start date/time for the draft Then
+    all connected owners see the scheduled start time And the draft does not automatically
+    transition to RUNNING at that time And commissioner must still explicitly start
+    the draft.
+  source: company
+- id: TS-TYPE-001
+  category: type_safety
+  priority: high
+  description: Never use 'any' type. Use 'unknown' for truly unknown types and narrow
+    with type guards.
+  remediation: Replace 'any' with specific types, union types, generics, or 'unknown'
+    with runtime checks.
+  source: industry-default
+- id: TS-TYPE-002
+  category: type_safety
+  priority: high
+  description: 'Enable strict mode in tsconfig.json: strict: true (includes strictNullChecks,
+    noImplicitAny, strictFunctionTypes).'
+  remediation: 'Set "strict": true in tsconfig.json compilerOptions.'
+  source: industry-default
+- id: TS-TEST-001
+  category: testing
+  priority: high
+  description: New feature code must have at least 80% line coverage with functional
+    tests. No mock frameworks allowed.
+  remediation: Add functional tests with real services. Use type-safe test utilities.
+  source: industry-default
+- id: TS-ERR-001
+  category: error_handling
+  priority: high
+  description: Define typed error classes instead of throwing plain strings or generic
+    Error. Use Result types for recoverable failures.
+  remediation: Create custom error classes extending Error, or use a Result<T, E>
+    pattern.
+  source: industry-default
+- id: RX-ARCH-001
+  category: architecture
+  priority: high
+  description: 'Follow React hooks rules: only call hooks at the top level (never
+    inside loops, conditions, or nested functions). Only call hooks from React function
+    components or custom hooks.'
+  remediation: Move hook calls to the top level of the component function. Extract
+    conditional logic below the hook calls.
+  source: industry-default
+- id: RX-ARCH-002
+  category: architecture
+  priority: high
+  description: Components should be small and focused on one responsibility. Extract
+    reusable UI into shared components. Keep business logic out of components — use
+    custom hooks or service modules.
+  remediation: Split large components. Move data fetching to custom hooks. Move business
+    logic to utility modules.
+  source: industry-default
+- id: RX-A11Y-001
+  category: accessibility
+  priority: high
+  description: All interactive elements must be keyboard accessible. Use semantic
+    HTML (button, a, input) instead of div/span with onClick. Add aria-label for icon-only
+    buttons.
+  remediation: Replace <div onClick> with <button>. Add aria-label, role, and tabIndex
+    where needed.
+  source: industry-default
+- id: PG-SEC-002
+  category: security
+  priority: high
+  description: Use least-privilege database roles. Application should connect with
+    a role that has only SELECT/INSERT/UPDATE/DELETE — not SUPERUSER, CREATEDB, or
+    DROP.
+  remediation: Create a dedicated application role with GRANT only on needed tables
+    and operations.
+  source: industry-default
+- id: PG-PERF-001
+  category: performance
+  priority: high
+  description: Add indexes on columns used in WHERE, JOIN, and ORDER BY clauses for
+    tables expected to exceed 10,000 rows. Include foreign key columns.
+  remediation: Add CREATE INDEX on frequently queried columns. Use EXPLAIN ANALYZE
+    to verify index usage.
+  source: industry-default
+- id: PG-PERF-002
+  category: performance
+  priority: high
+  description: Use connection pooling (PgBouncer, SQLAlchemy pool, asyncpg pool).
+    Never open a new connection per request.
+  remediation: Configure connection pool with appropriate pool_size (5-20) and max_overflow.
+    Use pool_pre_ping for stale connection detection.
+  source: industry-default
+- id: PG-DATA-001
+  category: data_integrity
+  priority: high
+  description: Use database-level constraints (NOT NULL, UNIQUE, CHECK, FOREIGN KEY)
+    to enforce data integrity. Do not rely solely on application-level validation.
+  remediation: Add constraints in migrations. Use NOT NULL, UNIQUE, CHECK constraints,
+    and FOREIGN KEY references.
+  source: industry-default
+- id: PG-DATA-002
+  category: data_integrity
+  priority: high
+  description: Wrap multi-step data modifications in explicit transactions. Use SAVEPOINT
+    for partial rollback in complex workflows.
+  remediation: Use BEGIN/COMMIT/ROLLBACK or ORM transaction context managers for multi-statement
+    operations.
+  source: industry-default
+- id: EXTRACTED-009
+  category: conventions
+  priority: medium
+  description: PDF parsing and large CSV imports should run off the main event loop
+    (a `worker_thread`, or at minimum chunked processing) — this is exactly the kind
+    of synchronous work that would otherwise stall a concurrently RUNNING draft in
+    another league sharing the process (Multi-tenancy, above).
+  source: company
+- id: EXTRACTED-016
+  category: performance
+  priority: medium
+  description: Report generation, like PDF/CSV ingestion (Phase 2b), should run off
+    the main event loop if it's heavy enough to threaten a concurrently RUNNING draft's
+    latency.
+  source: company
+- id: EXTRACTED-017
+  category: conventions
+  priority: medium
+  description: Each later screen consumes the same WS event stream; none should require
+    server-side changes to the core state machine.
+  source: company
+- id: EXTRACTED-018
+  category: testing
+  priority: medium
+  description: Each 🔒 phase should end with automated tests covering its relevant
+    `PRD.md` §44 acceptance scenarios and `data-model.md` §21 invariants before moving
+    to the next phase.
+  source: company
+- id: EXTRACTED-019
+  category: conventions
+  priority: medium
+  description: If no custom target is set, the interface should avoid showing a redundant
+    "My Target."
+  source: company
+- id: EXTRACTED-027
+  category: conventions
+  priority: medium
+  description: A brief network interruption should not immediately surrender control.
+  source: company
+- id: EXTRACTED-028
+  category: conventions
+  priority: medium
+  description: 'Per-team configuration should support:'
+  source: company
+- id: EXTRACTED-030
+  category: conventions
+  priority: medium
+  description: No recommendation such as "you should bid" or "best alternative."
+  source: company
+- id: EXTRACTED-031
+  category: conventions
+  priority: medium
+  description: 'Comparable remaining players should be selected mechanically using
+    factors such as:'
+  source: company
+- id: EXTRACTED-037
+  category: conventions
+  priority: medium
+  description: A Whammy should not normally make legal roster completion mathematically
+    impossible unless commissioner explicitly overrides.
+  source: company
+- id: EXTRACTED-039
+  category: conventions
+  priority: medium
+  description: The application should not require or assume a supported ESPN roster-write
+    API.
+  source: company
+- id: TS-TYPE-003
+  category: type_safety
+  priority: medium
+  description: Use discriminated unions instead of optional properties for mutually
+    exclusive states. Avoid boolean flags that create invalid states.
+  remediation: Model states as union types with a literal discriminant field.
+  source: industry-default
+- id: RX-A11Y-002
+  category: accessibility
+  priority: medium
+  description: All images must have meaningful alt text. Decorative images should
+    have alt=''. Form inputs must have associated labels.
+  remediation: Add alt attributes to <img>. Add <label htmlFor> for every <input>.
+  source: industry-default
+- id: RX-PERF-001
+  category: performance
+  priority: medium
+  description: Avoid unnecessary re-renders. Use React.memo for expensive pure components,
+    useMemo for expensive computations, and useCallback for callback props.
+  remediation: Wrap expensive components in React.memo(). Use useMemo/useCallback
+    where profiling shows wasted renders.
+  source: industry-default
+- id: PG-PERF-003
+  category: performance
+  priority: medium
+  description: Avoid SELECT * in production queries. Select only the columns needed
+    to reduce data transfer and allow covering indexes.
+  remediation: 'Replace SELECT * with explicit column list: SELECT id, name, email
+    FROM users.'
+  source: industry-default
+- id: TS-CONV-001
+  category: conventions
+  priority: low
+  description: Use camelCase for variables/functions, PascalCase for classes/interfaces/types/enums,
+    UPPER_SNAKE_CASE for constants.
+  remediation: Rename identifiers to match TypeScript conventions.
+  source: industry-default
+summary:
+  total: 68
+  critical: 7
+  high: 45
+  medium: 15
+  low: 1
+  disabled: []
