@@ -1,0 +1,160 @@
+{
+  "nodes": [
+    {
+      "id": "F-MOD-000",
+      "module_ref": "MOD-000",
+      "layers": [
+        "scaffold",
+        "protocol",
+        "db",
+        "api",
+        "crash_recovery",
+        "ui"
+      ]
+    },
+    {
+      "id": "F-MOD-001",
+      "module_ref": "MOD-001",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-000"
+      ]
+    },
+    {
+      "id": "F-MOD-002",
+      "module_ref": "MOD-002",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-001"
+      ]
+    },
+    {
+      "id": "F-MOD-003",
+      "module_ref": "MOD-003",
+      "layers": [
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-002"
+      ]
+    },
+    {
+      "id": "F-MOD-004",
+      "module_ref": "MOD-004",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-003"
+      ]
+    },
+    {
+      "id": "F-MOD-005",
+      "module_ref": "MOD-005",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-003"
+      ]
+    },
+    {
+      "id": "F-MOD-006",
+      "module_ref": "MOD-006",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-003"
+      ]
+    },
+    {
+      "id": "F-MOD-007",
+      "module_ref": "MOD-007",
+      "layers": [
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-001"
+      ]
+    },
+    {
+      "id": "F-MOD-008",
+      "module_ref": "MOD-008",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-002"
+      ]
+    },
+    {
+      "id": "F-MOD-009",
+      "module_ref": "MOD-009",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-002"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "F-MOD-000",
+      "to": "F-MOD-001"
+    },
+    {
+      "from": "F-MOD-001",
+      "to": "F-MOD-002"
+    },
+    {
+      "from": "F-MOD-001",
+      "to": "F-MOD-007"
+    },
+    {
+      "from": "F-MOD-002",
+      "to": "F-MOD-003"
+    },
+    {
+      "from": "F-MOD-002",
+      "to": "F-MOD-008"
+    },
+    {
+      "from": "F-MOD-002",
+      "to": "F-MOD-009"
+    },
+    {
+      "from": "F-MOD-003",
+      "to": "F-MOD-004"
+    },
+    {
+      "from": "F-MOD-003",
+      "to": "F-MOD-005"
+    },
+    {
+      "from": "F-MOD-003",
+      "to": "F-MOD-006"
+    }
+  ]
+}
