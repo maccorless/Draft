@@ -1,0 +1,119 @@
+version: 1
+project_id: "Draft"
+last_updated: "2026-09-01T03:25:00Z"
+last_updated_after_feature: "brownfield-import"
+
+tech_patterns:
+  fastify_server:
+    tool: "Fastify 4.x"
+    pattern: "REST API server + WS upgrade handler, one process hosts all concurrent drafts"
+    injection: "Imported in server/src/index.ts; WS handler registered as a Fastify plugin"
+  per_draft_command_queue:
+    tool: "Node.js in-process async queue (Map<draft_id, Queue>)"
+    pattern: "All mutating commands for one draft_id are serialized through a single in-memory queue — one command in-flight at a time. This is the primary concurrency guard, not Postgres row locks."
+    injection: "Instantiated per draft in server/src/draft/command-queue.ts; invoked from WS handler"
+  zod_shared_schemas:
+    tool: "Zod 3.x via shared-types package"
+    pattern: "All WS message shapes and REST payloads are Zod schemas defined in shared-types/src/ and imported by both server and web — never duplicated"
+    injection: "shared-types is an npm workspace package; server and web both list it as a dependency"
+  postgres_state_stored:
+    tool: "PostgreSQL 15+"
+    pattern: "State-stored (not event-sourced). Live rows are authoritative; DraftEvent log is audit + WS reconnect replay only. Append-only — supersede with active:false, never delete."
+    injection: "Server reads from DB at startup; in-memory state is only updated after successful commit"
+  ws_auction_protocol:
+    tool: "native ws 8.x"
+    pattern: "Sequence-numbered envelope {seq, draft_id, event_type, payload, server_time} from Phase 0. AUTH as first message, not query param. Per-draft broadcast groups."
+    injection: "server/src/ws/handler.ts manages connections; shared-types/protocol.ts defines envelope shape"
+
+integrations:
+  - "PostgreSQL: primary state store — all draft, bid, ledger, roster rows"
+  - "ESPN Fantasy: post-draft roster-transfer worksheet (Phase 9, planned)"
+  - "Commissioner CSV: pre-draft player data + AAV + projections import (Phase 2a)"
+  - "ESPN AAV PDF: alternate AAV import path (Phase 2b, planned)"
+  - "SendGrid (stub): optional email delivery of DraftSummaryReport per owner (Phase 9, planned)"
+
+project_knowledge:
+  - id: "w0-t1"
+    topic: "server-receipt-time-placement"
+    insight: "server_receipt_time must be timestamped in the WS message handler BEFORE any await or queuing — an event-loop stall after the stamp is fine; a stall before it can turn a valid bid into an expired one."
+    evidence: ["data-model.md", "state-machine-flows.md"]
+    wave_added: 0
+    revised_from: null
+  - id: "w0-t2"
+    topic: "in-memory-update-after-commit"
+    insight: "In-memory DraftTeamState and PlayerAuction are updated ONLY after a successful DB commit; on commit failure, in-memory state is left untouched and the command is rejected — never partially applied."
+    evidence: ["BUILD_PLAN.md", "state-machine-flows.md"]
+    wave_added: 0
+    revised_from: null
+  - id: "w0-t3"
+    topic: "auth-epoch-per-command"
+    insight: "auth_epoch must be re-read from the DB on every command (not cached from token payload) — this is the only revocation mechanism and the entire 'kick this device' story depends on it being checked live."
+    evidence: ["PRD.md", "data-model.md"]
+    wave_added: 0
+    revised_from: null
+  - id: "w0-t4"
+    topic: "money-integer-server-side"
+    insight: "All money is integer minor units (cents); all arithmetic is server-side. max_legal_bid = remaining_budget - (1 * other_required_roster_spots). Never introduce floating-point in any financial path."
+    evidence: ["data-model.md"]
+    wave_added: 0
+    revised_from: null
+  - id: "w0-t5"
+    topic: "no-module-level-singletons"
+    insight: "All draft-scoped state (in-memory maps, timers, command queues, WS broadcast groups) must be keyed by draft_id — never a module-level singleton; one deployment hosts multiple concurrent league drafts."
+    evidence: ["BUILD_PLAN.md", "CLAUDE.md"]
+    wave_added: 0
+    revised_from: null
+
+consumption_views:
+  quick_context: |
+    Draft is a real-time fantasy-football auction platform: 12-team salary-cap live auction with server-authoritative bidding, post-draft ESPN roster transfer, and optional Auto-Agent mode. One Node.js + Fastify process serves multiple concurrent league drafts, each isolated by draft_id. The data layer is state-stored Postgres (not event-sourced): live rows are the authority, DraftEvent is audit/replay only. All auction mutations flow through a per-draft serialized in-memory command queue, then commit to Postgres, then update in-memory state, then broadcast — never out of that order. The WS protocol uses a sequence-numbered envelope defined in shared-types and an AUTH handshake as the first message. Pre-implementation: all source code is planned; design documents live in knowledge/.
+  style_guide: |
+    NAMING:
+    - Money fields: *_minor (integer cents). Duration fields: *_ms. Never float for either.
+    - Enum values: SCREAMING_SNAKE_CASE matching data-model.md exactly (e.g. SECOND_BID_OPEN, MANUAL_CONNECTED).
+    - draft_id is always the isolation key; never use league_id alone to route state.
+
+    COMMAND QUEUE:
+    - All mutations for a draft_id enqueue through server/draft/command-queue.ts. Never mutate draft state directly from the WS handler.
+    - server_receipt_time: stamp in the WS handler BEFORE the first await. Do not move it inside async code.
+    - In-memory state: update ONLY after DB commit succeeds. On failure: leave in-memory untouched, reject command.
+
+    AUTH:
+    - Re-read auth_epoch from DB on every command. Never trust the epoch from the token payload alone.
+    - Both the routing layer and the auth layer independently check league_id — routing alone is not the isolation mechanism.
+    - Rate-limit password checks (site/commissioner/team): 5 failures per IP+target per minute.
+
+    DATABASE:
+    - DraftEvent and its row effects (Acquisition, RosterEntry, BudgetLedgerEntry) commit in the same transaction. Never split them.
+    - Sequence numbers for DraftEvent are allocated inside the transaction — never pre-allocate.
+    - Rollback: supersede rows with active:false + new compensating row. Never hard-delete Acquisition, RosterEntry, or BudgetLedgerEntry.
+    - On process restart: force any RUNNING Draft to PAUSED before resuming serving — never resume against a stale expired deadline.
+
+    VALIDATION (Zod):
+    - All WS and REST input shapes are Zod schemas in shared-types. Never define a parallel schema in server or web.
+    - Relative bids (PLUS_ONE, MATCH) carry expected_current_bid + auction_version — reject on mismatch. Custom bids are accepted at the exact entered amount or rejected; never silently adjust.
+
+    ROSTER ASSIGNMENT:
+    - starter-first: lowest priority unfilled starter slot, then bench. Never reshuffle prior assignments.
+
+    AUTO-AGENT:
+    - Trigger: on auction open AND on every leadership change where the team isn't leading and price is below willingness. NOT just "react to being outbid" — that never fires for an agent that never led.
+    - Auto-Agent bids through the same Phase 3 pipeline as human bids. No separate code path.
+    - AUTO_AGENT bids are exempt from anti-snipe penalty accrual; still recorded as telemetry.
+
+  known_concerns: |
+    1. PREMATURE server_receipt_time: If server_receipt_time is stamped inside any async block (after an await), an event-loop stall between the WS receive and the stamp can flip a valid bid to expired. Always stamp synchronously in the WS message handler before the first await.
+
+    2. IN-MEMORY AHEAD OF DB: Updating in-memory DraftTeamState or PlayerAuction before the DB commit completes risks a phantom state that never actually committed. Guard: all in-memory mutations are in the post-commit callback, never before.
+
+    3. AUTH EPOCH CACHE: Caching auth_epoch in the token payload and trusting it on subsequent commands means a password change or commissioner revoke doesn't take effect. The epoch must be re-read from DB on every command.
+
+    4. MODULE-LEVEL DRAFT STATE: Any singleton (timer, queue, in-memory map) that isn't keyed by draft_id will cause cross-draft contamination when two leagues draft simultaneously. Always key state by draft_id.
+
+    5. AUTO-AGENT FIRST BID: Triggering Auto-Agent only on "lost leadership" means an agent that has never held the lead on a fresh nomination never places a first competing bid. Correct trigger: also fire on auction open if price is below willingness.
+
+    6. ROLLBACK SCOPE: Rollback is strictly reverse resolution_sequence order for the most recent N picks — there is no arbitrary-point rollback. A winner/player change always requires rollback (not in-place correction). In-place correction is price-only, gated by ledger replay.
+
+    7. FLOATING POINT MONEY: Any floating-point arithmetic in a financial path will cause rounding bugs. All money is integer minor units computed server-side.
+
+    8. NOMINATION QUEUE vs WATCH LIST: Nomination Queue may auto-nominate on missed turn. Watch List NEVER auto-nominates. Conflating them would introduce unintended nominations.

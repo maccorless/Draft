@@ -1,0 +1,67 @@
+domain: "auth"
+last_updated: "2026-09-01T03:25:00Z"
+last_updated_after_feature: "brownfield-import"
+
+narrative: |
+  Password-based authentication: site password → League selection → Commissioner/Host/Team password. HMAC-signed JWT tokens carry {role, league_id, team_id?, league_auth_epoch, team_auth_epoch?, iat, exp}. The auth_epoch fields are the revocation mechanism — bumping either (on password change or commissioner revoke) invalidates all previously issued tokens for that scope. auth_epoch is re-read from the DB on every command, not trusted from the token payload. WS AUTH is sent as the first message on the socket (not a query parameter). A socket that doesn't send AUTH within ~5s is closed.
+
+source_files:
+  - path: "server/src/auth/token.ts"
+    line_range: "PLANNED"
+    role: "HMAC sign/verify, token shape, expiry (~48h)"
+  - path: "server/src/auth/middleware.ts"
+    line_range: "PLANNED"
+    role: "Per-command auth_epoch DB lookup + validation; cross-league rejection"
+  - path: "server/src/auth/rate-limit.ts"
+    line_range: "PLANNED"
+    role: "In-memory rate limiter: 5 failures per IP+target per minute on password checks"
+  - path: "server/src/league/setup.ts"
+    line_range: "PLANNED"
+    role: "Creates User+Membership rows deterministically at league setup; no lazy creation"
+
+flow_traces:
+  - name: "login"
+    description: "Owner logs in and receives a session token"
+    steps:
+      - "POST /auth/login: site password checked (hashed server config)"
+      - "League selection: verify league exists"
+      - "Role-specific password check: commissioner_password_hash / host_password_hash / team_password_hash"
+      - "rate-limit.ts: increment failure counter on bad password; reject at 5/min"
+      - "token.ts: HMAC-sign {role, league_id, team_id?, league_auth_epoch, team_auth_epoch?, iat, exp}"
+      - "Return token to client"
+  - name: "per-command-auth"
+    description: "Token validated and epoch checked on every WS command"
+    steps:
+      - "Decode + verify HMAC signature"
+      - "Check token exp"
+      - "middleware.ts: SELECT auth_epoch FROM League WHERE id = token.league_id"
+      - "Reject if DB epoch != token.league_auth_epoch"
+      - "If team command: SELECT auth_epoch FROM Team WHERE id = token.team_id; reject if mismatch"
+      - "Reject if token.league_id != command.target_draft's league_id"
+
+integration_points:
+  - target: "live-draft"
+    mechanism: "middleware.ts called at head of every command handler in the queue"
+    direction: "outbound"
+  - target: "league-config"
+    mechanism: "Reads League.auth_epoch and Team.auth_epoch from DB per command"
+    direction: "inbound"
+  - target: "ws-handler"
+    mechanism: "WS AUTH message processed first; socket closed if AUTH not received within 5s"
+    direction: "inbound"
+
+known_issues:
+  - description: "Trusting auth_epoch from the token payload (without DB re-read) means password revocation has no effect until token expiry (~48h)"
+    severity: "high"
+    workaround: "Always SELECT auth_epoch from League/Team in middleware.ts on every command; never skip this for performance"
+  - description: "A commissioner who also owns a team (commissioner_team_id set) must get a single session with both COMMISSIONER and OWNER rights — two separate logins would create confusion and two separate sessions"
+    severity: "medium"
+    workaround: "Login flow: if authenticated as commissioner and League.commissioner_team_id is set, embed team_id in the token automatically"
+
+patterns:
+  - name: "epoch-revocation"
+    description: "auth_epoch is an incrementing integer on League and Team. Bumping it (password change, explicit revoke) invalidates all tokens issued with the old epoch value. No token blacklist needed."
+    example_file: "server/src/auth/middleware.ts:PLANNED"
+  - name: "deterministic-identity"
+    description: "User and Membership rows created at league/team setup time, not lazily per login. One User per team, one for commissioner, one for host if configured."
+    example_file: "server/src/league/setup.ts:PLANNED"

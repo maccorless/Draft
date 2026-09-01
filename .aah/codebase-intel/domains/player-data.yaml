@@ -1,0 +1,57 @@
+domain: "player-data"
+last_updated: "2026-09-01T03:25:00Z"
+last_updated_after_feature: "brownfield-import"
+
+narrative: |
+  Manages the pre-draft player intelligence pipeline: importing player data (stats, projections, AAVs, tiers) from external sources into a versioned DraftDataset, resolving ambiguities, and freezing the dataset before the draft starts. Once FROZEN, the dataset is immutable — the live auction references it but cannot modify it. The live draft must remain operable even if external data sources are down (all critical data is captured at freeze time).
+
+source_files:
+  - path: "server/src/player/dataset.ts"
+    line_range: "PLANNED"
+    role: "DraftDataset lifecycle: DRAFT → VALIDATED → FROZEN"
+  - path: "server/src/player/adapters/csv.ts"
+    line_range: "PLANNED"
+    role: "Commissioner CSV ingestion adapter (Phase 2a — the reference adapter)"
+  - path: "server/src/player/adapters/espn-pdf.ts"
+    line_range: "PLANNED"
+    role: "ESPN AAV PDF parser (Phase 2b)"
+  - path: "server/src/player/match.ts"
+    line_range: "PLANNED"
+    role: "Player name/ID matching and ambiguity resolution UI support"
+
+flow_traces:
+  - name: "csv-import"
+    description: "Commissioner imports a player CSV and freezes a DraftDataset"
+    steps:
+      - "POST /leagues/:id/draft-dataset: receive CSV file"
+      - "adapters/csv.ts: parse rows, normalize player names"
+      - "match.ts: attempt player ID match against Player master; collect ambiguities"
+      - "DB: INSERT DatasetImport with match/ambiguity counts"
+      - "Commissioner reviews ambiguity UI; resolves each"
+      - "POST /draft-dataset/:id/freeze: validate all players matched"
+      - "dataset.ts: set DraftDataset.status = FROZEN, frozen_at = now()"
+      - "Frozen dataset is now safe to reference in a Draft"
+
+integration_points:
+  - target: "live-draft"
+    mechanism: "Draft.dataset_id FK; PlayerAuction.dataset_player_id FK"
+    direction: "outbound"
+  - target: "commissioner CSV"
+    mechanism: "Multipart file upload; parsed off main event loop (worker_thread or chunked)"
+    direction: "inbound"
+  - target: "ESPN AAV PDF"
+    mechanism: "PDF parsing (Phase 2b); run off main event loop"
+    direction: "inbound"
+
+known_issues:
+  - description: "Large CSV imports and PDF parsing run synchronous work that would stall the Node.js event loop and degrade a concurrently RUNNING draft"
+    severity: "high"
+    workaround: "Run ingestion in a worker_thread or at minimum chunked async processing; never block the main event loop with synchronous I/O or CPU-bound parsing"
+  - description: "ESPN PDF format can change between seasons, silently breaking the parser"
+    severity: "medium"
+    workaround: "Phase 2b: parse defensively, surface parse errors with row context, fall back to manual CSV if needed"
+
+patterns:
+  - name: "frozen-dataset"
+    description: "DraftDataset transitions DRAFT → VALIDATED → FROZEN. Once FROZEN, no mutations. The live auction references the frozen version; losing access to external data sources after freeze has no effect."
+    example_file: "server/src/player/dataset.ts:PLANNED"

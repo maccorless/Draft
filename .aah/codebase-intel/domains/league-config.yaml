@@ -1,0 +1,50 @@
+domain: "league-config"
+last_updated: "2026-09-01T03:25:00Z"
+last_updated_after_feature: "brownfield-import"
+
+narrative: |
+  Manages all pre-draft league configuration: League entity, Teams, Memberships, RosterConfiguration (slots and starter counts), ScoringConfiguration, AuctionConfiguration (timers, anti-sniping rules, budgets), and AutoAgentLeagueDefaults. Configuration is commissioner-only and must be complete before the Draft can start. Key invariant: total_roster_size == total_starter_slots + bench_slots must hold.
+
+source_files:
+  - path: "server/src/league/routes.ts"
+    line_range: "PLANNED"
+    role: "REST endpoints for league CRUD, team creation, config update"
+  - path: "server/src/league/service.ts"
+    line_range: "PLANNED"
+    role: "Business logic: config invariant validation, password generation, commissioner_team_id handling"
+  - path: "server/src/league/roster.ts"
+    line_range: "PLANNED"
+    role: "RosterConfiguration + RosterSlotDefinition management; slot definitions used by starter-first assignment in live-draft"
+
+flow_traces:
+  - name: "commissioner-setup"
+    description: "Commissioner creates a league with full configuration"
+    steps:
+      - "POST /leagues: create League row + generate commissioner_password_hash"
+      - "POST /leagues/:id/teams: create Team rows (draft_order, team_password_hash)"
+      - "service.ts: create User + Membership rows deterministically for each team and commissioner"
+      - "POST /leagues/:id/roster-config: create RosterConfiguration + RosterSlotDefinition rows"
+      - "Validate: total_roster_size == sum(starter_slots) + bench_slots"
+      - "POST /leagues/:id/auction-config: create AuctionConfiguration (timers, budgets, anti-snipe)"
+      - "Draft may now be created"
+
+integration_points:
+  - target: "auth"
+    mechanism: "Creates User/Membership rows; manages commissioner_password_hash and team_password_hash"
+    direction: "outbound"
+  - target: "live-draft"
+    mechanism: "AuctionConfiguration timers and budget defaults read at Draft creation; RosterSlotDefinition used by starter-first assignment"
+    direction: "outbound"
+
+known_issues:
+  - description: "If total_roster_size != total_starter_slots + bench_slots, DraftTeamState.remaining_budget calculation will be wrong (max_legal_bid formula depends on correct required_remaining_spots)"
+    severity: "high"
+    workaround: "Enforce invariant server-side at AuctionConfiguration save time; reject the request with a clear error, never silently correct"
+  - description: "League.commissioner_team_id is nullable — only set when the commissioner also owns a team. Login flow must check this and embed team_id in the commissioner token to avoid requiring a second login."
+    severity: "medium"
+    workaround: "service.ts login path: if role == COMMISSIONER and commissioner_team_id is set, include team_id in token payload"
+
+patterns:
+  - name: "config-not-on-league"
+    description: "RosterConfiguration, AuctionConfiguration, and ScoringConfiguration each carry league_id FK with UNIQUE(league_id) — not a nullable FK on League. League can be inserted before configs exist without circular non-nullable FK issues."
+    example_file: "server/src/league/service.ts:PLANNED"

@@ -1,0 +1,27 @@
+{
+  "seeded_at": "2026-09-01T03:25:00Z",
+  "source": "brownfield_import",
+  "sources_read": [
+    "knowledge/PRD.md",
+    "knowledge/BUILD_PLAN.md",
+    "knowledge/data-model.md",
+    "knowledge/state-machine-flows.md",
+    "knowledge/screen-information-architecture.md",
+    ".aah/codebase-intel/codebase-learning.md",
+    ".aah/codebase-intel/architecture-diagram.md",
+    ".aah/codebase-intel/dependency-graph.md",
+    ".aah/codebase-intel/tech-stack.md",
+    ".aah/manifest.yaml"
+  ],
+  "tech_patterns_seeded": 5,
+  "project_knowledge_seeded": 5,
+  "style_guide_lines": 30,
+  "known_concerns_count": 8,
+  "quick_context_generated": true,
+  "tier2_domains_created": [
+    "live-draft",
+    "auth",
+    "player-data",
+    "league-config"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "profile_version": "1.0",
+  "root": "/Users/kcorless/Projects/Software/Draft",
+  "summary": {
+    "total_files": 0,
+    "total_lines": 0,
+    "total_bytes": 0,
+    "primary_language": "unknown",
+    "languages": {},
+    "frameworks": [],
+    "data_stores": []
+  },
+  "directory_structure": {},
+  "architecture": {
+    "layers": {},
+    "layer_files": {},
+    "coupling": {
+      "afferent": [],
+      "efferent": [],
+      "instability": []
+    },
+    "hotspots": []
+  },
+  "symbols": {
+    "total": 0,
+    "files_parsed": 0,
+    "by_kind": {},
+    "top_level": []
+  },
+  "imports": {
+    "module_graph_size": 0,
+    "entries": []
+  },
+  "entry_points": [],
+  "config_files": [],
+  "data_model_files": [],
+  "api_layer_files": [],
+  "test_files_count": 0
+}
