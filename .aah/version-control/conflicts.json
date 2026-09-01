@@ -86,12 +86,28 @@
       "field": "status",
       "field_class": "status",
       "base": "planned",
-      "local": "implementing",
+      "local": "done",
       "remote": "pending",
       "remote_ref": {
         "number": 6,
         "node_id": "I_kwDOUI9K_M8AAAABPK5enQ",
         "url": "https://github.com/maccorless/Draft/issues/6"
+      },
+      "detected_at": "lifecycle-update",
+      "status": "open"
+    },
+    {
+      "conflict_id": "CF-F-MOD-006-status",
+      "feature_id": "F-MOD-006",
+      "field": "status",
+      "field_class": "status",
+      "base": "planned",
+      "local": "implementing",
+      "remote": "pending",
+      "remote_ref": {
+        "number": 7,
+        "node_id": "I_kwDOUI9K_M8AAAABPK5gnQ",
+        "url": "https://github.com/maccorless/Draft/issues/7"
       },
       "detected_at": "lifecycle-update",
       "status": "open"
