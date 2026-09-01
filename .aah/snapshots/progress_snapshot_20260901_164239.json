@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-09-01T16:44:39.408791+00:00",
+  "last_updated": "2026-09-01T16:24:31.165895+00:00",
   "current_phase": "build",
   "current_wave": null,
   "current_tier": 0,
@@ -142,12 +142,8 @@
       "timestamp": "2026-09-01T16:24:31.165341+00:00",
       "summary": "2 commit(s) made. Progress: 0/10 features passing",
       "features_completed": []
-    },
-    {
-      "timestamp": "2026-09-01T16:44:39.408429+00:00",
-      "summary": "4 commit(s) made. Progress: 0/10 features passing",
-      "features_completed": []
     }
   ],
-  "checkpoint_history": []
+  "checkpoint_history": [],
+  "snapshot_timestamp": "2026-09-01T16:42:39.872604+00:00"
 }
