@@ -8,18 +8,18 @@
       "files": []
     }
   ],
-  "overall_passed": false,
-  "verdict": "BLOCK",
-  "status": "fail",
+  "overall_passed": true,
+  "verdict": "PASS",
+  "status": "pass",
   "linting": {
-    "passed": false,
-    "status": "fail",
-    "message": "Linter reported errors (exit 2) \u2014 see details.stdout"
+    "passed": true,
+    "status": "pass",
+    "message": "Linting passed"
   },
   "static_analysis": {
     "passed": true,
     "status": "pass",
-    "message": "0 issues found (0 critical/high)"
+    "message": "Static analysis passed"
   },
   "coverage": {
     "passed": true,
@@ -30,8 +30,8 @@
     "status": "not_applicable"
   },
   "findings": {
-    "linting": "",
-    "static_analysis": ""
+    "linting": "[{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n",
+    "static_analysis": "[{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n"
   },
   "commands": {
     "linting": "npx eslint . --format=json",
@@ -41,8 +41,8 @@
     "schema_version": 2,
     "rel_path": ".",
     "branch": "main",
-    "commit_sha": "fbb8fedb0ac2426941fc1a436028d962e4ddbec8759d67d463549d2aac06cbe7",
-    "head_sha": "ca3df564dd7a582461b0d5054e110bb5f79ad171",
+    "commit_sha": "7475be7e039be9ba0c4492f8644e775cb98372a4e6bbb7e6251bf595e1c22959",
+    "head_sha": "fae53dc1872268374eea461d75e108f31f7e4865",
     "clean": true
   },
   "schema_version": 1,
@@ -58,14 +58,14 @@
       "--subject-branch",
       "main"
     ],
-    "exit_code": 1,
-    "stdout_sha256": "ff32ec3a23f166bdb07394c8081890b535cde4ee85661ab34b6ea75c00ee821c",
-    "stderr_sha256": "b6531437a7851e85ac91762622a1fd602d5ee0a73bde3f3e1f65f7472087304a",
-    "duration_ms": 7854,
-    "host_pid": 20428,
-    "timestamp": "2026-09-01T20:55:37.899151+00:00",
+    "exit_code": 0,
+    "stdout_sha256": "01ee6e07432da3c408ad62220ee6c360065dc8a8e372a4ad986f0d77803bce8c",
+    "stderr_sha256": "ff32ec3a23f166bdb07394c8081890b535cde4ee85661ab34b6ea75c00ee821c",
+    "duration_ms": 1886,
+    "host_pid": 21063,
+    "timestamp": "2026-09-01T20:56:32.517158+00:00",
     "session_secret_sha256": "866ac2d0a3e1b61fe17f129b52fb8463e1b44f606eb1edf0b7269fd88971a035",
     "schema_version": 1,
-    "signature": "724db1e8dc29b9d6118473a0e7a7edd455fa4f697226bec6f0074fae699988c1"
+    "signature": "35c92d7010034ce426c04de205eebd10c67f153beb7200b49adba3cc0f3a9fc3"
   }
 }
