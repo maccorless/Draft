@@ -17,7 +17,7 @@ export default defineConfig({
     // Integration tests share draft_test DB — run files sequentially to prevent state leakage
     fileParallelism: false,
     globalSetup: './vitest.globalSetup.ts',
-    reporters: ['default', ['junit', { outputFile: 'test-results/junit.xml' }]],
+    reporters: ['dot', ['junit', { outputFile: 'test-results/junit.xml' }]],
     // Provide placeholder values for all required env vars so tests that import
     // buildServer do not fail the startup env check. Real values live in .env
     // and are never committed. Tests that need specific behavior override these.
