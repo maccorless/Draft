@@ -1,0 +1,71 @@
+{
+  "scope": "project",
+  "wave": null,
+  "scopes": [
+    {
+      "stack": "node",
+      "root": ".",
+      "files": []
+    }
+  ],
+  "overall_passed": false,
+  "verdict": "BLOCK",
+  "status": "fail",
+  "linting": {
+    "passed": false,
+    "status": "fail",
+    "message": "Linter reported errors (exit 2) \u2014 see details.stdout"
+  },
+  "static_analysis": {
+    "passed": true,
+    "status": "pass",
+    "message": "0 issues found (0 critical/high)"
+  },
+  "coverage": {
+    "passed": true,
+    "status": "not_applicable"
+  },
+  "type_check": {
+    "passed": true,
+    "status": "not_applicable"
+  },
+  "findings": {
+    "linting": "",
+    "static_analysis": ""
+  },
+  "commands": {
+    "linting": "npx eslint . --format=json",
+    "static_analysis": "npx eslint . --rule '{\"no-eval\": \"error\"}' --format=json"
+  },
+  "subject": {
+    "schema_version": 2,
+    "rel_path": ".",
+    "branch": "main",
+    "commit_sha": "fbb8fedb0ac2426941fc1a436028d962e4ddbec8759d67d463549d2aac06cbe7",
+    "head_sha": "ca3df564dd7a582461b0d5054e110bb5f79ad171",
+    "clean": true
+  },
+  "schema_version": 1,
+  "attestation": {
+    "method": "subprocess",
+    "command": [
+      "aah",
+      "run",
+      "core.build.quality_checks",
+      "run-project",
+      "--project-path",
+      "/Users/kcorless/Projects/Software/Draft",
+      "--subject-branch",
+      "main"
+    ],
+    "exit_code": 1,
+    "stdout_sha256": "ff32ec3a23f166bdb07394c8081890b535cde4ee85661ab34b6ea75c00ee821c",
+    "stderr_sha256": "b6531437a7851e85ac91762622a1fd602d5ee0a73bde3f3e1f65f7472087304a",
+    "duration_ms": 7854,
+    "host_pid": 20428,
+    "timestamp": "2026-09-01T20:55:37.899151+00:00",
+    "session_secret_sha256": "866ac2d0a3e1b61fe17f129b52fb8463e1b44f606eb1edf0b7269fd88971a035",
+    "schema_version": 1,
+    "signature": "724db1e8dc29b9d6118473a0e7a7edd455fa4f697226bec6f0074fae699988c1"
+  }
+}
