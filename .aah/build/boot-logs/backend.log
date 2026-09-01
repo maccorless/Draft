@@ -1526,3 +1526,8 @@ Error [ERR_UNSUPPORTED_DIR_IMPORT]: Directory import '/Users/kcorless/Projects/S
 Node.js v24.16.0
 3:02:46 PM [tsx] change in ./../node_modules/drizzle-orm/pg-core/view.js Rerunning...
 {"level":30,"time":1788300169985,"pid":38162,"hostname":"US-C32WYQ02WF","msg":"Server listening at http://0.0.0.0:3001"}
+{"level":30,"time":1788300584865,"pid":38162,"hostname":"US-C32WYQ02WF","reqId":"req-1","req":{"method":"GET","url":"/health","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":60862},"msg":"incoming request"}
+{"level":30,"time":1788300584870,"pid":38162,"hostname":"US-C32WYQ02WF","reqId":"req-1","res":{"statusCode":200},"responseTime":3.582915961742401,"msg":"request completed"}
+{"level":30,"time":1788300585021,"pid":38162,"hostname":"US-C32WYQ02WF","reqId":"req-2","req":{"method":"GET","url":"/favicon.ico","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":60862},"msg":"incoming request"}
+{"level":30,"time":1788300585021,"pid":38162,"hostname":"US-C32WYQ02WF","reqId":"req-2","msg":"Route GET:/favicon.ico not found"}
+{"level":30,"time":1788300585022,"pid":38162,"hostname":"US-C32WYQ02WF","reqId":"req-2","res":{"statusCode":404},"responseTime":0.4104589819908142,"msg":"request completed"}
