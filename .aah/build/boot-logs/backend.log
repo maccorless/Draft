@@ -1,12 +1,8 @@
 {"level":30,"time":1788279757744,"pid":7507,"hostname":"US-C32WYQ02WF","msg":"Server listening at http://0.0.0.0:3001"}
 {"level":30,"time":1788279759056,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-1","req":{"method":"GET","url":"/health","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":54993},"msg":"incoming request"}
-{"level":30,"time":1788279759063,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-1","res":{"statusCode":200},"responseTime":5.99637496471405,"msg":"request completed"}
-{"level":30,"time":1788279808413,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-2","req":{"method":"GET","url":"/","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":55090},"msg":"incoming request"}
-{"level":30,"time":1788279808413,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-2","msg":"Route GET:/ not found"}
-{"level":30,"time":1788279808414,"pid":7507,"hostname":9:29:11 AM [tsx] change in ./../shared-types/src/schemas/index.ts Rerunning...
-{"level":30,"time":1788280152215,"pid":8604,"hostname":"US-C32WYQ02WF","msg":"Server listening at http://0.0.0.0:3001"}
-eq-3","req":{"method":"GET","url":"/favicon.ico","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":55090},"msg":"incoming request"}
-{"level":30,"time":1788279808622,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-3","msg":"Route GET:/favicon.ico not found"}
-{"level":30,"time":1788279808623,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-3","res":{"statusCode":404},"responseTime":0.5465420484542847,"msg":"request completed"}
-9:29:11 AM [tsx] change in ./../shared-types/src/schemas/index.ts Restarting...
-9:29:16 AM [tsx] Process didn't exit in 5s. Force killing...
+{"level":30,"time":1788279759063,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-1","res":{"statusCode":200},"responseTime":5.99637496471405,"msg":"request comple9:32:22 AM [tsx] change in ./src/main.ts Rerunning...
+{"level":50,"time":1788280343882,"pid":18305,"hostname":"US-C32WYQ02WF","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:2008:16)\n    at listenInCluster (node:net:2065:12)\n    at node:net:2274:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+9:32:27 AM [tsx] change in ./src/main.ts Rerunning...
+{"level":30,"time":1788280348127,"pid":19721,"hostname":"US-C32WYQ02WF","msg":"Server listening at http://0.0.0.0:3001"}
+..
+{"level":50,"time":1788280348127,"pid":19725,"hostname":"US-C32WYQ02WF","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:2008:16)\n    at listenInCluster (node:net:2065:12)\n    at node:net:2274:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
