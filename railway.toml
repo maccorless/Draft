@@ -1,0 +1,14 @@
+[build]
+builder = "NIXPACKS"
+
+[[services]]
+name = "server"
+source = "server"
+
+[services.deploy]
+startCommand = "npm run build && node dist/main.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[services.build]
+buildCommand = "npm install && npm run db:migrate"

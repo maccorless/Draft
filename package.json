@@ -1,0 +1,21 @@
+{
+  "name": "draft",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "server",
+    "web",
+    "shared-types"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.1",
+    "@vitest/coverage-v8": "^2.1.1"
+  }
+}
