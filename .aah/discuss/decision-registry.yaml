@@ -299,6 +299,315 @@ decisions:
   activates: []
   notes: Real-time multiplayer auction platform; none of the three available archetypes
     apply; continuing without overlay
+- slug_id: drizzle-query-style
+  area: Architecture & Technical Foundation
+  question: How should Drizzle ORM be used for DB access?
+  options_presented: []
+  options_eliminated: []
+  response: 'Hybrid: raw SQL (sql tagged template) for the resolution/bid transaction;
+    Drizzle query builder for CRUD'
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Resolution transaction (INSERT BidAttempt + DraftEvent + UPDATE PlayerAuction
+    + DraftTeamState in one BEGIN/COMMIT) uses sql tag for full control; all other
+    DB access (league, team, dataset CRUD) uses query builder for type inference
+- slug_id: rate-limiter-approach
+  area: Architecture & Technical Foundation
+  question: How to enforce auth failure rate limiting?
+  options_presented: []
+  options_eliminated: []
+  response: '@fastify/rate-limit plugin, in-memory store, minimal config on auth routes'
+  response_type: single-select
+  source: user
+  activates: []
+  notes: 'PRD §4.4 specifies 5 failures/IP/min; user confirmed keep minimal implementation;
+    private app so no distributed brute-force risk; in-memory store sufficient (single
+    Railway instance); ponytail: switch to Redis store if ever multi-instance'
+- slug_id: csv-parsing-worker
+  area: Architecture & Technical Foundation
+  question: How to handle CSV/PDF parsing off the main event loop?
+  options_presented: []
+  options_eliminated: []
+  response: node:worker_threads — spawn a worker for each import operation
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Imports are pre-draft only (DraftDataset must be FROZEN before draft starts);
+    no live-draft safety risk; worker_threads still correct for large file CPU work;
+    downgraded from severity:high to medium in known concerns since concurrent draft
+    impact is not possible per state machine
+- slug_id: package-manager
+  area: Architecture & Technical Foundation
+  question: npm or pnpm for workspace management?
+  options_presented: []
+  options_eliminated: []
+  response: npm (npm workspaces)
+  response_type: single-select
+  source: inferred
+  activates: []
+  notes: BUILD_PLAN.md specifies npm workspaces; no reason to deviate for a 3-package
+    monorepo; pre-resolved without asking
+- slug_id: password-hashing
+  area: Security, Privacy & Compliance
+  question: Which algorithm for hashing site/league/team passwords?
+  options_presented: []
+  options_eliminated: []
+  response: '@node-rs/bcrypt — Rust-native bcrypt, configurable work factor'
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Private fantasy app threat model; bcrypt appropriate; @node-rs/bcrypt chosen
+    for fast native Rust port with no node-pre-gyp compile issues on Railway; work
+    factor 12 recommended; all passwords <=72 bytes
+- slug_id: jwt-signing
+  area: Security, Privacy & Compliance
+  question: Which JWT library for HMAC-signed tokens?
+  options_presented: []
+  options_eliminated: []
+  response: '@fastify/jwt plugin'
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Native Fastify plugin; request.jwtVerify() decorator; fastify.jwt.sign()
+    for issuance; auth_epoch re-check on every command implemented as a preHandler
+    hook that calls request.jwtVerify() then reads auth_epoch from DB
+- slug_id: secrets-management
+  area: Security, Privacy & Compliance
+  question: How to manage secrets in production?
+  options_presented: []
+  options_eliminated: []
+  response: Railway env vars (production) + .env file git-ignored (local dev)
+  response_type: single-select
+  source: user
+  activates: []
+  notes: JWT_SECRET, DATABASE_URL, SENDGRID_API_KEY injected via Railway env vars;
+    local dev uses .env loaded via dotenv; .env is git-ignored; no secrets manager
+    needed at this scale
+- slug_id: postgres-pool
+  area: Data & State Architecture
+  question: Postgres driver and connection pooling strategy?
+  options_presented: []
+  options_eliminated: []
+  response: Drizzle + postgres.js (postgres npm package) with built-in connection
+    pool
+  response_type: single-select
+  source: user
+  activates: []
+  notes: postgres.js is Drizzle's native recommended Node driver; smart built-in pooling;
+    max pool size 10 sufficient for 12 concurrent users; PgBouncer not needed at this
+    scale
+- slug_id: ws-reconnect-strategy
+  area: Data & State Architecture
+  question: How should reconnecting WebSocket clients receive current state?
+  options_presented: []
+  options_eliminated: []
+  response: Full state snapshot on AUTH completion — current DraftTeamState, PlayerAuction,
+    and recent DraftEvent tail
+  response_type: single-select
+  source: user
+  activates: []
+  notes: 'Design-spec''d: snapshot-on-connect; for a 12-team draft, snapshot is small;
+    client always gets authoritative state; DraftEvent log replay delivers the snapshot
+    content; simpler than seq-based gap-fill'
+- slug_id: session-state-location
+  area: Data & State Architecture
+  question: Where does DraftClientSession (active WS connections, multi-window) state
+    live?
+  options_presented: []
+  options_eliminated: []
+  response: In-memory Map<draft_id, Map<team_id, Set<ws>>> on the server
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Fast, simple, no serialization overhead; Map resets on restart which is correct
+    — crash recovery sends RUNNING drafts to PAUSED so all clients must reconnect
+    anyway; multi-window tracked by team_id key; add Redis only if multi-instance
+    Railway needed
+- slug_id: bid-latency-target
+  area: Quality Attributes / NFRs
+  question: Bid pipeline latency target from server receipt to broadcast?
+  options_presented: []
+  options_eliminated: []
+  response: Hard p99 < 200ms end-to-end (server_receipt_time to broadcast)
+  response_type: single-select
+  source: user
+  activates: []
+  notes: 'Achievable if Postgres is co-located with server on Railway (same region);
+    the critical path is: stamp receipt time -> command queue -> validate -> DB transaction
+    -> commit -> broadcast; at 12 concurrent users this is not load-intensive; add
+    OTel histogram for bid_pipeline_duration_ms'
+- slug_id: concurrency-capacity
+  area: Quality Attributes / NFRs
+  question: How many concurrent drafts/users must the system handle?
+  options_presented: []
+  options_eliminated: []
+  response: 1-5 concurrent leagues (12-60 concurrent users)
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Covers known use case + reasonable growth; multi-draft isolation already
+    architected (per draft_id state keying); Railway container auto-scales if needed;
+    no Redis or distributed coordination required at this scale
+- slug_id: railway-topology
+  area: Deployment, Ops & Observability
+  question: How to structure deployment on Railway?
+  options_presented: []
+  options_eliminated: []
+  response: 'Two Railway services: one Railway-managed Postgres, one Node.js service;
+    same repo with railway.toml'
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Railway-managed Postgres provides backups, point-in-time recovery, and auto-injected
+    DATABASE_URL env var; Node service references it; deploy both from monorepo root;
+    co-locate in same Railway region for p99 < 200ms latency target
+- slug_id: ci-cd-pipeline
+  area: Deployment, Ops & Observability
+  question: CI/CD approach?
+  options_presented: []
+  options_eliminated: []
+  response: 'GitHub Actions: tsc --noEmit + Vitest on every PR; Railway CLI deploy
+    on merge to main'
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Type check and test gate must pass before deploy; Railway deploy action uses
+    RAILWAY_TOKEN secret; single workflow file in .github/workflows/; deploy only
+    the server service (web is served statically or separate Railway service)
+- slug_id: observability-impl
+  area: Deployment, Ops & Observability
+  question: Structured logging and observability implementation?
+  options_presented: []
+  options_eliminated: []
+  response: Pino (Fastify-native) + pino-opentelemetry-transport; bid_pipeline_duration_ms
+    histogram
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Fastify uses Pino natively; OTel transport emits structured logs to Railway
+    log aggregator; add bid_pipeline_duration_ms histogram to instrument p99 < 200ms
+    target; no trace spans needed at MVP; logger.info for draft events, logger.debug
+    for bid pipeline steps
+- slug_id: empty-nomination-queue
+  area: Solution Flow & Edge Cases
+  question: What happens when a team's nomination queue is empty and their turn expires?
+  options_presented: []
+  options_eliminated: []
+  response: System auto-nominates the highest-AAV available (not-yet-awarded) player
+    from the frozen dataset
+  response_type: single-select
+  source: user
+  activates: []
+  notes: 'On nomination timer expiry with empty queue: server runs argmax(aav_minor)
+    over DraftDataset players where player_id NOT IN resolved PlayerAuction results;
+    this player is nominated at the minimum bid; commissioner can still pause before
+    this fires if needed; PRD did not specify this behavior — user-defined policy'
+- slug_id: anti-sniping-config
+  area: Solution Flow & Edge Cases
+  question: Can the commissioner change anti-sniping extension mid-draft and when
+    does it apply?
+  options_presented: []
+  options_eliminated: []
+  response: Per-auction override allowed during draft; change applies to the NEXT
+    auction, not the currently-running one
+  response_type: single-select
+  source: user
+  activates: []
+  notes: User chose per-auction override; applying to next auction (not current) avoids
+    race with active Rebid timer; commissioner UI shows current setting and a pending-next
+    value; config stored on AuctionConfiguration with a pending_override column or
+    draft-level override that supersedes league default
+- slug_id: crash-recovery-ux
+  area: Solution Flow & Edge Cases
+  question: What do owners see when the server restarts and the draft is paused?
+  options_presented: []
+  options_eliminated: []
+  response: 'Auto-reconnect with visible status banner: ''Reconnecting...'' then ''Draft
+    paused — waiting for commissioner'''
+  response_type: single-select
+  source: user
+  activates: []
+  notes: WS client detects close event; shows reconnecting banner; retries with exponential
+    backoff (1s, 2s, 4s, max 5s); on AUTH success receives snapshot and sees PAUSED
+    state; commissioner console shows pause notification with PAUSED reason = SERVER_RESTART
+- slug_id: nominator-match-race
+  area: Solution Flow & Edge Cases
+  question: How is a simultaneous Nominator Match collision handled?
+  options_presented: []
+  options_eliminated: []
+  response: First WS receipt wins; second is rejected with NOMINATOR_MATCH_CONSUMED
+  response_type: single-select
+  source: inferred
+  activates: []
+  notes: Per-draft command queue serializes all commands; only one NOMINATOR_MATCH
+    command processes at a time; second command sees match_used=true and is rejected
+    cleanly; no special handling needed — serialization model covers this
+- slug_id: pdf-parsing-library
+  area: Integration & External Interfaces
+  question: Which library to parse ESPN AAV PDF for Phase 2b?
+  options_presented: []
+  options_eliminated: []
+  response: pdfjs-dist (Mozilla PDF.js)
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Most robust for tabular PDFs; actively maintained; run in worker_threads
+    (already decided); wrap defensively — fail loudly on parse errors with row context
+    surfaced to commissioner UI; ESPN PDF format fragility is a known:medium concern
+- slug_id: phase2b-adapters
+  area: Integration & External Interfaces
+  question: Which external player data adapters to build in Phase 2b?
+  options_presented: []
+  options_eliminated: []
+  response: 'Three adapters: ESPN AAV PDF (pdfjs-dist), FantasyPros API, Excel/XLSX
+    import (pre-formatted, no in-app transformation)'
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Excel adapter uses xlsx (SheetJS) to read .xlsx, passes rows through the
+    same normalization pipeline as the CSV adapter; user explicitly said transformation
+    happens outside the app so the XLSX schema matches the CSV schema; Sleeper and
+    nflverse deferred to future phases
+- slug_id: mobile-responsive-strategy
+  area: UI / UX
+  question: Mobile and responsive CSS approach for the draft UI?
+  options_presented: []
+  options_eliminated: []
+  response: Desktop-first; responsive CSS media query at <=768px; mobile gets simplified
+    bid/read view using shared components, not a separate mobile component
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Auction UI is information-dense (bid amounts, timers, player lists, budget
+    tables); designed for desktop; mobile breakpoint collapses to simplified view
+    via media queries and conditional rendering on shared components; no duplicate
+    component tree
+- slug_id: client-countdown
+  area: UI / UX
+  question: How to render bid countdown timer on the client?
+  options_presented: []
+  options_eliminated: []
+  response: Server sends deadline_ts (epoch ms) in snapshot; client renders Math.max(0,
+    deadline_ts - Date.now()) on 100ms setInterval
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Countdown is display-only; server_receipt_time is the real authority for
+    anti-sniping deadline enforcement; Railway NTP-synced server clock; 1-2s max client
+    clock drift is irrelevant to actual bid outcomes
+- slug_id: draft-board-loading
+  area: UI / UX
+  question: Draft board initial load and reconnect skeleton UX?
+  options_presented: []
+  options_eliminated: []
+  response: Simple loading spinner — snapshot loads in under 1s; skeleton UI can be
+    added as later polish
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Minimize UI complexity before core data layer is stable; loading spinner
+    is 5 lines; skeleton UI deferred to post-MVP polish pass
 deferred_ideas: []
 constraint_audit:
   passed: null
