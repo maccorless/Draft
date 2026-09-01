@@ -223,6 +223,18 @@ into the root first, then run the same command. Commit the configs with this mod
 
 ## Test Config
 
+- command: DATABASE_URL=postgres://localhost/draft_test JWT_SECRET=test-secret-at-least-32-chars-long npx vitest run
+- test_paths:
+  - server/src/__tests__/F-MOD-000_env-check.test.ts
+  - server/src/__tests__/F-MOD-000_health.test.ts
+  - server/src/__tests__/F-MOD-000_auth.test.ts
+  - server/src/__tests__/F-MOD-000_websocket.test.ts
+  - server/src/__tests__/F-MOD-000_crash-recovery.test.ts
+  - server/src/__tests__/F-MOD-000_schema.test.ts
+  - shared-types/src/__tests__/F-MOD-000_protocol.test.ts
+  - web/src/__tests__/F-MOD-000_lobby.test.tsx
+  - web/src/__tests__/F-MOD-000_commissioner.test.tsx
+
 ## Constraints
 
 ## Applicable Standards
