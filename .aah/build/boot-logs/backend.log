@@ -3,7 +3,10 @@
 {"level":30,"time":1788279759063,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-1","res":{"statusCode":200},"responseTime":5.99637496471405,"msg":"request completed"}
 {"level":30,"time":1788279808413,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-2","req":{"method":"GET","url":"/","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":55090},"msg":"incoming request"}
 {"level":30,"time":1788279808413,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-2","msg":"Route GET:/ not found"}
-{"level":30,"time":1788279808414,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-2","res":{"statusCode":404},"responseTime":0.4420410394668579,"msg":"request completed"}
-{"level":30,"time":1788279808622,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-3","req":{"method":"GET","url":"/favicon.ico","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":55090},"msg":"incoming request"}
+{"level":30,"time":1788279808414,"pid":7507,"hostname":9:29:11 AM [tsx] change in ./../shared-types/src/schemas/index.ts Rerunning...
+{"level":30,"time":1788280152215,"pid":8604,"hostname":"US-C32WYQ02WF","msg":"Server listening at http://0.0.0.0:3001"}
+eq-3","req":{"method":"GET","url":"/favicon.ico","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":55090},"msg":"incoming request"}
 {"level":30,"time":1788279808622,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-3","msg":"Route GET:/favicon.ico not found"}
 {"level":30,"time":1788279808623,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-3","res":{"statusCode":404},"responseTime":0.5465420484542847,"msg":"request completed"}
+9:29:11 AM [tsx] change in ./../shared-types/src/schemas/index.ts Restarting...
+9:29:16 AM [tsx] Process didn't exit in 5s. Force killing...
