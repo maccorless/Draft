@@ -18,11 +18,11 @@
           "test_cases": [],
           "dependencies": [],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:23:41Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     },
     "F-MOD-001": {
@@ -42,11 +42,11 @@
             "F-MOD-000"
           ],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:23:45Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     },
     "F-MOD-002": {
@@ -66,11 +66,11 @@
             "F-MOD-001"
           ],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:23:47Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     },
     "F-MOD-003": {
@@ -90,11 +90,11 @@
             "F-MOD-002"
           ],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:23:50Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     },
     "F-MOD-004": {
@@ -114,11 +114,11 @@
             "F-MOD-003"
           ],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:23:52Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     },
     "F-MOD-005": {
@@ -138,11 +138,11 @@
             "F-MOD-003"
           ],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:23:54Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     },
     "F-MOD-006": {
@@ -162,11 +162,11 @@
             "F-MOD-003"
           ],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:23:57Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     },
     "F-MOD-007": {
@@ -186,11 +186,11 @@
             "F-MOD-001"
           ],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:23:59Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     },
     "F-MOD-008": {
@@ -210,11 +210,11 @@
             "F-MOD-002"
           ],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:24:03Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     },
     "F-MOD-009": {
@@ -234,11 +234,11 @@
             "F-MOD-002"
           ],
           "layer": null,
-          "status": "pending"
+          "status": "planned"
         }
       },
       "remote_updated_at": "2026-09-01T14:24:05Z",
-      "lifecycle": "pending",
+      "lifecycle": "planned",
       "status_label": "aah:pending"
     }
   }
