@@ -1,0 +1,10 @@
+services:
+  - name: backend
+    cwd: server
+    command: PORT=3001 node --env-file=../.env ../node_modules/.bin/tsx watch src/main.ts
+    health: http://localhost:3001/health
+
+  - name: frontend
+    cwd: web
+    command: npm run dev
+    health: http://localhost:5173
