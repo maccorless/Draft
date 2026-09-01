@@ -3,9 +3,13 @@
   "current_phase": "init",
   "current_wave": null,
   "current_tier": 0,
-  "last_completed_feature": "F-MOD-001",
+  "last_completed_feature": "F-MOD-002",
   "in_progress_features": [],
-  "known_issues": [],
+  "known_issues": [
+    "F-MOD-002: auto-nomination on expired turn not yet implemented (requires nomination cursor timer)",
+    "F-MOD-002: OTel bid_pipeline_duration_ms histogram not yet instrumented",
+    "F-MOD-002: Draft Room and Draft Board UI screens not yet implemented"
+  ],
   "environment_state": "unknown",
   "next_steps": "Initialize project and begin problem statement intake",
   "session_history": [],

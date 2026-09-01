@@ -15,6 +15,8 @@ import { registerHealthRoute } from './health.js';
 import { registerWsHandler } from './ws/handler.js';
 import { registerLeagueRoutes } from './league/routes.js';
 import { registerPlayerRoutes } from './player/routes.js';
+import { registerDraftRoutes } from './auction/routes.js';
+import { registerAuctionWsHandler } from './ws/auction-handler.js';
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
@@ -107,6 +109,8 @@ export async function buildServer() {
   await registerLeagueRoutes(server, db);
   await registerPlayerRoutes(server, db);
   await registerWsHandler(server, db);
+  await registerDraftRoutes(server, db, sql);
+  await registerAuctionWsHandler(server, sql);
 
   return server;
 }
