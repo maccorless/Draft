@@ -1,0 +1,9 @@
+{
+  "module": 5,
+  "all_healthy": true,
+  "logs": ".aah/build/boot-logs/",
+  "services": [
+    {"name": "backend", "url": "http://localhost:3001/health", "http_code": 200, "healthy": true},
+    {"name": "frontend", "url": "http://localhost:5173", "http_code": 404, "healthy": true}
+  ]
+}
