@@ -1,0 +1,61 @@
+raw_statement: >
+  Build the full fantasy football auction draft platform end-to-end per the design
+  documents (PRD, data-model, state-machine-flows, screen-information-architecture,
+  BUILD_PLAN). The system conducts a real-time salary-cap auction draft for a 12-team
+  private fantasy football league, with server-authoritative bidding, post-draft ESPN
+  roster transfer, and optional Auto-Agent mode.
+
+improvement_type: initial_implementation
+# Note: project_type == brownfield (design docs present, no source code). This is an
+# initial implementation from a complete design spec — not enhancement, migration, or bug_fix.
+# The bug_fix fast-path does NOT apply; regular flow is used.
+
+target_areas:
+  - real_time_auction_engine        # nomination FSM, bid pipeline, PlayerAuction FSM, anti-sniping, timers
+  - authentication_and_auth_epoch   # site/league/team passwords, HMAC tokens, epoch revocation, rate limiting
+  - player_data_management          # DraftDataset lifecycle (DRAFT→VALIDATED→FROZEN), CSV/PDF ingestion adapters
+  - websocket_protocol              # sequence-numbered envelope, AUTH handshake, reconnect/replay, multi-draft isolation
+  - session_and_multi_draft         # DraftClientSession, snapshot-on-connect, multi-window identity, concurrent leagues
+  - auto_agent                      # MANUAL↔AUTO_AGENT FSM, disconnect grace timer, bidding cadence, willingness calc
+  - commissioner_tools              # pause/resume, price correction (in-place), rollback (reverse resolution_sequence), Whammy
+  - league_and_roster_configuration # League/Team/Membership CRUD, RosterConfiguration, AuctionConfiguration, ScoringConfiguration
+  - frontend_screens                # Draft Room, War Room, Commissioner Console, Draft Board, Mobile View, Lobby
+  - post_draft_and_analytics        # DraftSummaryReport, ESPN entry-order worksheet, bid analytics, email delivery
+  - deployment_and_ops              # Node.js + Postgres infrastructure, CI/CD, env config, crash recovery
+
+constraints:
+  - Server owns all auction state — client is display-only for bid outcomes, prices, deadlines
+  - Append-only history: compensating rows (active:false + new row); no hard deletes on Acquisition/RosterEntry/BudgetLedgerEntry
+  - All money is integer minor units (cents), all arithmetic server-side; no floating-point in financial paths
+  - Per-draft serialized command queue — one command in-flight per draft_id; no Postgres row-lock substitute
+  - auth_epoch re-read from DB on every command (not cached from token payload)
+  - Multi-draft isolation at two layers: routing AND auth (league_id mismatch rejection on every command)
+  - State-stored not event-sourced: in-memory state mirrors DB; updates only after successful commit
+  - Crash recovery: any RUNNING Draft comes back PAUSED on server restart; never resume against stale expired deadline
+  - server_receipt_time stamped in WS handler BEFORE any await
+  - Rollback is reverse resolution_sequence order for most recent N picks only — no arbitrary-point rollback
+  - In-place correction for price ONLY, gated by ledger replay; winner/player changes always require rollback
+  - No strategic valuation: AAVs are static reference data; no system-computed fair value or recommendations
+  - Starter-first roster assignment: lowest priority unfilled starter slot then bench; never reshuffle prior assignments
+
+integration_surface:
+  - ESPN Fantasy (post-draft roster-transfer worksheet — Phase 9)
+  - Commissioner CSV upload (player data, AAVs, projections — Phase 2a)
+  - ESPN AAV PDF import (Phase 2b)
+  - FantasyPros / Sleeper / nflverse adapters (Phase 2b, additional ingestion)
+  - SendGrid email (Draft Summary Report delivery — Phase 9, stub first)
+  count: 5
+
+process_flow: >
+  Commissioner configures league → loads player dataset (CSV/PDF) and freezes it →
+  owners join lobby and set up private strategy data → commissioner starts draft →
+  nomination turn rotation → per-player auction (bid pipeline → PlayerAuction FSM →
+  resolution → ledger + roster assignment) → Auto-Agent handles disconnected teams →
+  commissioner uses correction/rollback as needed → draft completes →
+  summary reports + ESPN transfer worksheet generated.
+
+end_users:
+  - Commissioner (owns league config, correction/rollback, Whammy, dataset import)
+  - Team owners (bid, nominate, watch list, nomination queue, Auto-Agent config)
+  - Host (optional facilitator role)
+  - War Room viewer (second-screen analytics — same owner identity as Draft Room)

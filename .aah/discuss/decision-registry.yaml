@@ -1,0 +1,310 @@
+schema_version: '1.0'
+project: Draft
+complexity: mvp
+archetype: ai-applications
+domain_ids: []
+archetypes: []
+started_at: '2026-08-31'
+pre_resolved:
+- slug_id: backend-language
+  value: TypeScript (Node.js 20+ LTS)
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: .aah/codebase-intel/tech-stack.md · Explicit stack choice
+    in BUILD_PLAN.md; all three packages (server, web, shared-types) use TypeScript'
+- slug_id: backend-framework
+  value: Fastify 4.x
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/BUILD_PLAN.md · Fastify chosen explicitly in BUILD_PLAN.md
+    for HTTP server and WS upgrade handler'
+- slug_id: realtime-transport
+  value: native ws WebSockets, sequence-numbered envelope
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/BUILD_PLAN.md · plain ws (not Socket.io); envelope
+    {seq, draft_id, event_type, payload, server_time} defined in shared-types from
+    Phase 0; AUTH as first WS message not query param'
+- slug_id: primary-database
+  value: PostgreSQL 15+
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/BUILD_PLAN.md · State-stored model; Postgres rows
+    are authoritative truth; DraftEvent log is audit+replay only'
+- slug_id: frontend-framework
+  value: React 18 + Vite 5 + TypeScript
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/BUILD_PLAN.md · Explicit stack choice; monorepo
+    web/ package'
+- slug_id: validation-library
+  value: Zod 3.x via shared-types package
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/BUILD_PLAN.md · Shared between client and server
+    via shared-types npm workspace package; single source of truth for all WS and
+    REST shapes'
+- slug_id: monorepo-structure
+  value: 'npm workspaces: server/, web/, shared-types/'
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/BUILD_PLAN.md · Three-package monorepo; shared-types
+    is the cross-package contract; web never imports server'
+- slug_id: state-management-model
+  value: state-stored (not event-sourced)
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/BUILD_PLAN.md · Postgres rows are live authority;
+    DraftEvent log for audit and WS reconnect replay only; bounded rollback (last
+    N picks) makes arbitrary-point reconstruction unnecessary'
+- slug_id: auth-mechanism
+  value: password-based + HMAC-signed JWTs + auth_epoch revocation
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/PRD.md · site password → League → Commissioner/Host/Team
+    password; HMAC tokens ~48h expiry; auth_epoch re-read from DB on every command;
+    WS AUTH as first message; rate limit 5 failures/IP/min'
+- slug_id: rollback-strategy
+  value: append-only; bounded reverse-resolution_sequence rollback
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/BUILD_PLAN.md · Rollback undoes last N picks in
+    strict reverse resolution_sequence order as one transaction; in-place correction
+    only for price, gated by ledger replay; no arbitrary-point rollback; original
+    events remain queryable as superseded'
+- slug_id: money-representation
+  value: integer minor units (cents), all arithmetic server-side
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/data-model.md · All money fields are *_minor integers;
+    no floating point anywhere; max_legal_bid = remaining_budget - (1 * other_required_roster_spots);
+    calculated server-side only'
+- slug_id: concurrency-model
+  value: per-draft serialized in-memory command queue
+  source: codebase
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/BUILD_PLAN.md · Map<draft_id, AsyncQueue>; one
+    command in-flight per draft_id at a time; this is the primary concurrency guard,
+    not Postgres row locks; in-memory state updated only after commit'
+- slug_id: cloud-vs-local
+  value: cloud
+  source: inferred
+  locked: true
+  activates: []
+  notes: 'source-detail: .aah/discuss/decision-registry.yaml · Railway deployment
+    chosen by user = cloud'
+- slug_id: data-storage-present
+  value: 'yes'
+  source: inferred
+  locked: true
+  activates: []
+  notes: 'source-detail: .aah/discuss/decision-registry.yaml · PostgreSQL is the primary
+    data store — explicitly chosen'
+- slug_id: custom-ui-required
+  value: 'yes'
+  source: inferred
+  locked: true
+  activates: []
+  notes: 'source-detail: knowledge/screen-information-architecture.md · Draft Room,
+    War Room, Commissioner Console, Draft Board, Mobile View — all bespoke interactive
+    screens'
+decisions:
+- slug_id: deployment-platform
+  area: Deployment & Ops
+  question: Where does this platform run?
+  options_presented:
+  - Railway
+  - AWS
+  - GCP
+  - Heroku
+  - Self-hosted VPS
+  options_eliminated: []
+  response: Railway
+  response_type: single-select
+  source: user
+  activates: []
+  notes: User chose Railway; managed containers; no manual Docker/K8s ops needed
+- slug_id: db-migration-tool
+  area: Data & State Architecture
+  question: 'Which DB migration tool? (BUILD_PLAN.md deferred: node-pg-migrate, Drizzle,
+    or Prisma)'
+  options_presented:
+  - Drizzle ORM
+  - Prisma
+  - node-pg-migrate
+  - kysely
+  options_eliminated: []
+  response: Drizzle ORM
+  response_type: single-select
+  source: user
+  activates: []
+  notes: User chose Drizzle; gives type-safe query builder + migrations without Prisma's
+    codegen overhead; good fit for complex atomic resolution transaction
+- slug_id: test-runner
+  area: Architecture & Technical Foundation
+  question: Which test runner?
+  options_presented:
+  - Vitest
+  - Jest
+  - Node built-in test runner
+  options_eliminated: []
+  response: Vitest
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Vitest; fast, native ESM, good TypeScript support; consistent with Vite on
+    the frontend
+- slug_id: ui-component-library
+  area: UI / UX
+  question: UI component library or bare React?
+  options_presented:
+  - Bare React (no library)
+  - shadcn/ui
+  - Radix UI
+  - Chakra UI
+  - MUI
+  options_eliminated: []
+  response: Bare React (no library) unless strong benefit
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Default bare React; user open to a component library if there is a clear
+    benefit — evaluate at Phase 6 frontend screens
+- slug_id: email-service
+  area: Integration & External Interfaces
+  question: Email delivery for Draft Summary Reports?
+  options_presented:
+  - SendGrid
+  - Postmark
+  - Resend
+  - AWS SES
+  - Skip / in-app only
+  options_eliminated: []
+  response: SendGrid (flexible, low volume)
+  response_type: single-select
+  source: user
+  activates: []
+  notes: SendGrid chosen; low volume, cost-effective; stub the interface in Phase
+    9 then wire real SendGrid; flexible to swap provider
+- slug_id: observability
+  area: Deployment & Ops
+  question: Logging and observability approach?
+  options_presented:
+  - OTel-compatible logging framework
+  - Pino (built-in Fastify)
+  - Winston
+  - Cloud-native only (Railway logs)
+  - Datadog
+  options_eliminated: []
+  response: OTel-compatible logging framework
+  response_type: single-select
+  source: user
+  activates: []
+  notes: OTel-compatible; Pino + OpenTelemetry is the natural fit with Fastify; structured
+    JSON logs; exportable to any backend
+- slug_id: compliance-regimes
+  area: Security, Privacy & Compliance
+  question: Which compliance regimes apply to this system?
+  options_presented:
+  - none
+  - soc2
+  - gdpr
+  - pci-dss
+  options_eliminated: []
+  response: none
+  response_type: multi-select
+  source: user
+  activates: []
+  notes: Private fantasy football league; no regulated data (no health info, no payment
+    cards, no EU personal data processing at regulated scale)
+- slug_id: docker-installed
+  area: Architecture & Technical Foundation
+  question: Do you have Docker installed?
+  options_presented:
+  - 'yes'
+  - 'no'
+  options_eliminated: []
+  response: 'yes'
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Docker available locally; Railway manages containers in production
+- slug_id: cloud-provider
+  area: Deployment & Ops
+  question: Which cloud provider?
+  options_presented:
+  - aws
+  - railway
+  options_eliminated:
+  - aws
+  response: railway
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Railway chosen; harness aah-deploy/aah-access tooling (AWS-only) does not
+    apply; manual Railway deployment; build phases still produce working code
+- slug_id: development-methodology
+  area: Deployment & Ops
+  question: How will the team develop this across local and cloud environments?
+  options_presented:
+  - local-cloud-ready
+  - full-integrated-cloud
+  - local-railway
+  options_eliminated: []
+  response: local-railway
+  response_type: single-select
+  source: user
+  activates: []
+  notes: Local dev with Docker for Postgres; Railway handles production containers;
+    no AWS SDK or local AWS shell needed
+- slug_id: business-domain
+  area: Domain & Archetype
+  question: Which business domain(s) does this project target?
+  options_presented:
+  - financial-services
+  - ai-applications
+  - ai-infra-platforms
+  options_eliminated: []
+  response: none — consumer sports/entertainment application; no matching harness
+    domain brief
+  response_type: free-text
+  source: user
+  activates: []
+  notes: Fantasy football auction draft platform; harness taxonomy is financial-services
+    only; no match
+- slug_id: technical-archetype
+  area: Domain & Archetype
+  question: Which technical archetype(s) apply?
+  options_presented:
+  - ai-applications
+  - ai-infra-platforms
+  - aws-native-services
+  options_eliminated: []
+  response: none — real-time web app (WebSocket + Postgres + React); Railway deployment;
+    no AI/ML; no AWS
+  response_type: free-text
+  source: user
+  activates: []
+  notes: Real-time multiplayer auction platform; none of the three available archetypes
+    apply; continuing without overlay
+deferred_ideas: []
+constraint_audit:
+  passed: null
+  violations: []
+active_references:
+  computed_at: '2026-08-31'
+  guidance_references: []
+  domain_brief_paths: []
+  archetype_playbook_paths: []
