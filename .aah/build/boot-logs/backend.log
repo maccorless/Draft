@@ -5,10 +5,202 @@
 9:32:27 AM [tsx] change in ./src/main.ts Rerunning...
 {"level":30,"time":1788280348127,"pid":19721,"hostname":"US-C32WYQ02WF","msg":"Server listening at http://0.0.0.0:3001"}
 9:32:58 AM [tsx] change in ./src/auction/engine.ts Restarting...
-{"level":50,"time":1788280379732,"pid":22242,"hostname":"US-C32WYQ02WF","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:2008:16)\n    at listenInCluster (node:net:2065:12)\n    at node:net:2274:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
-9:49:39 AM [tsx] change in ./src/auction/engine.ts Rerunning...
-{"level":30,"time":1788281380749,"pid":42771,"hostname":"US-C32WYQ02WF","msg":"Server listening at http://0.0.0.0:3001"}
-9:59:38 AM [tsx] change in ./src/auction/routes.ts Restarting...
-{"level":50,"time":1788281980155,"pid":54117,"hostname":"US-C32WYQ02WF","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:2008:16)\n    at listenInCluster (node:net:2065:12)\n    at node:net:2274:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
-9:59:43 AM [tsx] change in ./src/auction/routes.ts Rerunning...
-{"level":50,"time":1788281983928,"pid":54132,"hostname":"US-C32WYQ02WF","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:2008:16)\n    at listenInCluster (node:net:2065:12)\n    at node:net:2274:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
+{"level":50,"time":1788280379732,"pid":22242,"hostname":"US-C32WYQ02WF","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:2008:16)\n    at listenInCluster (node:net:2065:12)\n    at node:net:2274:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUS10:02:24 AM [tsx] unlink in ./../node_modules/sonic-boom/index.js Process hasn't exited. Killing process...
+10:02:24 AM [tsx] unlink in ./../node_modules/@pinojs/redact/index.js Process hasn't exited. Killing process...
+10:02:25 AM [tsx] unlink in ./../node_modules/zod/v3/types.js Process hasn't exited. Killing process...
+10:02:25 AM [tsx] unlink in ./../node_modules/@lukeed/ms/dist/index.js Process hasn't exited. Killing process...
+10:02:26 AM [tsx] unlink in ./../node_modules/asn1.js/lib/asn1/api.js Process hasn't exited. Killing process...
+10:02:26 AM [tsx] unlink in ./../node_modules/drizzle-orm/sql/functions/vector.js Process hasn't exited. Killing process...
+10:02:26 AM [tsx] unlink in ./../node_modules/find-my-way/lib/strategies/http-method.js Process hasn't exited. Killing process...
+10:02:26 AM [tsx] unlink in ./../node_modules/ret/dist/types/types.js Process hasn't exited. Killing process...
+10:02:26 AM [tsx] unlink in ./../node_modules/zod/v3/locales/en.js Process hasn't exited. Killing process...
+10:02:27 AM [tsx] unlink in ./../node_modules/@fastify/busboy/lib/utils/Decoder.js Process hasn't exited. Killing process...
+10:02:27 AM [tsx] unlink in ./../node_modules/fast-json-stringify/node_modules/ajv-formats/dist/limit.js Process hasn't exited. Killing process...
+10:02:28 AM [tsx] unlink in ./../node_modules/fastify/node_modules/pino/lib/symbols.js Process hasn't exited. Killing process...
+10:02:28 AM [tsx] unlink in ./../node_modules/@fastify/busboy/deps/dicer/lib/PartStream.js Process hasn't exited. Killing process...
+10:02:36 AM [tsx] add in ./../node_modules/zod/v3/helpers/parseUtil.js Process hasn't exited. Killing process...
+10:02:36 AM [tsx] add in ./../node_modules/zod/v3/ZodError.js Process hasn't exited. Killing process...
+10:02:38 AM [tsx] add in ./../node_modules/drizzle-orm/pg-core/view.js Process hasn't exited. Killing process...
+59:18)
+    at defaultResolve (node:internal/modules/esm/resolve:992:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:691:20)
+    at #resolveAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:708:38)
+    at nextStep (node:internal/modules/customization_hooks:189:26)
+    at resolveBaseSync (file:///Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/register-SoqaU4rg.mjs:2:10932)
+    at resolveDirectorySync (file:///Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/register-SoqaU4rg.mjs:2:12238)
+    at resolveTsPathsSync (file:///Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/register-SoqaU4rg.mjs:2:13445) {
+  code: 'ERR_MODULE_NOT_FOUND'
+}
+
+Node.js v24.16.0
+10:02:25 AM [tsx] unlink in ./../node_modules/zod/v3/types.js Rerunning...
+node:internal/modules/cjs/loader:1503
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1500:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1116:12)
+    at Module._load (node:internal/modules/cjs/loader:1285:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1600:12)
+    at node:internal/modules/cjs/loader:2146:12
+    at loadPreloadModules (node:internal/process/pre_execution:711:5)
+    at initializeModuleLoaders (node:internal/process/pre_execution:243:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.16.0
+10:02:25 AM [tsx] unlink in ./../node_modules/@lukeed/ms/dist/index.js Rerunning...
+10:02:26 AM [tsx] unlink in ./../node_modules/asn1.js/lib/asn1/api.js Restarting...
+node:internal/modules/cjs/loader:1503
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1500:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1116:12)
+    at Module._load (node:internal/modules/cjs/loader:1285:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1600:12)
+    at node:internal/modules/cjs/loader:2146:12
+    at loadPreloadModules (node:internal/process/pre_execution:711:5)
+    at initializeModuleLoaders (node:internal/process/pre_execution:243:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.16.0
+10:02:26 AM [tsx] unlink in ./../node_modules/find-my-way/lib/strategies/http-method.js Rerunning...
+10:02:26 AM [tsx] unlink in ./../node_modules/ret/dist/types/types.js Restarting...
+node:internal/modules/cjs/loader:1503
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1500:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1116:12)
+    at Module._load (node:internal/modules/cjs/loader:1285:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1600:12)
+    at node:internal/modules/cjs/loader:2146:12
+    at loadPreloadModules (node:internal/process/pre_execution:711:5)
+    at initializeModuleLoaders (node:internal/process/pre_execution:243:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.16.0
+10:02:27 AM [tsx] unlink in ./../node_modules/zod/v3/locales/en.js Restarting...
+node:internal/modules/cjs/loader:1503
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1500:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1116:12)
+    at Module._load (node:internal/modules/cjs/loader:1285:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1600:12)
+    at node:internal/modules/cjs/loader:2146:12
+    at loadPreloadModules (node:internal/process/pre_execution:711:5)
+    at initializeModuleLoaders (node:internal/process/pre_execution:243:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.16.0
+10:02:27 AM [tsx] unlink in ./../node_modules/@fastify/busboy/lib/utils/Decoder.js Rerunning...
+node:internal/modules/cjs/loader:1503
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1500:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1116:12)
+    at Module._load (node:internal/modules/cjs/loader:1285:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1600:12)
+    at node:internal/modules/cjs/loader:2146:12
+    at loadPreloadModules (node:internal/process/pre_execution:711:5)
+    at initializeModuleLoaders (node:internal/process/pre_execution:243:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.16.0
+10:02:27 AM [tsx] unlink in ./../node_modules/fast-json-stringify/node_modules/ajv-formats/dist/limit.js Rerunning...
+10:02:28 AM [tsx] unlink in ./../node_modules/readable-stream/lib/internal/streams/stream.js Restarting...
+node:internal/modules/cjs/loader:1503
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1500:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1116:12)
+    at Module._load (node:internal/modules/cjs/loader:1285:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1600:12)
+    at node:internal/modules/cjs/loader:2146:12
+    at loadPreloadModules (node:internal/process/pre_execution:711:5)
+    at initializeModuleLoaders (node:internal/process/pre_execution:243:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.16.0
+10:02:28 AM [tsx] unlink in ./../node_modules/@fastify/busboy/deps/dicer/lib/PartStream.js Restarting...
+node:internal/modules/cjs/loader:1503
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/kcorless/Projects/Software/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1500:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1071:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1095:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1116:12)
+    at Module._load (node:internal/modules/cjs/loader:1285:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1600:12)
+    at node:internal/modules/cjs/loader:2146:12
+    at loadPreloadModules (node:internal/process/pre_execution:711:5)
+    at initializeModuleLoaders (node:internal/process/pre_execution:243:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.16.0
+10:02:36 AM [tsx] change in ./../node_modules/zod/v3/ZodError.js Rerunning...
+10:02:36 AM [tsx] change in ./../node_modules/avvio/lib/validate-plugin.js Restarting...
+10:02:38 AM [tsx] change in ./../node_modules/drizzle-orm/pg-core/view.js Restarting...
+{"level":30,"time":1788282163646,"pid":54865,"hostname":"US-C32WYQ02WF","msg":"Server listening at http://0.0.0.0:3001"}
+modules/zod/v3/ZodError.js Rerunning...
+10:02:38 AM [tsx] change in ./../node_modules/drizzle-orm/pg-core/view.js Restarting...
+{"level":50,"time":1788282163646,"pid":54864,"hostname":"US-C32WYQ02WF","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3001","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3001\n    at Server.setupListenHandle [as _listen2] (node:net:2008:16)\n    at listenInCluster (node:net:2065:12)\n    at node:net:2274:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3001},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3001"}
