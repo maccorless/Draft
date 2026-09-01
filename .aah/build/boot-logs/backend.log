@@ -1,22 +1,9 @@
-node:internal/modules/run_main:107
-    triggerUncaughtException(
-    ^
-
-PostgresError: database "draft_dev" does not exist
-    at ErrorResponse (file:///Users/kcorless/Projects/Software/Draft/node_modules/postgres/src/connection.js:817:22)
-    at handle (file:///Users/kcorless/Projects/Software/Draft/node_modules/postgres/src/connection.js:489:6)
-    at Socket.data (file:///Users/kcorless/Projects/Software/Draft/node_modules/postgres/src/connection.js:324:9)
-    at Socket.emit (node:events:509:28)
-    at addChunk (node:internal/streams/readable:563:12)
-    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
-    at Readable.push (node:internal/streams/readable:394:5)
-    at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
-  severity_local: 'FATAL',
-  severity: 'FATAL',
-  code: '3D000',
-  file: 'postinit.c',
-  line: '1023',
-  routine: 'InitPostgres'
-}
-
-Node.js v24.16.0
+{"level":30,"time":1788279757744,"pid":7507,"hostname":"US-C32WYQ02WF","msg":"Server listening at http://0.0.0.0:3001"}
+{"level":30,"time":1788279759056,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-1","req":{"method":"GET","url":"/health","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":54993},"msg":"incoming request"}
+{"level":30,"time":1788279759063,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-1","res":{"statusCode":200},"responseTime":5.99637496471405,"msg":"request completed"}
+{"level":30,"time":1788279808413,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-2","req":{"method":"GET","url":"/","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":55090},"msg":"incoming request"}
+{"level":30,"time":1788279808413,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-2","msg":"Route GET:/ not found"}
+{"level":30,"time":1788279808414,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-2","res":{"statusCode":404},"responseTime":0.4420410394668579,"msg":"request completed"}
+{"level":30,"time":1788279808622,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-3","req":{"method":"GET","url":"/favicon.ico","hostname":"localhost:3001","remoteAddress":"127.0.0.1","remotePort":55090},"msg":"incoming request"}
+{"level":30,"time":1788279808622,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-3","msg":"Route GET:/favicon.ico not found"}
+{"level":30,"time":1788279808623,"pid":7507,"hostname":"US-C32WYQ02WF","reqId":"req-3","res":{"statusCode":404},"responseTime":0.5465420484542847,"msg":"request completed"}
