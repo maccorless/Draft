@@ -21,6 +21,28 @@ process.env['JWT_SECRET'] = JWT_SECRET;
 
 const SKIP_DB = !process.env['DATABASE_URL'];
 
+// Shared server — avoids a second buildServer() in the same worker which can
+// hang in the full suite due to module-level state accumulation.
+let sharedServer: FastifyInstance;
+let sharedSql: ReturnType<typeof postgres>;
+
+if (!SKIP_DB) {
+  beforeAll(async () => {
+    sharedSql = postgres(DATABASE_URL, { max: 2 });
+    // Truncate leagues so /auth/site's O(n×bcrypt) doesn't time out when this
+    // file runs after other module tests that accumulated league rows.
+    await sharedSql`TRUNCATE TABLE leagues, draft_datasets RESTART IDENTITY CASCADE`;
+    const { buildServer } = await import('../main.js');
+    sharedServer = await buildServer();
+    await sharedServer.ready();
+  });
+
+  afterAll(async () => {
+    await sharedServer.close();
+    await sharedSql.end();
+  });
+}
+
 describe.skipIf(SKIP_DB)('F-MOD-000 auth routes', () => {
   let server: FastifyInstance;
   let sql: ReturnType<typeof postgres>;
@@ -28,15 +50,8 @@ describe.skipIf(SKIP_DB)('F-MOD-000 auth routes', () => {
   let testTeamId: string;
 
   beforeAll(async () => {
-    sql = postgres(DATABASE_URL, { max: 2 });
-    const { buildServer } = await import('../main.js');
-    server = await buildServer();
-    await server.ready();
-  });
-
-  afterAll(async () => {
-    await server.close();
-    await sql.end();
+    server = sharedServer;
+    sql = sharedSql;
   });
 
   beforeEach(async () => {
@@ -186,36 +201,26 @@ describe.skipIf(SKIP_DB)('F-MOD-000 auth routes', () => {
   });
 });
 
-describe('F-MOD-000 rate limiting', () => {
-  let server: FastifyInstance;
-
-  beforeAll(async () => {
-    const { buildServer } = await import('../main.js');
-    server = await buildServer();
-    await server.ready();
-  });
-
-  afterAll(async () => {
-    await server.close();
-  });
-
+describe.skipIf(SKIP_DB)('F-MOD-000 rate limiting', () => {
   it('test_F_MOD_000_rate_limit_blocks_after_5_failures', async () => {
-    // Make 5 failing auth attempts
+    // Use a distinct remoteAddress so these requests have their own rate-limit
+    // bucket, isolated from the auth-routes describe's requests (127.0.0.1).
+    const distinctIp = '10.99.99.99';
     for (let i = 0; i < 5; i++) {
-      await server.inject({
+      await sharedServer.inject({
         method: 'POST',
         url: '/auth/site',
         payload: { site_password: 'wrong-pass' },
-        headers: { 'x-forwarded-for': '10.0.0.99' },
+        remoteAddress: distinctIp,
       });
     }
 
-    // 6th attempt must be rate-limited (429)
-    const response = await server.inject({
+    // 6th attempt on the same IP must be rate-limited (429)
+    const response = await sharedServer.inject({
       method: 'POST',
       url: '/auth/site',
       payload: { site_password: 'wrong-pass' },
-      headers: { 'x-forwarded-for': '10.0.0.99' },
+      remoteAddress: distinctIp,
     });
 
     expect(response.statusCode).toBe(429);

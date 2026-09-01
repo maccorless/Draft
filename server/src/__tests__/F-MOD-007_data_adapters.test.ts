@@ -122,21 +122,20 @@ function startFpTestServer(
 // ── Test suite ────────────────────────────────────────────────────────────────
 
 describe('F-MOD-007 env checker — FANTASYPROS_API_KEY', () => {
-  it('test_F_MOD_007_env_check_exits_when_fantasypros_api_key_missing', () => {
+  it('test_F_MOD_007_env_check_passes_without_fantasypros_api_key', () => {
+    // FANTASYPROS_API_KEY is optional — the server boots without it and the
+    // FantasyPros adapter returns a 503 when the key is absent at call time.
     const result = spawnSync(process.execPath, [ENV_CHECK], {
       env: {
         DATABASE_URL: 'postgres://localhost/test',
         JWT_SECRET: 'test-secret-at-least-32-chars-long',
         NODE_ENV: 'test',
-        SENDGRID_API_KEY: 'test-sendgrid',
-        // FANTASYPROS_API_KEY intentionally absent
+        // FANTASYPROS_API_KEY intentionally absent — must not block boot
       },
       encoding: 'utf8',
       timeout: 5000,
     });
-    expect(result.status).toBe(1);
-    expect(result.stderr).toContain('ERR_CDR_78_EX_CONFIG');
-    expect(result.stderr).toContain('FANTASYPROS_API_KEY');
+    expect(result.status).toBe(0);
   });
 
   it('test_F_MOD_007_env_example_contains_fantasypros_api_key_placeholder', () => {

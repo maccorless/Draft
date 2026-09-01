@@ -8,7 +8,8 @@
  *   cp .env.example .env
  */
 
-const REQUIRED = ['DATABASE_URL', 'JWT_SECRET', 'NODE_ENV', 'SENDGRID_API_KEY', 'FANTASYPROS_API_KEY'];
+// SENDGRID_API_KEY and FANTASYPROS_API_KEY are optional — features fail gracefully without them
+const REQUIRED = ['DATABASE_URL', 'JWT_SECRET', 'NODE_ENV'];
 
 const missing = REQUIRED.filter((name) => !process.env[name]);
 
