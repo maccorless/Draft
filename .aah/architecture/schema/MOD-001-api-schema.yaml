@@ -1,0 +1,335 @@
+openapi: "3.1.0"
+info:
+  title: MOD-001 Player Dataset Management
+  version: "1.0.0"
+  description: |
+    League setup, draft creation, and CSV dataset import. A dataset must be
+    FROZEN before a draft can reference it.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /leagues:
+    post:
+      operationId: createLeague
+      summary: Create a new league (commissioner setup)
+      tags: [league]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLeagueRequest"
+      responses:
+        "201":
+          description: League created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeagueSummary"
+
+  /leagues/{leagueId}/teams:
+    post:
+      operationId: createTeam
+      summary: Add a team to the league
+      tags: [league]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTeamRequest"
+      responses:
+        "201":
+          description: Team created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamSummary"
+
+  /leagues/{leagueId}/config/roster:
+    put:
+      operationId: setRosterConfig
+      summary: Set roster slot definitions for the league
+      tags: [league]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RosterConfigRequest"
+      responses:
+        "200":
+          description: Roster configuration saved
+
+  /leagues/{leagueId}/config/auction:
+    put:
+      operationId: setAuctionConfig
+      summary: Set auction timer and budget configuration for the league
+      tags: [league]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuctionConfigRequest"
+      responses:
+        "200":
+          description: Auction configuration saved
+
+  /leagues/{leagueId}/datasets:
+    post:
+      operationId: createDataset
+      summary: Create a new draft dataset (empty; ready for import)
+      tags: [dataset]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      responses:
+        "201":
+          description: Dataset created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatasetSummary"
+
+  /leagues/{leagueId}/datasets/{datasetId}/import/csv:
+    post:
+      operationId: importDatasetCsv
+      summary: Import players from a CSV file into the dataset
+      tags: [dataset]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/datasetId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Import result with row count and any validation errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+
+  /leagues/{leagueId}/datasets/{datasetId}/freeze:
+    post:
+      operationId: freezeDataset
+      summary: Freeze the dataset; no further modifications allowed after this
+      tags: [dataset]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/datasetId"
+      responses:
+        "200":
+          description: Dataset is now FROZEN
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DatasetSummary"
+
+  /leagues/{leagueId}/drafts:
+    post:
+      operationId: createDraft
+      summary: Create a new draft referencing a FROZEN dataset
+      tags: [draft]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDraftRequest"
+      responses:
+        "201":
+          description: Draft created in CREATED status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftSummary"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    leagueId:
+      name: leagueId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    datasetId:
+      name: datasetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+    CreateLeagueRequest:
+      type: object
+      required: [name, site_password, commissioner_password]
+      properties:
+        name:
+          type: string
+        site_password:
+          type: string
+        commissioner_password:
+          type: string
+
+    LeagueSummary:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
+    CreateTeamRequest:
+      type: object
+      required: [name, team_password, draft_order]
+      properties:
+        name:
+          type: string
+        team_password:
+          type: string
+        draft_order:
+          type: integer
+          minimum: 1
+
+    TeamSummary:
+      type: object
+      required: [id, name, draft_order]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        draft_order:
+          type: integer
+
+    RosterConfigRequest:
+      type: object
+      required: [bench_slots, slots]
+      properties:
+        bench_slots:
+          type: integer
+        slots:
+          type: array
+          items:
+            type: object
+            required: [position, priority, is_starter, slot_count]
+            properties:
+              position:
+                type: string
+              priority:
+                type: integer
+              is_starter:
+                type: boolean
+              slot_count:
+                type: integer
+
+    AuctionConfigRequest:
+      type: object
+      required: [initial_budget_minor, nomination_timer_ms, second_bid_timer_ms, rebid_timer_ms]
+      properties:
+        initial_budget_minor:
+          type: integer
+          description: Per-team starting budget in cents
+        nomination_timer_ms:
+          type: integer
+        second_bid_timer_ms:
+          type: integer
+        rebid_timer_ms:
+          type: integer
+        anti_snipe_threshold_ms:
+          type: integer
+        anti_snipe_extension_ms:
+          type: integer
+        min_bid_minor:
+          type: integer
+          default: 100
+
+    DatasetSummary:
+      type: object
+      required: [id, status, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [DRAFT, VALIDATED, FROZEN]
+        version:
+          type: integer
+        frozen_at:
+          type: string
+          format: date-time
+
+    ImportResult:
+      type: object
+      required: [rows_imported, errors]
+      properties:
+        rows_imported:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              message:
+                type: string
+
+    CreateDraftRequest:
+      type: object
+      required: [dataset_id]
+      properties:
+        dataset_id:
+          type: string
+          format: uuid
+
+    DraftSummary:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [CREATED, RUNNING, PAUSED, COMPLETE]

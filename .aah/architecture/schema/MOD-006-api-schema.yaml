@@ -1,0 +1,135 @@
+openapi: "3.1.0"
+info:
+  title: MOD-006 Draft Completion and Reports
+  version: "1.0.0"
+  description: |
+    Post-draft summary report generation, ESPN worksheet download, and
+    SendGrid email dispatch to all team owners.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /drafts/{draftId}/report:
+    get:
+      operationId: getDraftReport
+      summary: Get the post-draft summary report
+      tags: [reports]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: Draft summary report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftSummaryReport"
+
+  /drafts/{draftId}/espn-worksheet:
+    get:
+      operationId: getEspnWorksheet
+      summary: Download ESPN roster worksheet for manual entry
+      tags: [reports]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: ESPN-formatted CSV/Excel file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+
+  /drafts/{draftId}/report/email:
+    post:
+      operationId: emailDraftReport
+      summary: Send draft summary email to all team owners via SendGrid
+      tags: [reports]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "202":
+          description: Email dispatch accepted (fire-and-forget)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmailDispatchResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    draftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    DraftSummaryReport:
+      type: object
+      required: [draft_id, completed_at, teams]
+      properties:
+        draft_id:
+          type: string
+          format: uuid
+        completed_at:
+          type: string
+          format: date-time
+        teams:
+          type: array
+          items:
+            type: object
+            required: [team_id, team_name, acquisitions, final_budget_minor]
+            properties:
+              team_id:
+                type: string
+                format: uuid
+              team_name:
+                type: string
+              final_budget_minor:
+                type: integer
+                description: Remaining unspent budget
+              acquisitions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    player_name:
+                      type: string
+                    position:
+                      type: string
+                    price_minor:
+                      type: integer
+                    roster_slot:
+                      type: string
+
+    EmailDispatchResponse:
+      type: object
+      required: [accepted]
+      properties:
+        accepted:
+          type: boolean
+        recipients:
+          type: integer
+          description: Number of team email addresses targeted
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

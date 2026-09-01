@@ -13,7 +13,7 @@
 
 ```mermaid
 C4Context
-    title System Context — Fantasy Football Auction Draft Platform
+    title System Context for Fantasy Football Auction Draft Platform
 
     Person(commissioner, "Commissioner", "Configures league, imports player data, controls the auction, applies corrections and rollbacks")
     Person(owner, "Team Owner", "Bids in real time, manages Watch List and Nomination Queue, configures Auto-Agent")

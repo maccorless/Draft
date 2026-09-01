@@ -1,0 +1,150 @@
+openapi: "3.1.0"
+info:
+  title: MOD-007 Phase 2b Data Adapters
+  version: "1.0.0"
+  description: |
+    Additional dataset import adapters: ESPN AAV PDF (pdfjs-dist), FantasyPros API
+    proxy, and Excel/XLSX (SheetJS). All parsing runs in node:worker_threads.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /leagues/{leagueId}/datasets/{datasetId}/import/excel:
+    post:
+      operationId: importDatasetExcel
+      summary: Import players from an Excel (XLSX) file
+      tags: [adapters]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/datasetId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Excel XLSX file; column mapping inferred from headers
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+
+  /leagues/{leagueId}/datasets/{datasetId}/import/espn-pdf:
+    post:
+      operationId: importDatasetEspnPdf
+      summary: Import ESPN AAV data from a PDF file
+      tags: [adapters]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/datasetId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: ESPN AAV PDF (parsed with pdfjs-dist in worker_thread)
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+
+  /leagues/{leagueId}/datasets/{datasetId}/import/fantasypros:
+    post:
+      operationId: importDatasetFantasyPros
+      summary: Import player projections from FantasyPros API
+      tags: [adapters]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/datasetId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FantasyProsImportRequest"
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    leagueId:
+      name: leagueId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    datasetId:
+      name: datasetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ImportResult:
+      type: object
+      required: [rows_imported, errors]
+      properties:
+        rows_imported:
+          type: integer
+        source:
+          type: string
+          enum: [CSV, EXCEL, ESPN_PDF, FANTASYPROS]
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              row:
+                type: integer
+              message:
+                type: string
+
+    FantasyProsImportRequest:
+      type: object
+      required: [scoring_format]
+      properties:
+        scoring_format:
+          type: string
+          enum: [STD, HALF_PPR, PPR]
+          description: Scoring format used to select the right FantasyPros projection set
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

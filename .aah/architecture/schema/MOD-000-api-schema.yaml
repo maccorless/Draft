@@ -1,0 +1,158 @@
+openapi: "3.1.0"
+info:
+  title: MOD-000 Walking Skeleton
+  version: "1.0.0"
+  description: Health check, authentication, and session bootstrap endpoints.
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Service liveness check
+      tags: [system]
+      responses:
+        "200":
+          description: Service is up
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /auth/site:
+    post:
+      operationId: authSite
+      summary: Authenticate site password to discover available leagues
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteAuthRequest"
+      responses:
+        "200":
+          description: Site access granted; returns available league info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteAuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/league/{leagueId}:
+    post:
+      operationId: authLeague
+      summary: Authenticate as commissioner or team owner; returns JWT
+      tags: [auth]
+      parameters:
+        - name: leagueId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeagueAuthRequest"
+      responses:
+        "200":
+          description: JWT issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeagueAuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: Authentication failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Insufficient role
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, ts]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        ts:
+          type: string
+          format: date-time
+
+    SiteAuthRequest:
+      type: object
+      required: [site_password]
+      properties:
+        site_password:
+          type: string
+
+    SiteAuthResponse:
+      type: object
+      required: [leagues]
+      properties:
+        leagues:
+          type: array
+          items:
+            type: object
+            required: [id, name]
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+
+    LeagueAuthRequest:
+      type: object
+      required: [role, password]
+      properties:
+        role:
+          type: string
+          enum: [COMMISSIONER, OWNER]
+        team_id:
+          type: string
+          format: uuid
+          description: Required when role=OWNER
+        password:
+          type: string
+
+    LeagueAuthResponse:
+      type: object
+      required: [token, expires_in]
+      properties:
+        token:
+          type: string
+          description: HMAC-signed JWT carrying league_id, team_id, role, auth_epoch
+        expires_in:
+          type: integer
+          description: Seconds until token expiry (default 172800 = 48h)
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

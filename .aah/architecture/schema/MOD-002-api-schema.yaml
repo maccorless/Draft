@@ -1,0 +1,174 @@
+openapi: "3.1.0"
+info:
+  title: MOD-002 Live Auction Core
+  version: "1.0.0"
+  description: |
+    Draft lifecycle REST endpoints (start, pause, resume) and WebSocket command/event protocol.
+    The WS protocol is documented here as x-websocket-protocol; actual bidding is WS-only.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /drafts/{draftId}/start:
+    post:
+      operationId: startDraft
+      summary: Commissioner starts the draft (CREATED -> RUNNING)
+      tags: [draft-control]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: Draft is now RUNNING
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftStatusResponse"
+        "409":
+          $ref: "#/components/responses/Conflict"
+
+  /drafts/{draftId}/pause:
+    post:
+      operationId: pauseDraft
+      summary: Commissioner pauses the draft (RUNNING -> PAUSED)
+      tags: [draft-control]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: Draft is now PAUSED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftStatusResponse"
+
+  /drafts/{draftId}/resume:
+    post:
+      operationId: resumeDraft
+      summary: Commissioner resumes a paused draft (PAUSED -> RUNNING)
+      tags: [draft-control]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: Draft is now RUNNING
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftStatusResponse"
+
+x-websocket-protocol:
+  description: |
+    WebSocket endpoint: wss://{host}/ws/drafts/{draftId}
+    All messages use the envelope: { type, payload, seq }
+    Client authenticates immediately after connect with AUTHENTICATE command.
+
+  client-commands:
+    - type: AUTHENTICATE
+      payload:
+        token: string (JWT)
+      description: Must be the first message after connect.
+
+    - type: BID_COMMAND
+      payload:
+        player_auction_id: uuid
+        bid_amount_minor: integer
+        bid_type: "ABSOLUTE | RELATIVE | NOMINATOR_MATCH"
+        expected_current_bid_minor: integer (required for RELATIVE)
+        expected_auction_version: integer (required for RELATIVE/NOMINATOR_MATCH)
+      description: Place a bid. Server stamps server_receipt_time on arrival.
+
+    - type: NOMINATE_COMMAND
+      payload:
+        player_dataset_entry_id: uuid
+        opening_bid_minor: integer (minimum 100)
+      description: Nominate a player for auction. Only valid during nomination window.
+
+  server-events:
+    - type: AUTHENTICATED
+      payload: {}
+      description: Confirms authentication; client is now in the broadcast group.
+
+    - type: BID_ACCEPTED
+      payload:
+        player_auction_id: uuid
+        bid_amount_minor: integer
+        leading_team_id: uuid
+        auction_version: integer
+        rebid_deadline_ts: integer (epoch ms)
+        anti_snipe_extended: boolean
+
+    - type: BID_REJECTED
+      payload:
+        player_auction_id: uuid
+        code: string
+        reason: string
+
+    - type: NOMINATION_STARTED
+      payload:
+        player_auction_id: uuid
+        player_name: string
+        nominator_team_id: uuid
+        opening_bid_minor: integer
+        nomination_deadline_ts: integer
+        second_bid_deadline_ts: integer
+        system_nominated: boolean
+
+    - type: PLAYER_AWARDED
+      payload:
+        player_auction_id: uuid
+        player_name: string
+        winning_team_id: uuid
+        price_minor: integer
+        roster_slot: string
+        resolution_sequence: integer
+
+    - type: ERROR
+      payload:
+        code: string
+        reason: string
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    draftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    Conflict:
+      description: State transition not allowed from current status
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    DraftStatusResponse:
+      type: object
+      required: [draft_id, status]
+      properties:
+        draft_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [CREATED, RUNNING, PAUSED, COMPLETE]
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

@@ -1,0 +1,142 @@
+openapi: "3.1.0"
+info:
+  title: MOD-004 Auto-Agent
+  version: "1.0.0"
+  description: |
+    Configure Auto-Agent willingness and manually toggle control mode.
+    Mode transitions (AUTO_AGENT ↔ MANUAL) are broadcast as DraftEvents.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /drafts/{draftId}/teams/{teamId}/auto-agent:
+    put:
+      operationId: setAutoAgentConfig
+      summary: Configure Auto-Agent willingness ceiling for a team
+      tags: [auto-agent]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AutoAgentConfigRequest"
+      responses:
+        "200":
+          description: Auto-agent configuration saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AutoAgentConfigResponse"
+
+  /drafts/{draftId}/teams/{teamId}/control-mode:
+    patch:
+      operationId: setControlMode
+      summary: Manually toggle a team between MANUAL and AUTO_AGENT control
+      tags: [auto-agent]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ControlModeRequest"
+      responses:
+        "200":
+          description: Control mode updated and broadcast to all clients
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ControlModeResponse"
+
+x-websocket-events:
+  description: |
+    Auto-agent control mode changes are broadcast to all draft clients.
+  events:
+    - type: TEAM_AUTO_AGENT_ENABLED
+      payload:
+        team_id: uuid
+        triggered_by: "disconnect_grace | manual"
+
+    - type: TEAM_MANUAL_CONTROL_REQUESTED
+      payload:
+        team_id: uuid
+        triggered_by: "owner"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    draftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    teamId:
+      name: teamId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    AutoAgentConfigRequest:
+      type: object
+      required: [willingness_pct]
+      properties:
+        willingness_pct:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Fraction of remaining budget Auto-Agent will bid up to
+
+    AutoAgentConfigResponse:
+      type: object
+      required: [team_id, willingness_pct]
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        willingness_pct:
+          type: number
+
+    ControlModeRequest:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [MANUAL, AUTO_AGENT]
+
+    ControlModeResponse:
+      type: object
+      required: [team_id, control_mode]
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        control_mode:
+          type: string
+          enum: [MANUAL, AUTO_AGENT]
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

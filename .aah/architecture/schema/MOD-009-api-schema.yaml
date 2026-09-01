@@ -1,0 +1,94 @@
+openapi: "3.1.0"
+info:
+  title: MOD-009 Whammy
+  version: "1.0.0"
+  description: |
+    Commissioner-triggered Whammy events: random budget or entertainment events
+    flowing through the Budget Ledger. Whammy is optional and configured per-league.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /drafts/{draftId}/whammy:
+    post:
+      operationId: triggerWhammy
+      summary: Commissioner triggers a Whammy event for a target team
+      tags: [whammy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhammyRequest"
+      responses:
+        "200":
+          description: Whammy applied; BudgetLedgerEntry created; event broadcast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhammyResponse"
+
+x-websocket-events:
+  events:
+    - type: WHAMMY_APPLIED
+      payload:
+        team_id: uuid
+        amount_minor: integer
+        description: string
+        new_remaining_budget_minor: integer
+      description: Broadcast to all draft clients when a Whammy fires.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    draftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    WhammyRequest:
+      type: object
+      required: [team_id, amount_minor, description]
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        amount_minor:
+          type: integer
+          description: Budget delta in cents; negative = debit (penalty), positive = credit (bonus)
+        description:
+          type: string
+          description: Human-readable label for the Whammy event
+
+    WhammyResponse:
+      type: object
+      required: [team_id, amount_minor, new_remaining_budget_minor]
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        amount_minor:
+          type: integer
+        new_remaining_budget_minor:
+          type: integer
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

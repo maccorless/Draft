@@ -1,0 +1,154 @@
+openapi: "3.1.0"
+info:
+  title: MOD-003 Session / Reconnect / Multi-Draft
+  version: "1.0.0"
+  description: |
+    REST endpoints for listing active drafts and querying draft state.
+    Reconnect state delivery happens over WebSocket (see MOD-002 WS protocol).
+
+security:
+  - bearerAuth: []
+
+paths:
+  /leagues/{leagueId}/drafts:
+    get:
+      operationId: listDrafts
+      summary: List all drafts for the league
+      tags: [session]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      responses:
+        "200":
+          description: List of drafts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [drafts]
+                properties:
+                  drafts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DraftSummary"
+
+  /drafts/{draftId}/state:
+    get:
+      operationId: getDraftState
+      summary: Full draft state snapshot (REST fallback; WS STATE_SNAPSHOT is preferred)
+      tags: [session]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: Full draft state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftStateSnapshot"
+
+x-websocket-addendum:
+  description: |
+    Reconnect flow for MOD-003 is handled within the MOD-002 WS connection.
+    On connect, client sends: { type: AUTHENTICATE, payload: { token, last_seen_sequence } }
+    Server responds with STATE_SNAPSHOT followed by missed DraftEvents in sequence order.
+
+  server-events:
+    - type: STATE_SNAPSHOT
+      payload:
+        draft_id: uuid
+        status: "CREATED | RUNNING | PAUSED | COMPLETE"
+        teams: array of DraftTeamState
+        current_auction:
+          player_auction_id: uuid
+          current_bid_minor: integer
+          leading_team_id: uuid
+          auction_version: integer
+          rebid_deadline_ts: integer
+        missed_events_replayed: integer
+        as_of_sequence: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    leagueId:
+      name: leagueId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    draftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    DraftSummary:
+      type: object
+      required: [id, status, league_id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        league_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [CREATED, RUNNING, PAUSED, COMPLETE]
+        started_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    DraftStateSnapshot:
+      type: object
+      required: [draft_id, status, teams]
+      properties:
+        draft_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [CREATED, RUNNING, PAUSED, COMPLETE]
+        teams:
+          type: array
+          items:
+            type: object
+            properties:
+              team_id:
+                type: string
+                format: uuid
+              remaining_budget_minor:
+                type: integer
+              roster_filled_count:
+                type: integer
+              control_mode:
+                type: string
+                enum: [MANUAL, AUTO_AGENT]
+        current_auction:
+          type: object
+          nullable: true
+          properties:
+            player_auction_id:
+              type: string
+              format: uuid
+            current_bid_minor:
+              type: integer
+            leading_team_id:
+              type: string
+              format: uuid
+            auction_version:
+              type: integer
+            rebid_deadline_ts:
+              type: integer

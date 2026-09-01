@@ -1,0 +1,161 @@
+openapi: "3.1.0"
+info:
+  title: MOD-005 Corrections and Rollback
+  version: "1.0.0"
+  description: |
+    Commissioner-only price correction (in-place, gated by ledger replay) and
+    bounded rollback (last N picks in reverse resolution_sequence order).
+    Draft must be PAUSED before rollback is accepted.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /drafts/{draftId}/corrections/price:
+    post:
+      operationId: correctPrice
+      summary: Correct the price of an already-awarded pick
+      description: |
+        Only the price is corrected in place. Replays the team's ledger forward
+        to confirm no later pick by that team becomes illegal. Rejected if any
+        later pick would violate budget constraints.
+      tags: [corrections]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PriceCorrectionRequest"
+      responses:
+        "200":
+          description: Price corrected; new budget_ledger_entry created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriceCorrectionResponse"
+        "409":
+          description: Correction would make a later pick illegal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /drafts/{draftId}/rollback:
+    post:
+      operationId: rollbackPicks
+      summary: Roll back the last N picks in reverse resolution_sequence order
+      description: |
+        Draft must be PAUSED. Undoes acquisitions, roster entries, and ledger
+        debits in a single all-or-nothing transaction. PlayerAuctions are reset
+        to PENDING status.
+      tags: [corrections]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RollbackRequest"
+      responses:
+        "200":
+          description: Rollback applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RollbackResponse"
+        "409":
+          description: Draft is not PAUSED or no picks to roll back
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    draftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    PriceCorrectionRequest:
+      type: object
+      required: [acquisition_id, new_price_minor]
+      properties:
+        acquisition_id:
+          type: string
+          format: uuid
+        new_price_minor:
+          type: integer
+          minimum: 100
+          description: New price in cents (minimum $1.00)
+
+    PriceCorrectionResponse:
+      type: object
+      required: [acquisition_id, old_price_minor, new_price_minor]
+      properties:
+        acquisition_id:
+          type: string
+          format: uuid
+        old_price_minor:
+          type: integer
+        new_price_minor:
+          type: integer
+        team_id:
+          type: string
+          format: uuid
+        new_remaining_budget_minor:
+          type: integer
+
+    RollbackRequest:
+      type: object
+      required: [count]
+      properties:
+        count:
+          type: integer
+          minimum: 1
+          description: Number of picks to roll back in reverse resolution_sequence order
+
+    RollbackResponse:
+      type: object
+      required: [rolled_back, picks_reversed]
+      properties:
+        rolled_back:
+          type: integer
+          description: Number of picks actually rolled back
+        picks_reversed:
+          type: array
+          items:
+            type: object
+            properties:
+              acquisition_id:
+                type: string
+                format: uuid
+              player_name:
+                type: string
+              team_id:
+                type: string
+                format: uuid
+              price_minor:
+                type: integer
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

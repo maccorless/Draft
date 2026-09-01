@@ -1,0 +1,267 @@
+openapi: "3.1.0"
+info:
+  title: MOD-008 Owner Strategy and War Room
+  version: "1.0.0"
+  description: |
+    Owner Target Values (private, never broadcast), Watch List and Nomination Queue
+    management, and War Room window synchronization (two synchronized windows sharing
+    one team identity).
+
+security:
+  - bearerAuth: []
+
+paths:
+  /drafts/{draftId}/teams/{teamId}/target-values:
+    get:
+      operationId: getTargetValues
+      summary: Get all private target values for a team
+      tags: [strategy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: Target values (only returned to the authenticated team)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TargetValueList"
+
+    put:
+      operationId: setTargetValues
+      summary: Bulk-set target values for multiple players
+      tags: [strategy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetTargetValuesRequest"
+      responses:
+        "200":
+          description: Target values updated
+
+  /drafts/{draftId}/teams/{teamId}/watchlist:
+    get:
+      operationId: getWatchList
+      summary: Get a team's Watch List
+      tags: [strategy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: Watch list items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WatchListResponse"
+
+    post:
+      operationId: addToWatchList
+      summary: Add a player to the Watch List (never auto-nominates)
+      tags: [strategy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WatchListAddRequest"
+      responses:
+        "201":
+          description: Player added to watch list
+
+  /drafts/{draftId}/teams/{teamId}/watchlist/{playerId}:
+    delete:
+      operationId: removeFromWatchList
+      summary: Remove a player from the Watch List
+      tags: [strategy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Removed
+
+  /drafts/{draftId}/teams/{teamId}/nomination-queue:
+    get:
+      operationId: getNominationQueue
+      summary: Get a team's Nomination Queue (auto-nominates when it's their turn)
+      tags: [strategy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: Nomination queue items in order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NominationQueueResponse"
+
+    put:
+      operationId: reorderNominationQueue
+      summary: Reorder the Nomination Queue
+      tags: [strategy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReorderQueueRequest"
+      responses:
+        "200":
+          description: Queue reordered
+
+x-websocket-events:
+  description: |
+    War Room sync: a secondary browser window opened by the same owner connects to
+    the same WS draft endpoint. The server recognizes the same team_id and sends
+    duplicate broadcasts — no special "war room" handshake needed.
+  events:
+    - type: NOMINATOR_MATCH_AVAILABLE
+      payload:
+        team_id: uuid
+        player_auction_id: uuid
+        current_bid_minor: integer
+      description: Notifies the team that their Nominator Match right can be exercised.
+
+    - type: NOMINATOR_MATCH_USED
+      payload:
+        team_id: uuid
+        player_auction_id: uuid
+      description: Broadcast after match is exercised; right is permanently consumed.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    draftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    teamId:
+      name: teamId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    TargetValueList:
+      type: object
+      required: [values]
+      properties:
+        values:
+          type: array
+          items:
+            type: object
+            required: [player_id, target_value_minor]
+            properties:
+              player_id:
+                type: string
+                format: uuid
+              player_name:
+                type: string
+              target_value_minor:
+                type: integer
+
+    SetTargetValuesRequest:
+      type: object
+      required: [values]
+      properties:
+        values:
+          type: array
+          items:
+            type: object
+            required: [player_id, target_value_minor]
+            properties:
+              player_id:
+                type: string
+                format: uuid
+              target_value_minor:
+                type: integer
+
+    WatchListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              player_id:
+                type: string
+                format: uuid
+              player_name:
+                type: string
+              position:
+                type: string
+
+    WatchListAddRequest:
+      type: object
+      required: [player_id]
+      properties:
+        player_id:
+          type: string
+          format: uuid
+
+    NominationQueueResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              player_id:
+                type: string
+                format: uuid
+              player_name:
+                type: string
+              queue_position:
+                type: integer
+
+    ReorderQueueRequest:
+      type: object
+      required: [ordered_player_ids]
+      properties:
+        ordered_player_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
