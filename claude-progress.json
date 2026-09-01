@@ -1,9 +1,9 @@
 {
-  "last_updated": "2026-09-01T18:16:51.808567+00:00",
+  "last_updated": "2026-09-01T18:50:14.912492+00:00",
   "current_phase": "init",
   "current_wave": null,
   "current_tier": 0,
-  "last_completed_feature": "F-MOD-004",
+  "last_completed_feature": "F-MOD-005",
   "in_progress_features": [],
   "known_issues": [
     "F-MOD-002: auto-nomination on expired turn not yet implemented (requires nomination cursor timer)",
