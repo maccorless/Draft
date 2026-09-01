@@ -6,10 +6,13 @@
  * 2. auth_epoch is re-read from DB on every command (never from token payload).
  * 3. All mutating commands go through the per-draft AsyncQueue.
  * 4. Multi-draft isolation: verify draft.league_id === token.league_id on every command.
+ * 5. On AUTHENTICATE: send STATE_SNAPSHOT + replay missed DraftEvents (F-MOD-003).
+ * 6. Multi-window identity: multiple tabs share one logical team session (F-MOD-003).
  */
 import type { FastifyInstance } from 'fastify';
 import type { FastifyRequest } from 'fastify';
 import type { SocketStream } from '@fastify/websocket';
+import type WebSocket from 'ws';
 
 import postgres from 'postgres';
 
@@ -19,8 +22,11 @@ import {
   processBidCommand,
   processNominateCommand,
   processPassNomination,
+  registerTeamSession,
+  unregisterTeamSession,
   type TokenClaims,
 } from '../auction/engine.js';
+import { buildDraftStateSnapshot } from '../session/routes.js';
 
 interface DraftParams {
   draftId: string;
@@ -39,12 +45,9 @@ export async function registerAuctionWsHandler(
       const socket = connection.socket;
       const draftId = req.params.draftId;
 
-      // Register this connection with the draft's runtime
-      const rt = getOrCreateRuntime(draftId);
-      rt.clients.add(socket as unknown as import('ws').WebSocket);
-
       let authenticated = false;
       let sessionClaims: TokenClaims | null = null;
+      let sessionTeamId: string | null = null;
 
       // Auth timeout — close if AUTHENTICATE not received within 5s
       const authTimer = setTimeout(() => {
@@ -76,7 +79,7 @@ export async function registerAuctionWsHandler(
             return;
           }
 
-          const payload = msgObj.payload as { token?: string } | undefined;
+          const payload = msgObj.payload as { token?: string; last_seen_sequence?: number } | undefined;
           const token = payload?.token;
           if (!token) {
             socket.close(4401, 'MISSING_TOKEN');
@@ -92,9 +95,9 @@ export async function registerAuctionWsHandler(
             return;
           }
 
-          // Verify the draft belongs to this token's league (multi-draft isolation)
-          const draftRows = await sql<[{ league_id: string }]>`
-            SELECT league_id FROM drafts WHERE id = ${draftId} LIMIT 1
+          // Verify the draft belongs to this token's league (multi-draft isolation — constraint #11)
+          const draftRows = await sql<[{ league_id: string; status: string }]>`
+            SELECT league_id, status FROM drafts WHERE id = ${draftId} LIMIT 1
           `;
           const draft = draftRows[0];
           if (!draft) {
@@ -106,7 +109,7 @@ export async function registerAuctionWsHandler(
             return;
           }
 
-          // Re-read auth_epoch from DB — CONSTRAINT 2
+          // Re-read auth_epoch from DB — constraint #12
           const currentEpoch = await readAuthEpoch(sql, claims);
           if (currentEpoch === null || claims.auth_epoch !== currentEpoch) {
             socket.close(4401, 'AUTH_EPOCH_INVALID');
@@ -116,8 +119,55 @@ export async function registerAuctionWsHandler(
           clearTimeout(authTimer);
           authenticated = true;
           sessionClaims = claims;
+          sessionTeamId = claims.team_id ?? claims.league_id; // commissioner uses league_id as identity
 
-          socket.send(JSON.stringify({ type: 'AUTHENTICATED' }));
+          // ─── Register in multi-window session tracking ─────────────────────
+          registerTeamSession(draftId, sessionTeamId, socket as unknown as WebSocket);
+
+          // ─── Build and send STATE_SNAPSHOT ────────────────────────────────
+          // Only replay missed events when client explicitly provides last_seen_sequence
+          // (i.e., this is a reconnect, not an initial fresh connect).
+          const hasLastSeen = typeof payload?.last_seen_sequence === 'number';
+          const lastSeenSeq: number = hasLastSeen ? (payload!.last_seen_sequence as number) : -1;
+
+          // Load missed events (only on reconnect when last_seen_sequence is provided)
+          const missedEvents = hasLastSeen ? await sql<Array<{
+            sequence: number;
+            event_type: string;
+            team_id: string | null;
+            player_auction_id: string | null;
+            payload: unknown;
+            created_at: Date;
+          }>>`
+            SELECT sequence, event_type, team_id, player_auction_id, payload, created_at
+            FROM draft_events
+            WHERE draft_id = ${draftId} AND sequence > ${lastSeenSeq}
+            ORDER BY sequence ASC
+          ` : [];
+
+          const snapshot = await buildDraftStateSnapshot(sql, draftId, draft.status);
+          snapshot.missed_events_replayed = missedEvents.length;
+
+          // Send STATE_SNAPSHOT first
+          socket.send(JSON.stringify({ type: 'STATE_SNAPSHOT', payload: snapshot }));
+
+          // Replay missed events in sequence order
+          for (const ev of missedEvents) {
+            socket.send(JSON.stringify({
+              type: ev.event_type,
+              payload: {
+                ...(ev.payload as Record<string, unknown>),
+                sequence: ev.sequence,
+                team_id: ev.team_id,
+                player_auction_id: ev.player_auction_id,
+                created_at: ev.created_at instanceof Date
+                  ? ev.created_at.toISOString()
+                  : ev.created_at,
+                _replayed: true,
+              },
+            }));
+          }
+
           return;
         }
 
@@ -126,8 +176,8 @@ export async function registerAuctionWsHandler(
 
         const claims = sessionClaims;
 
-        // Re-read auth_epoch on EVERY command — CONSTRAINT 2
-        rt.queue.enqueue(async () => {
+        // Re-read auth_epoch on EVERY command — constraint #2
+        getOrCreateRuntime(draftId).queue.enqueue(async () => {
           const currentEpoch = await readAuthEpoch(sql, claims);
           if (currentEpoch === null || claims.auth_epoch !== currentEpoch) {
             socket.send(JSON.stringify({
@@ -138,9 +188,9 @@ export async function registerAuctionWsHandler(
             return;
           }
 
-          // Route command
+          // Route command — also re-verify league_id per constraint #11
           const type = msgObj.type;
-          const payload = msgObj.payload as Record<string, unknown> ?? {};
+          const commandPayload = msgObj.payload as Record<string, unknown> ?? {};
 
           if (type === 'BID_COMMAND') {
             const teamId = claims.team_id;
@@ -148,7 +198,7 @@ export async function registerAuctionWsHandler(
               socket.send(JSON.stringify({
                 type: 'BID_REJECTED',
                 payload: {
-                  player_auction_id: payload['player_auction_id'] ?? '',
+                  player_auction_id: commandPayload['player_auction_id'] ?? '',
                   code: 'NO_TEAM',
                   reason: 'Commissioner cannot bid',
                 },
@@ -162,28 +212,28 @@ export async function registerAuctionWsHandler(
               serverReceiptTime,
               sql,
               command: {
-                player_auction_id: String(payload['player_auction_id'] ?? ''),
-                bid_amount_minor: Number(payload['bid_amount_minor'] ?? 0),
-                bid_type: String(payload['bid_type'] ?? 'ABSOLUTE') as 'ABSOLUTE' | 'RELATIVE' | 'NOMINATOR_MATCH',
-                expected_current_bid_minor: payload['expected_current_bid_minor'] !== undefined
-                  ? Number(payload['expected_current_bid_minor'])
+                player_auction_id: String(commandPayload['player_auction_id'] ?? ''),
+                bid_amount_minor: Number(commandPayload['bid_amount_minor'] ?? 0),
+                bid_type: String(commandPayload['bid_type'] ?? 'ABSOLUTE') as 'ABSOLUTE' | 'RELATIVE' | 'NOMINATOR_MATCH',
+                expected_current_bid_minor: commandPayload['expected_current_bid_minor'] !== undefined
+                  ? Number(commandPayload['expected_current_bid_minor'])
                   : undefined,
-                expected_auction_version: payload['expected_auction_version'] !== undefined
-                  ? Number(payload['expected_auction_version'])
+                expected_auction_version: commandPayload['expected_auction_version'] !== undefined
+                  ? Number(commandPayload['expected_auction_version'])
                   : undefined,
               },
             });
           } else if (type === 'NOMINATE_COMMAND') {
-            const teamId = claims.team_id ?? claims.league_id; // fallback for commissioner
+            const teamId = claims.team_id ?? claims.league_id;
             await processNominateCommand({
               draftId,
-              teamId: teamId,
+              teamId,
               leagueId: claims.league_id,
               serverReceiptTime,
               sql,
               command: {
-                player_dataset_entry_id: String(payload['player_dataset_entry_id'] ?? ''),
-                opening_bid_minor: Number(payload['opening_bid_minor'] ?? 100),
+                player_dataset_entry_id: String(commandPayload['player_dataset_entry_id'] ?? ''),
+                opening_bid_minor: Number(commandPayload['opening_bid_minor'] ?? 100),
               },
             });
           } else if (type === 'PASS_NOMINATION') {
@@ -202,12 +252,23 @@ export async function registerAuctionWsHandler(
 
       socket.on('close', () => {
         clearTimeout(authTimer);
-        rt.clients.delete(socket as unknown as import('ws').WebSocket);
+        if (sessionTeamId) {
+          unregisterTeamSession(draftId, sessionTeamId, socket as unknown as WebSocket);
+        } else {
+          // Not yet authenticated — still remove from flat client set if registered early
+          const rt = getOrCreateRuntime(draftId);
+          rt.clients.delete(socket as unknown as WebSocket);
+        }
       });
 
       socket.on('error', () => {
         clearTimeout(authTimer);
-        rt.clients.delete(socket as unknown as import('ws').WebSocket);
+        if (sessionTeamId) {
+          unregisterTeamSession(draftId, sessionTeamId, socket as unknown as WebSocket);
+        } else {
+          const rt = getOrCreateRuntime(draftId);
+          rt.clients.delete(socket as unknown as WebSocket);
+        }
       });
     },
   );

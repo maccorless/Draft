@@ -35,8 +35,9 @@ async function connectAndAuth(
     });
     ws.on('message', (data: Buffer | string) => {
       const msg = JSON.parse(data.toString()) as { type: string };
-      if (msg.type === 'AUTHENTICATED') resolve();
-      else reject(new Error(`Expected AUTHENTICATED, got ${msg.type}`));
+      // F-MOD-003 changed auth confirmation from AUTHENTICATED → STATE_SNAPSHOT
+      if (msg.type === 'AUTHENTICATED' || msg.type === 'STATE_SNAPSHOT') resolve();
+      else reject(new Error(`Expected AUTHENTICATED or STATE_SNAPSHOT, got ${msg.type}`));
     });
     ws.on('error', reject);
     setTimeout(() => reject(new Error('connectAndAuth timed out')), 5000);
@@ -374,7 +375,7 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
 
     const ws = await connectAndAuth(serverPort, draftId, team1Token);
-    // connectAndAuth verified AUTHENTICATED was received
+    // F-MOD-003: auth confirmation is now STATE_SNAPSHOT (connectAndAuth accepts both)
     ws.close();
   });
 

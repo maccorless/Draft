@@ -20,6 +20,10 @@ export interface DraftRuntime {
   queue: AsyncQueue;
   clients: Set<WebSocket>;
   awardTimer: ReturnType<typeof setInterval> | null;
+  /** Per-team session tracking: Map<team_id, Set<WebSocket>> for multi-window identity */
+  teamSessions: Map<string, Set<WebSocket>>;
+  /** Grace timers: when all of a team's windows drop, a timer is started (F-MOD-004 acts on expiry) */
+  graceTimers: Map<string, ReturnType<typeof setTimeout>>;
 }
 
 // ─── Per-draft runtimes (keyed by draft_id) ──────────────────────────────────
@@ -30,7 +34,7 @@ const draftRuntimes = new Map<string, DraftRuntime>();
 export function getOrCreateRuntime(draftId: string): DraftRuntime {
   let rt = draftRuntimes.get(draftId);
   if (!rt) {
-    rt = { queue: new AsyncQueue(), clients: new Set(), awardTimer: null };
+    rt = { queue: new AsyncQueue(), clients: new Set(), awardTimer: null, teamSessions: new Map(), graceTimers: new Map() };
     draftRuntimes.set(draftId, rt);
   }
   return rt;
@@ -39,7 +43,69 @@ export function getOrCreateRuntime(draftId: string): DraftRuntime {
 export function removeRuntime(draftId: string): void {
   const rt = draftRuntimes.get(draftId);
   if (rt?.awardTimer) clearInterval(rt.awardTimer);
+  for (const t of rt?.graceTimers.values() ?? []) clearTimeout(t);
   draftRuntimes.delete(draftId);
+}
+
+/**
+ * Register a WebSocket connection for a given team.
+ * Adds to both the flat broadcast set and the per-team set.
+ * Clears any existing grace timer for this team (reconnect within grace).
+ */
+export function registerTeamSession(
+  draftId: string,
+  teamId: string,
+  ws: WebSocket,
+  gracePeriodMs = 60_000,
+  onGraceExpired?: (draftId: string, teamId: string) => void,
+): void {
+  const rt = getOrCreateRuntime(draftId);
+  rt.clients.add(ws);
+
+  if (!rt.teamSessions.has(teamId)) {
+    rt.teamSessions.set(teamId, new Set());
+  }
+  rt.teamSessions.get(teamId)!.add(ws);
+
+  // Clear grace timer if reconnecting within grace period
+  const existing = rt.graceTimers.get(teamId);
+  if (existing) {
+    clearTimeout(existing);
+    rt.graceTimers.delete(teamId);
+  }
+
+  void gracePeriodMs; // captured for use in unregister — stored per-usage
+  void onGraceExpired;
+}
+
+/**
+ * Unregister a WebSocket connection for a given team.
+ * If this was the last connection for the team, start the grace timer.
+ */
+export function unregisterTeamSession(
+  draftId: string,
+  teamId: string,
+  ws: WebSocket,
+  gracePeriodMs = 60_000,
+  onGraceExpired?: (draftId: string, teamId: string) => void,
+): void {
+  const rt = draftRuntimes.get(draftId);
+  if (!rt) return;
+  rt.clients.delete(ws);
+
+  const teamSet = rt.teamSessions.get(teamId);
+  if (teamSet) {
+    teamSet.delete(ws);
+    if (teamSet.size === 0) {
+      rt.teamSessions.delete(teamId);
+      // All windows for this team dropped — start grace timer
+      const timer = setTimeout(() => {
+        rt.graceTimers.delete(teamId);
+        if (onGraceExpired) onGraceExpired(draftId, teamId);
+      }, gracePeriodMs);
+      rt.graceTimers.set(teamId, timer);
+    }
+  }
 }
 
 // ─── Broadcast ────────────────────────────────────────────────────────────────
