@@ -25,11 +25,43 @@ paths:
               $ref: "#/components/schemas/WhammyRequest"
       responses:
         "200":
-          description: Whammy applied; BudgetLedgerEntry created; event broadcast
+          description: Whammy applied or queued for approval; BudgetLedgerEntry created if no approval required
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/WhammyResponse"
+
+  /drafts/{draftId}/whammy/{whammyId}/approve:
+    post:
+      operationId: approveWhammy
+      summary: Commissioner approves a pending Whammy (PENDING_APPROVAL -> APPLIED)
+      tags: [whammy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/whammyId"
+      responses:
+        "200":
+          description: Whammy approved and applied; BudgetLedgerEntry created; WHAMMY_APPLIED broadcast sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhammyResponse"
+
+  /drafts/{draftId}/whammy/{whammyId}/reject:
+    post:
+      operationId: rejectWhammy
+      summary: Commissioner rejects a pending Whammy (PENDING_APPROVAL -> REJECTED)
+      tags: [whammy]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/whammyId"
+      responses:
+        "200":
+          description: Whammy rejected; no budget effect applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhammyRejectResponse"
 
 x-websocket-events:
   events:
@@ -51,6 +83,13 @@ components:
   parameters:
     draftId:
       name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    whammyId:
+      name: whammyId
       in: path
       required: true
       schema:
@@ -83,6 +122,17 @@ components:
           type: integer
         new_remaining_budget_minor:
           type: integer
+
+    WhammyRejectResponse:
+      type: object
+      required: [whammy_id, status]
+      properties:
+        whammy_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [REJECTED]
 
     ErrorResponse:
       type: object

@@ -91,6 +91,21 @@ produces:
     schema_file: schema/MOD-002-api-schema.yaml
     request_schema: {}
     response_schema: PLAYER_AWARDED
+
+  - operation_id: ws_AUTHENTICATED
+    schema_file: schema/MOD-002-api-schema.yaml
+    request_schema: AUTHENTICATE
+    response_schema: AUTHENTICATED
+
+  - operation_id: ws_PASS_NOMINATION
+    schema_file: schema/MOD-002-api-schema.yaml
+    request_schema: PASS_NOMINATION
+    response_schema: NOMINATION_TURN_CHANGED
+
+  - operation_id: ws_NOMINATION_TURN_CHANGED
+    schema_file: schema/MOD-002-api-schema.yaml
+    request_schema: {}
+    response_schema: NOMINATION_TURN_CHANGED
 ```
 
 ## Required Env Variables

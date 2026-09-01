@@ -84,6 +84,10 @@ x-websocket-protocol:
         opening_bid_minor: integer (minimum 100)
       description: Nominate a player for auction. Only valid during nomination window.
 
+    - type: PASS_NOMINATION
+      payload: {}
+      description: Team passes their nomination turn; advances the nomination cursor to the next team.
+
   server-events:
     - type: AUTHENTICATED
       payload: {}
@@ -122,6 +126,12 @@ x-websocket-protocol:
         price_minor: integer
         roster_slot: string
         resolution_sequence: integer
+
+    - type: NOMINATION_TURN_CHANGED
+      payload:
+        current_nominator_team_id: uuid
+        nomination_deadline_ts: integer (epoch ms)
+      description: Broadcast when the nomination cursor advances to the next team.
 
     - type: ERROR
       payload:

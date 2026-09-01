@@ -79,6 +79,16 @@ produces:
       amount_minor: integer
       description: string
       new_remaining_budget_minor: integer
+
+  - operation_id: approveWhammy
+    schema_file: schema/MOD-009-api-schema.yaml
+    request_schema: "(none)"
+    response_schema: WhammyResponse
+
+  - operation_id: rejectWhammy
+    schema_file: schema/MOD-009-api-schema.yaml
+    request_schema: "(none)"
+    response_schema: WhammyRejectResponse
 ```
 
 ## Required Env Variables

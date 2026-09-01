@@ -29,7 +29,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/LeagueSummary"
 
+  /leagues/{leagueId}:
+    get:
+      operationId: getLeague
+      summary: Get league details (id, name)
+      tags: [league]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      responses:
+        "200":
+          description: League summary (no password hashes)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeagueSummary"
+
   /leagues/{leagueId}/teams:
+    get:
+      operationId: listTeams
+      summary: List all teams in the league
+      tags: [league]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      responses:
+        "200":
+          description: Array of team summaries (no password hashes)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamListResponse"
+
     post:
       operationId: createTeam
       summary: Add a team to the league
@@ -49,6 +78,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TeamSummary"
+
+  /leagues/{leagueId}/players:
+    get:
+      operationId: listPlayers
+      summary: List all players in the league's active dataset
+      tags: [dataset]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      responses:
+        "200":
+          description: Players with AAV, projections, tier from the active dataset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerListResponse"
 
   /leagues/{leagueId}/config/roster:
     put:
@@ -264,6 +308,50 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RosterSlotConfigItem"
+
+    TeamListResponse:
+      type: object
+      required: [teams]
+      properties:
+        teams:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamSummary"
+
+    PlayerEntry:
+      type: object
+      required: [player_id, dataset_entry_id, name, position, aav_minor]
+      properties:
+        player_id:
+          type: string
+          format: uuid
+        dataset_entry_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        position:
+          type: string
+        nfl_team:
+          type: string
+        aav_minor:
+          type: integer
+          description: Average Auction Value in cents
+        projected_points:
+          type: number
+          nullable: true
+        tier:
+          type: integer
+          nullable: true
+
+    PlayerListResponse:
+      type: object
+      required: [players]
+      properties:
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerEntry"
 
     AuctionConfigRequest:
       type: object

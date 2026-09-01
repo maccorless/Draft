@@ -95,6 +95,21 @@ produces:
     schema_file: schema/MOD-001-api-schema.yaml
     request_schema: CreateDraftRequest
     response_schema: CreateDraftResponse
+
+  - operation_id: getLeague
+    schema_file: schema/MOD-001-api-schema.yaml
+    request_schema: "(none)"
+    response_schema: LeagueSummary
+
+  - operation_id: listTeams
+    schema_file: schema/MOD-001-api-schema.yaml
+    request_schema: "(none)"
+    response_schema: TeamListResponse
+
+  - operation_id: listPlayers
+    schema_file: schema/MOD-001-api-schema.yaml
+    request_schema: "(none)"
+    response_schema: PlayerListResponse
 ```
 
 ## Required Env Variables

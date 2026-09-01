@@ -63,7 +63,12 @@ x-websocket-events:
         team_id: uuid
         triggered_by: "disconnect_grace | manual"
 
-    - type: TEAM_MANUAL_CONTROL_REQUESTED
+    - type: TEAM_AUTO_AGENT_DISABLED
+      payload:
+        team_id: uuid
+        triggered_by: "owner"
+
+    - type: TEAM_RECONNECTED
       payload:
         team_id: uuid
         triggered_by: "owner"
