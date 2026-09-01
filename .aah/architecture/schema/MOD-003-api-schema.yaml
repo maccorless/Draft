@@ -111,6 +111,37 @@ components:
           type: string
           format: date-time
 
+    TeamStateEntry:
+      type: object
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        remaining_budget_minor:
+          type: integer
+        roster_filled_count:
+          type: integer
+        control_mode:
+          type: string
+          enum: [MANUAL, AUTO_AGENT]
+
+    ActiveAuctionState:
+      type: object
+      nullable: true
+      properties:
+        player_auction_id:
+          type: string
+          format: uuid
+        current_bid_minor:
+          type: integer
+        leading_team_id:
+          type: string
+          format: uuid
+        auction_version:
+          type: integer
+        rebid_deadline_ts:
+          type: integer
+
     DraftStateSnapshot:
       type: object
       required: [draft_id, status, teams]
@@ -124,31 +155,6 @@ components:
         teams:
           type: array
           items:
-            type: object
-            properties:
-              team_id:
-                type: string
-                format: uuid
-              remaining_budget_minor:
-                type: integer
-              roster_filled_count:
-                type: integer
-              control_mode:
-                type: string
-                enum: [MANUAL, AUTO_AGENT]
+            $ref: "#/components/schemas/TeamStateEntry"
         current_auction:
-          type: object
-          nullable: true
-          properties:
-            player_auction_id:
-              type: string
-              format: uuid
-            current_bid_minor:
-              type: integer
-            leading_team_id:
-              type: string
-              format: uuid
-            auction_version:
-              type: integer
-            rebid_deadline_ts:
-              type: integer
+          $ref: "#/components/schemas/ActiveAuctionState"

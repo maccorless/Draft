@@ -8,12 +8,16 @@ modules:
   - id: MOD-000
     name: walking-skeleton
     description: >
-      All non-demoable infrastructure: monorepo scaffold, shared-types package, WS envelope
-      protocol, auth (site/league/team passwords + HMAC JWTs + auth_epoch revocation),
-      league/team/roster/auction configuration CRUD, Drizzle schema + migrations,
-      Railway CI/CD pipeline, and crash-recovery (RUNNING → PAUSED on restart).
-    demo_criteria: "Server boots, /health responds 200, tsc --noEmit passes, Vitest passes"
-    smoke_test: "npm run build && curl http://localhost:3000/health"
+      Walking skeleton: monorepo scaffold, shared-types package, WS envelope protocol,
+      auth (POST /auth/site, POST /auth/league/:id — HMAC JWTs + auth_epoch revocation),
+      Drizzle schema + migrations, Railway CI/CD pipeline, crash-recovery (RUNNING to PAUSED
+      on restart), and /health endpoint. League/team/config CRUD lives in MOD-001.
+    demo_criteria: >
+      Server boots. GET /health returns 200. POST /auth/site returns available league names.
+      POST /auth/league/:id with correct password returns a JWT. tsc --noEmit passes. Vitest passes.
+    smoke_test: >
+      npm run build && curl http://localhost:3000/health (200) && curl -X POST
+      http://localhost:3000/auth/site (leagues list) && tsc --noEmit
     layers:
       scaffold:
         - npm workspaces monorepo (server/, web/, shared-types/)
@@ -26,21 +30,18 @@ modules:
         - AUTH message (first WS message; carries JWT + league_id)
         - Zod validators for all WS message types
       db:
-        - Drizzle schema for all entities (League, Team, Membership, User, Draft, PlayerAuction, BidAttempt, DraftEvent, DraftTeamState, Acquisition, RosterEntry, BudgetLedgerEntry, RosterConfiguration, RosterSlotDefinition, AuctionConfiguration, ScoringConfiguration, AutoAgentConfig, DraftDataset, Player)
+        - Drizzle schema for all entities (League, Team, Membership, User, Draft, PlayerAuction, BidAttempt, DraftEvent, DraftTeamState, Acquisition, RosterEntry, BudgetLedgerEntry, RosterConfiguration, RosterSlotDefinition, AuctionConfiguration, AutoAgentConfig, DraftDataset, Player, WhammyConfig)
         - Drizzle migrations pipeline (generate + run)
         - postgres.js connection pool (max 10)
         - Env checker: validates DATABASE_URL + JWT_SECRET at boot (ERR_CDR_78_EX_CONFIG)
       api:
+        - GET /health
+        - POST /auth/site (site password; returns league list)
+        - POST /auth/league/:id (commissioner or team password; returns JWT)
         - Fastify server with Pino logger + pino-opentelemetry-transport
         - @fastify/jwt plugin; auth_epoch re-read from DB in preHandler hook on every command
         - @node-rs/bcrypt for password hashing (work factor 12)
         - @fastify/rate-limit on auth routes (in-memory, 5 failures/IP/min)
-        - League CRUD (POST /leagues, GET /leagues/:id)
-        - Team CRUD (POST /leagues/:id/teams, GET /leagues/:id/teams)
-        - RosterConfiguration + RosterSlotDefinition endpoints
-        - AuctionConfiguration endpoints (anti-snipe extension configurable per league)
-        - Login endpoints (site, league, commissioner, team)
-        - Draft creation endpoint (POST /leagues/:id/drafts)
       crash_recovery:
         - On startup: query all Draft rows with status=RUNNING; update to PAUSED + emit DRAFT_PAUSED event
       ui:
@@ -52,27 +53,34 @@ modules:
   - id: MOD-001
     name: player-dataset-management
     description: >
-      Commissioner imports player data from CSV (Phase 2a reference adapter), resolves player
-      matching ambiguities, and freezes a DraftDataset. The draft can only start once a dataset
-      is FROZEN and associated with the draft.
+      League and team setup CRUD, auction and roster configuration, plus CSV player data import
+      and dataset freeze. Commissioner creates a league, adds teams, configures roster slots
+      and auction timers, imports players from CSV, and freezes the dataset. A draft can only
+      start once a FROZEN dataset is attached.
     demo_criteria: >
-      Commissioner uploads a CSV, sees matched and ambiguous players, resolves ambiguities,
-      freezes the dataset, and the draft shows as ready to start.
+      Commissioner creates a league, adds 12 teams, configures roster and auction settings,
+      uploads a CSV of players, freezes the dataset, and creates a draft. Draft shows as
+      ready to start (status=CREATED with frozen dataset attached).
     smoke_test: >
-      POST /leagues/:id/draft-dataset (CSV upload) → GET /draft-dataset/:id (check status=VALIDATED)
-      → POST /draft-dataset/:id/resolve-ambiguity → POST /draft-dataset/:id/freeze
-      → GET /draft-dataset/:id (status=FROZEN)
+      POST /leagues (create league) → POST /leagues/:id/teams (x2) → PUT /leagues/:id/config/roster
+      → PUT /leagues/:id/config/auction → POST /leagues/:id/datasets → POST /leagues/:id/datasets/:id/import/csv
+      → POST /leagues/:id/datasets/:id/freeze (status=FROZEN) → POST /leagues/:id/drafts (draft created)
     layers:
       db:
         - DraftDataset lifecycle columns (status: DRAFT | VALIDATED | FROZEN, frozen_at)
-        - DatasetImport (import job rows with match/ambiguity counts)
         - Player master table and PlayerDatasetEntry join
       api:
-        - POST /leagues/:id/draft-dataset (multipart CSV upload; worker_threads parsing)
-        - GET /draft-dataset/:id/ambiguities (list unresolved player matches)
-        - POST /draft-dataset/:id/resolve-ambiguity (commissioner resolves one)
-        - POST /draft-dataset/:id/freeze (validate all resolved; set FROZEN)
-        - GET /leagues/:id/players (list frozen dataset players with AAV + projections)
+        - POST /leagues (create league)
+        - GET /leagues/:id
+        - POST /leagues/:id/teams (add team)
+        - GET /leagues/:id/teams
+        - PUT /leagues/:id/config/roster (roster slots; RosterConfiguration + RosterSlotDefinition)
+        - PUT /leagues/:id/config/auction (timers, budget, anti-snipe; AuctionConfiguration)
+        - POST /leagues/:id/datasets (create empty dataset)
+        - POST /leagues/:id/datasets/:id/import/csv (multipart CSV; worker_threads parsing)
+        - POST /leagues/:id/datasets/:id/freeze (validate; set FROZEN)
+        - GET /leagues/:id/players (list dataset players with AAV + projections)
+        - POST /leagues/:id/drafts (create draft referencing FROZEN dataset)
       ui:
         - Dataset import screen (CSV upload dropzone, progress indicator)
         - Ambiguity resolution UI (side-by-side player match candidates; confirm/override)
@@ -174,7 +182,7 @@ modules:
       api:
         - Disconnect detection: DraftClientSession monitors Set<ws> empty → start grace timer
         - Grace timer fires: set control_mode = AUTO_AGENT; emit TEAM_AUTO_AGENT_ENABLED; broadcast
-        - Auto-Agent bidding: on NOMINATION_STARTED and on PLAYER_AWARDED (leadership change) → if below ceiling → BID_ABSOLUTE at max legal up to willingness ceiling
+        - Auto-Agent bidding: on NOMINATION_STARTED and on BID_ACCEPTED where new leading_team_id != this team's team_id → if current_bid < willingness_ceiling → BID_ABSOLUTE at min(current_bid + 100, max_legal_bid)
         - WS command: SET_AUTO_AGENT_CONFIG (owner sets willingness_pct)
         - WS command: RESUME_MANUAL (explicit owner action to restore manual control)
       ui:
@@ -204,13 +212,13 @@ modules:
         - Acquisition.active (bool; set false on supersede/rollback — never deleted)
         - RosterEntry.active (bool; set false on rollback — never deleted)
         - BudgetLedgerEntry compensating rows (on rollback: new row reversing the debit)
-        - DraftEvent rows: PRICE_CORRECTED, ROLLBACK_STARTED, ROLLBACK_COMPLETED, ACQUISITION_SUPERSEDED
+        - DraftEvent rows: PRICE_CORRECTED, ROLLBACK_STARTED, ROLLBACK_APPLIED, ACQUISITION_SUPERSEDED
       api:
-        - POST /drafts/:id/correct-price (body: acquisition_id, new_price_minor)
+        - POST /drafts/:id/corrections/price (body: acquisition_id, new_price_minor)
           Gated by ledger replay: replay team's ledger forward from pick's resolution_sequence under corrected price; reject if any later pick becomes illegal
-        - POST /drafts/:id/rollback (body: n_picks; default 1)
+        - POST /drafts/:id/rollback (body: count; default 1)
           Draft must be PAUSED first; undo last N picks in strict reverse resolution_sequence order; single all-or-nothing transaction
-        - WS broadcast: PRICE_CORRECTED, ROLLBACK_COMPLETED events
+        - WS broadcast: PRICE_CORRECTED, ROLLBACK_APPLIED events
       ui:
         - Commissioner Console: Correction panel (pick selector, new price input, ledger preview)
         - Commissioner Console: Rollback panel (confirm dialog showing which picks will be undone)
@@ -222,8 +230,8 @@ modules:
     name: draft-completion-and-reports
     description: >
       Draft completion flow, post-draft report generation, ESPN-compatible roster worksheet export,
-      and SendGrid email delivery. Also covers Nominator Match (one-per-draft tie-at-current-price
-      right) and final auto-nomination on empty queue.
+      SendGrid email delivery, and Nominator Match (one-per-draft tie-at-current-price right).
+      Auto-nomination on empty queue is owned by MOD-002; this module exercises it in its demo.
     demo_criteria: >
       All players are awarded. Draft status moves to COMPLETE. Commissioner exports the ESPN
       roster entry worksheet (formatted XLSX/CSV). Owners receive a Draft Summary Report email

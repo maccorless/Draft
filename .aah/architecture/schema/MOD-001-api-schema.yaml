@@ -3,8 +3,8 @@ info:
   title: MOD-001 Player Dataset Management
   version: "1.0.0"
   description: |
-    League setup, draft creation, and CSV dataset import. A dataset must be
-    FROZEN before a draft can reference it.
+    League/team setup CRUD, auction and roster configuration, CSV player data import,
+    and dataset freeze. A dataset must be FROZEN before a draft can reference it.
 
 security:
   - bearerAuth: []
@@ -161,7 +161,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DraftSummary"
+                $ref: "#/components/schemas/CreateDraftResponse"
 
 components:
   securitySchemes:
@@ -241,6 +241,19 @@ components:
         draft_order:
           type: integer
 
+    RosterSlotConfigItem:
+      type: object
+      required: [position, priority, is_starter, slot_count]
+      properties:
+        position:
+          type: string
+        priority:
+          type: integer
+        is_starter:
+          type: boolean
+        slot_count:
+          type: integer
+
     RosterConfigRequest:
       type: object
       required: [bench_slots, slots]
@@ -250,17 +263,7 @@ components:
         slots:
           type: array
           items:
-            type: object
-            required: [position, priority, is_starter, slot_count]
-            properties:
-              position:
-                type: string
-              priority:
-                type: integer
-              is_starter:
-                type: boolean
-              slot_count:
-                type: integer
+            $ref: "#/components/schemas/RosterSlotConfigItem"
 
     AuctionConfigRequest:
       type: object
@@ -299,21 +302,27 @@ components:
           type: string
           format: date-time
 
+    ImportError:
+      type: object
+      properties:
+        row:
+          type: integer
+        message:
+          type: string
+
     ImportResult:
       type: object
       required: [rows_imported, errors]
       properties:
         rows_imported:
           type: integer
+        source:
+          type: string
+          enum: [CSV, EXCEL, ESPN_PDF, FANTASYPROS]
         errors:
           type: array
           items:
-            type: object
-            properties:
-              row:
-                type: integer
-              message:
-                type: string
+            $ref: "#/components/schemas/ImportError"
 
     CreateDraftRequest:
       type: object
@@ -323,13 +332,19 @@ components:
           type: string
           format: uuid
 
-    DraftSummary:
+    CreateDraftResponse:
       type: object
-      required: [id, status]
+      required: [id, status, league_id]
       properties:
         id:
           type: string
           format: uuid
+        league_id:
+          type: string
+          format: uuid
         status:
           type: string
-          enum: [CREATED, RUNNING, PAUSED, COMPLETE]
+          enum: [CREATED]
+        dataset_id:
+          type: string
+          format: uuid

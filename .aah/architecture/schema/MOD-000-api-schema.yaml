@@ -107,6 +107,16 @@ components:
         site_password:
           type: string
 
+    LeagueBrief:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+
     SiteAuthResponse:
       type: object
       required: [leagues]
@@ -114,14 +124,7 @@ components:
         leagues:
           type: array
           items:
-            type: object
-            required: [id, name]
-            properties:
-              id:
-                type: string
-                format: uuid
-              name:
-                type: string
+            $ref: "#/components/schemas/LeagueBrief"
 
     LeagueAuthRequest:
       type: object

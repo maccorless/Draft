@@ -77,6 +77,35 @@ components:
         format: uuid
 
   schemas:
+    ReportAcquisitionEntry:
+      type: object
+      properties:
+        player_name:
+          type: string
+        position:
+          type: string
+        price_minor:
+          type: integer
+        roster_slot:
+          type: string
+
+    ReportTeamEntry:
+      type: object
+      required: [team_id, team_name, acquisitions, final_budget_minor]
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        team_name:
+          type: string
+        final_budget_minor:
+          type: integer
+          description: Remaining unspent budget
+        acquisitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportAcquisitionEntry"
+
     DraftSummaryReport:
       type: object
       required: [draft_id, completed_at, teams]
@@ -90,30 +119,7 @@ components:
         teams:
           type: array
           items:
-            type: object
-            required: [team_id, team_name, acquisitions, final_budget_minor]
-            properties:
-              team_id:
-                type: string
-                format: uuid
-              team_name:
-                type: string
-              final_budget_minor:
-                type: integer
-                description: Remaining unspent budget
-              acquisitions:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    player_name:
-                      type: string
-                    position:
-                      type: string
-                    price_minor:
-                      type: integer
-                    roster_slot:
-                      type: string
+            $ref: "#/components/schemas/ReportTeamEntry"
 
     EmailDispatchResponse:
       type: object

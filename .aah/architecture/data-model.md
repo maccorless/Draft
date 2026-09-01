@@ -175,6 +175,15 @@ erDiagram
 | anti_snipe_extension_ms | int | extends rebid deadline by this amount |
 | min_bid_minor | int | default 100 (= $1.00) |
 
+**WhammyConfig** (optional per-league; commissioner-controlled)
+| Field | Type | Notes |
+|-------|------|-------|
+| id | uuid PK | |
+| league_id | uuid FK UNIQUE | |
+| enabled | bool | if false, POST /drafts/:id/whammy is rejected |
+| max_amount_minor | int | absolute ceiling on any single Whammy delta (cents) |
+| allowed_event_types | string[] | labels for preset Whammy types (e.g. "PENALTY", "BONUS", "CUSTOM") |
+
 ### 3.2 Player Dataset
 
 **DraftDataset**

@@ -73,6 +73,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+x-websocket-events:
+  description: |
+    Corrections and rollback broadcast events. Draft must be PAUSED before rollback fires.
+  events:
+    - type: PRICE_CORRECTED
+      payload:
+        acquisition_id: uuid
+        old_price_minor: integer
+        new_price_minor: integer
+        team_id: uuid
+        new_remaining_budget_minor: integer
+
+    - type: ROLLBACK_APPLIED
+      payload:
+        picks_reversed: array of ReversedPick (acquisition_id, player_name, team_id, price_minor)
+        count: integer
+
 components:
   securitySchemes:
     bearerAuth:
@@ -128,6 +145,20 @@ components:
           minimum: 1
           description: Number of picks to roll back in reverse resolution_sequence order
 
+    ReversedPick:
+      type: object
+      properties:
+        acquisition_id:
+          type: string
+          format: uuid
+        player_name:
+          type: string
+        team_id:
+          type: string
+          format: uuid
+        price_minor:
+          type: integer
+
     RollbackResponse:
       type: object
       required: [rolled_back, picks_reversed]
@@ -138,18 +169,7 @@ components:
         picks_reversed:
           type: array
           items:
-            type: object
-            properties:
-              acquisition_id:
-                type: string
-                format: uuid
-              player_name:
-                type: string
-              team_id:
-                type: string
-                format: uuid
-              price_minor:
-                type: integer
+            $ref: "#/components/schemas/ReversedPick"
 
     ErrorResponse:
       type: object

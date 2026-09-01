@@ -171,6 +171,50 @@ components:
         format: uuid
 
   schemas:
+    TargetValueEntry:
+      type: object
+      required: [player_id, target_value_minor]
+      properties:
+        player_id:
+          type: string
+          format: uuid
+        player_name:
+          type: string
+        target_value_minor:
+          type: integer
+
+    TargetValueInput:
+      type: object
+      required: [player_id, target_value_minor]
+      properties:
+        player_id:
+          type: string
+          format: uuid
+        target_value_minor:
+          type: integer
+
+    WatchListEntry:
+      type: object
+      properties:
+        player_id:
+          type: string
+          format: uuid
+        player_name:
+          type: string
+        position:
+          type: string
+
+    NominationQueueEntry:
+      type: object
+      properties:
+        player_id:
+          type: string
+          format: uuid
+        player_name:
+          type: string
+        queue_position:
+          type: integer
+
     TargetValueList:
       type: object
       required: [values]
@@ -178,16 +222,7 @@ components:
         values:
           type: array
           items:
-            type: object
-            required: [player_id, target_value_minor]
-            properties:
-              player_id:
-                type: string
-                format: uuid
-              player_name:
-                type: string
-              target_value_minor:
-                type: integer
+            $ref: "#/components/schemas/TargetValueEntry"
 
     SetTargetValuesRequest:
       type: object
@@ -196,14 +231,7 @@ components:
         values:
           type: array
           items:
-            type: object
-            required: [player_id, target_value_minor]
-            properties:
-              player_id:
-                type: string
-                format: uuid
-              target_value_minor:
-                type: integer
+            $ref: "#/components/schemas/TargetValueInput"
 
     WatchListResponse:
       type: object
@@ -212,15 +240,7 @@ components:
         items:
           type: array
           items:
-            type: object
-            properties:
-              player_id:
-                type: string
-                format: uuid
-              player_name:
-                type: string
-              position:
-                type: string
+            $ref: "#/components/schemas/WatchListEntry"
 
     WatchListAddRequest:
       type: object
@@ -237,15 +257,7 @@ components:
         items:
           type: array
           items:
-            type: object
-            properties:
-              player_id:
-                type: string
-                format: uuid
-              player_name:
-                type: string
-              queue_position:
-                type: integer
+            $ref: "#/components/schemas/NominationQueueEntry"
 
     ReorderQueueRequest:
       type: object

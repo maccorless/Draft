@@ -80,7 +80,7 @@ sequenceDiagram
     note over Q: Serialized, one command in-flight per draft
     Q->>CMD: dequeue and execute
 
-    CMD->>CMD: auth_epoch check (re-read from in-memory state, refreshed from DB)
+    CMD->>DB: SELECT auth_epoch for league/team (re-read unconditionally, never from cache)
     CMD->>CMD: validate bid: auction status OPEN, budget check, version match
     alt validation fails
         CMD-->>C: WS ERROR {code, reason}

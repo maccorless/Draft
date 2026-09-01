@@ -112,6 +112,14 @@ components:
         format: uuid
 
   schemas:
+    ImportError:
+      type: object
+      properties:
+        row:
+          type: integer
+        message:
+          type: string
+
     ImportResult:
       type: object
       required: [rows_imported, errors]
@@ -124,12 +132,7 @@ components:
         errors:
           type: array
           items:
-            type: object
-            properties:
-              row:
-                type: integer
-              message:
-                type: string
+            $ref: "#/components/schemas/ImportError"
 
     FantasyProsImportRequest:
       type: object
