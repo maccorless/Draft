@@ -1,0 +1,22 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+PostgresError: database "draft_dev" does not exist
+    at ErrorResponse (file:///Users/kcorless/Projects/Software/Draft/node_modules/postgres/src/connection.js:817:22)
+    at handle (file:///Users/kcorless/Projects/Software/Draft/node_modules/postgres/src/connection.js:489:6)
+    at Socket.data (file:///Users/kcorless/Projects/Software/Draft/node_modules/postgres/src/connection.js:324:9)
+    at Socket.emit (node:events:509:28)
+    at addChunk (node:internal/streams/readable:563:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:514:3)
+    at Readable.push (node:internal/streams/readable:394:5)
+    at TCP.onStreamRead (node:internal/stream_base_commons:189:23) {
+  severity_local: 'FATAL',
+  severity: 'FATAL',
+  code: '3D000',
+  file: 'postinit.c',
+  line: '1023',
+  routine: 'InitPostgres'
+}
+
+Node.js v24.16.0
