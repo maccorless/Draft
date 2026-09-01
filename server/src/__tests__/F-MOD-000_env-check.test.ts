@@ -56,9 +56,11 @@ describe('F-MOD-000 env checker', () => {
   });
 
   it('test_F_MOD_000_env_check_passes_when_all_required_vars_present', () => {
+    // NODE_ENV was added to the required list by MOD-001 (spec: "DATABASE_URL, JWT_SECRET, or NODE_ENV absent → ERR_CDR_78_EX_CONFIG")
     const result = runEnvCheck({
       DATABASE_URL: 'postgres://localhost/test',
       JWT_SECRET: 'test-secret-at-least-32-chars-long',
+      NODE_ENV: 'test',
     });
     expect(result.status).toBe(0);
   });

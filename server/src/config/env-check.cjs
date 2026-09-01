@@ -8,7 +8,7 @@
  *   cp .env.example .env
  */
 
-const REQUIRED = ['DATABASE_URL', 'JWT_SECRET'];
+const REQUIRED = ['DATABASE_URL', 'JWT_SECRET', 'NODE_ENV'];
 
 const missing = REQUIRED.filter((name) => !process.env[name]);
 

@@ -13,6 +13,8 @@ import { drafts } from '../db/schema/index.js';
 import { registerAuthRoutes } from './auth/routes.js';
 import { registerHealthRoute } from './health.js';
 import { registerWsHandler } from './ws/handler.js';
+import { registerLeagueRoutes } from './league/routes.js';
+import { registerPlayerRoutes } from './player/routes.js';
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
@@ -102,6 +104,8 @@ export async function buildServer() {
 
   await registerHealthRoute(server);
   await registerAuthRoutes(server, db);
+  await registerLeagueRoutes(server, db);
+  await registerPlayerRoutes(server, db);
   await registerWsHandler(server, db);
 
   return server;
