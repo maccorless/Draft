@@ -15,5 +15,12 @@ export default defineConfig({
     testTimeout: 15000,
     hookTimeout: 15000,
     reporters: ['default', ['junit', { outputFile: 'test-results/junit.xml' }]],
+    // Provide placeholder values for all required env vars so tests that import
+    // buildServer do not fail the startup env check. Real values live in .env
+    // and are never committed. Tests that need specific behavior override these.
+    env: {
+      SENDGRID_API_KEY: 'test-sendgrid-key-placeholder',
+      FANTASYPROS_API_KEY: 'test-fantasypros-key-placeholder',
+    },
   },
 });

@@ -1,11 +1,14 @@
 /**
- * Dataset, player, and draft-creation routes (MOD-001).
+ * Dataset, player, and draft-creation routes (MOD-001 + MOD-007).
  *
- * POST   /leagues/:leagueId/datasets                         → create dataset
- * POST   /leagues/:leagueId/datasets/:datasetId/import/csv  → CSV import (worker_threads)
- * POST   /leagues/:leagueId/datasets/:datasetId/freeze      → freeze dataset
- * POST   /leagues/:leagueId/drafts                          → create draft
- * GET    /leagues/:leagueId/players                         → list players for active dataset
+ * POST   /leagues/:leagueId/datasets                              → create dataset
+ * POST   /leagues/:leagueId/datasets/:datasetId/import/csv       → CSV import (worker_threads)
+ * POST   /leagues/:leagueId/datasets/:datasetId/import/excel     → Excel import (worker_threads)
+ * POST   /leagues/:leagueId/datasets/:datasetId/import/espn-pdf  → ESPN PDF import (worker_threads)
+ * POST   /leagues/:leagueId/datasets/:datasetId/import/fantasypros → FantasyPros API import
+ * POST   /leagues/:leagueId/datasets/:datasetId/freeze           → freeze dataset
+ * POST   /leagues/:leagueId/drafts                               → create draft
+ * GET    /leagues/:leagueId/players                              → list players for active dataset
  */
 import { Worker } from 'node:worker_threads';
 import { existsSync } from 'node:fs';
@@ -24,6 +27,10 @@ import {
 } from '../../db/schema/index.js';
 import { CreateDraftRequestSchema } from '@draft/shared-types';
 import { requireCommissioner } from '../league/auth-hook.js';
+import { ExcelAdapter } from './adapters/excel.js';
+import { EspnPdfAdapter } from './adapters/espn-pdf.js';
+import { FantasyProsAdapter } from './adapters/fantasypros.js';
+import type { AdapterResult, ImportSource } from './adapters/types.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 // Compiled JS path (production)
@@ -66,6 +73,117 @@ function parseCsvInWorker(csvContent: string): Promise<WorkerResult> {
       if (code !== 0) reject(new Error(`CSV worker exited with code ${code}`));
     });
   });
+}
+
+/**
+ * Verify a dataset exists, belongs to the given league, and is not FROZEN.
+ * Returns the dataset record on success, or sends an HTTP error and returns null.
+ */
+async function findDataset(
+  db: PostgresJsDatabase,
+  datasetId: string,
+  leagueId: string,
+  reply: import('fastify').FastifyReply,
+): Promise<{ id: string; status: string } | null> {
+  const [dataset] = await db
+    .select({ id: draftDatasets.id, status: draftDatasets.status, league_id: draftDatasets.league_id })
+    .from(draftDatasets)
+    .where(eq(draftDatasets.id, datasetId))
+    .limit(1);
+
+  if (!dataset || dataset.league_id !== leagueId) {
+    await reply.status(404).send({ code: 'NOT_FOUND', message: 'Dataset not found' });
+    return null;
+  }
+  if (dataset.status === 'FROZEN') {
+    await reply.status(409).send({ code: 'CONFLICT', message: 'Dataset is frozen; no further imports allowed' });
+    return null;
+  }
+  return dataset;
+}
+
+/**
+ * UPSERT a set of parsed rows into players + player_dataset_entries.
+ * Returns { rowsImported, importErrors } after processing all rows.
+ */
+async function upsertRows(
+  db: PostgresJsDatabase,
+  datasetId: string,
+  result: AdapterResult,
+  source: ImportSource,
+): Promise<{ rowsImported: number; importErrors: Array<{ row: number; message: string }> }> {
+  let rowsImported = 0;
+  const importErrors = [...result.errors];
+
+  for (const row of result.rows) {
+    try {
+      let playerId: string;
+
+      if (row.espn_player_id) {
+        const [existing] = await db
+          .select({ id: players.id })
+          .from(players)
+          .where(eq(players.espn_player_id, row.espn_player_id))
+          .limit(1);
+
+        if (existing) {
+          await db.update(players)
+            .set({ name: row.name, position: row.position, nfl_team: row.nfl_team })
+            .where(eq(players.id, existing.id));
+          playerId = existing.id;
+        } else {
+          const [p] = await db.insert(players)
+            .values({ name: row.name, position: row.position, nfl_team: row.nfl_team, espn_player_id: row.espn_player_id })
+            .returning({ id: players.id });
+          playerId = p!.id;
+        }
+      } else {
+        const existing = await db
+          .select({ id: players.id })
+          .from(players)
+          .where(and(eq(players.name, row.name), eq(players.position, row.position)));
+
+        if (existing.length === 1) {
+          playerId = existing[0]!.id;
+        } else if (existing.length > 1) {
+          importErrors.push({ row: 0, message: `Ambiguous player match for '${row.name}' (${row.position})` });
+          continue;
+        } else {
+          const [p] = await db.insert(players)
+            .values({ name: row.name, position: row.position, nfl_team: row.nfl_team })
+            .returning({ id: players.id });
+          playerId = p!.id;
+        }
+      }
+
+      const existingEntry = await db
+        .select({ id: playerDatasetEntries.id })
+        .from(playerDatasetEntries)
+        .where(and(eq(playerDatasetEntries.dataset_id, datasetId), eq(playerDatasetEntries.player_id, playerId)))
+        .limit(1);
+
+      if (existingEntry.length === 0) {
+        await db.insert(playerDatasetEntries).values({
+          dataset_id: datasetId,
+          player_id: playerId,
+          aav_minor: row.aav_minor,
+          projected_points: row.projected_points !== null ? String(row.projected_points) : null,
+          tier: row.tier,
+          source,
+        });
+      } else {
+        await db.update(playerDatasetEntries)
+          .set({ aav_minor: row.aav_minor, projected_points: row.projected_points !== null ? String(row.projected_points) : null, tier: row.tier })
+          .where(eq(playerDatasetEntries.id, existingEntry[0]!.id));
+      }
+
+      rowsImported++;
+    } catch (rowErr) {
+      importErrors.push({ row: 0, message: `Error processing '${row.name}': ${String(rowErr)}` });
+    }
+  }
+
+  return { rowsImported, importErrors };
 }
 
 export async function registerPlayerRoutes(
@@ -243,6 +361,105 @@ export async function registerPlayerRoutes(
       }
 
       return reply.send({ rows_imported: rowsImported, source: 'CSV', errors: importErrors });
+    },
+  );
+
+  /**
+   * POST /leagues/:leagueId/datasets/:datasetId/import/excel
+   * Parses an XLSX file in a worker thread; UPSERTs players into the dataset.
+   */
+  server.post<{ Params: DatasetParams }>(
+    '/leagues/:leagueId/datasets/:datasetId/import/excel',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const { leagueId, datasetId } = req.params;
+      const dataset = await findDataset(db, datasetId, leagueId, reply);
+      if (!dataset) return;
+
+      const data = await (req as typeof req & { file: () => Promise<import('@fastify/multipart').MultipartFile | undefined> }).file();
+      if (!data) {
+        return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'No file uploaded' });
+      }
+      const chunks: Buffer[] = [];
+      for await (const chunk of data.file) chunks.push(chunk);
+      const fileBuffer = Buffer.concat(chunks);
+
+      let result: AdapterResult;
+      try {
+        result = await new ExcelAdapter().parse(fileBuffer);
+      } catch (err) {
+        return reply.status(500).send({ code: 'WORKER_ERROR', message: `Excel parsing failed: ${String(err)}` });
+      }
+
+      const { rowsImported, importErrors } = await upsertRows(db, datasetId, result, 'EXCEL');
+      return reply.send({ rows_imported: rowsImported, source: 'EXCEL', errors: importErrors });
+    },
+  );
+
+  /**
+   * POST /leagues/:leagueId/datasets/:datasetId/import/espn-pdf
+   * Parses an ESPN AAV PDF in a worker thread. Defensive — partial errors are
+   * collected and returned in ImportResult; the HTTP response is always 200.
+   */
+  server.post<{ Params: DatasetParams }>(
+    '/leagues/:leagueId/datasets/:datasetId/import/espn-pdf',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const { leagueId, datasetId } = req.params;
+      const dataset = await findDataset(db, datasetId, leagueId, reply);
+      if (!dataset) return;
+
+      const data = await (req as typeof req & { file: () => Promise<import('@fastify/multipart').MultipartFile | undefined> }).file();
+      if (!data) {
+        return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'No file uploaded' });
+      }
+      const chunks: Buffer[] = [];
+      for await (const chunk of data.file) chunks.push(chunk);
+      const fileBuffer = Buffer.concat(chunks);
+
+      // Worker errors are collected, never 500 — defensive parsing contract.
+      let result: AdapterResult;
+      try {
+        result = await new EspnPdfAdapter().parse(fileBuffer);
+      } catch (err) {
+        // Even a worker crash returns 200 with error details, not 500.
+        result = { rows: [], errors: [{ row: 0, message: `PDF parsing failed: ${String(err)}` }] };
+      }
+
+      const { rowsImported, importErrors } = await upsertRows(db, datasetId, result, 'ESPN_PDF');
+      return reply.send({ rows_imported: rowsImported, source: 'ESPN_PDF', errors: importErrors });
+    },
+  );
+
+  /**
+   * POST /leagues/:leagueId/datasets/:datasetId/import/fantasypros
+   * Fetches player projections from FantasyPros API (server-side).
+   * Body: { scoring_format: "STD" | "HALF_PPR" | "PPR" }
+   */
+  server.post<{ Params: DatasetParams }>(
+    '/leagues/:leagueId/datasets/:datasetId/import/fantasypros',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const { leagueId, datasetId } = req.params;
+      const dataset = await findDataset(db, datasetId, leagueId, reply);
+      if (!dataset) return;
+
+      const body = req.body as Record<string, unknown>;
+      const scoringFormat = body?.['scoring_format'];
+      if (!scoringFormat || !['STD', 'HALF_PPR', 'PPR'].includes(String(scoringFormat).toUpperCase())) {
+        return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'scoring_format must be STD, HALF_PPR, or PPR' });
+      }
+
+      let result: AdapterResult;
+      try {
+        result = await new FantasyProsAdapter().parse({ scoring_format: String(scoringFormat) });
+      } catch (err) {
+        // Non-2xx from FantasyPros or network error → typed ErrorResponse, no silent fallback.
+        return reply.status(502).send({ code: 'FANTASYPROS_ERROR', message: String(err) });
+      }
+
+      const { rowsImported, importErrors } = await upsertRows(db, datasetId, result, 'FANTASYPROS');
+      return reply.send({ rows_imported: rowsImported, source: 'FANTASYPROS', errors: importErrors });
     },
   );
 
