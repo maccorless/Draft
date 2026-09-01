@@ -797,7 +797,7 @@
       "passes": false
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-007",
       "title": "Phase 2b Player Data Ingestion Adapters",
       "module_ref": "MOD-007",
@@ -904,7 +904,7 @@
       "passes": false
     },
     {
-      "status": "pending",
+      "status": "implementing",
       "id": "F-MOD-008",
       "title": "Owner Strategy Tools and War Room Screen",
       "module_ref": "MOD-008",
