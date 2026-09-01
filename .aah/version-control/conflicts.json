@@ -70,7 +70,7 @@
       "field": "status",
       "field_class": "status",
       "base": "planned",
-      "local": "implementing",
+      "local": "done",
       "remote": "pending",
       "remote_ref": {
         "number": 5,

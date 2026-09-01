@@ -457,7 +457,7 @@
       "passes": false
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-004",
       "title": "Auto-Agent Mode for Disconnected Teams",
       "module_ref": "MOD-004",
