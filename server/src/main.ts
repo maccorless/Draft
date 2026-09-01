@@ -18,6 +18,7 @@ import { registerPlayerRoutes } from './player/routes.js';
 import { registerDraftRoutes } from './auction/routes.js';
 import { registerAuctionWsHandler } from './ws/auction-handler.js';
 import { registerSessionRoutes } from './session/routes.js';
+import { registerAutoAgentRoutes } from './auction/auto-agent-routes.js';
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
@@ -113,6 +114,7 @@ export async function buildServer() {
   await registerDraftRoutes(server, db, sql);
   await registerAuctionWsHandler(server, sql);
   await registerSessionRoutes(server, sql);
+  await registerAutoAgentRoutes(server, sql);
 
   return server;
 }

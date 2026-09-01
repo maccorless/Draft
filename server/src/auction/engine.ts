@@ -189,7 +189,14 @@ export interface BidContext {
   command: BidCommandPayload;
 }
 
-export async function processBidCommand(ctx: BidContext): Promise<void> {
+export interface BidResult {
+  accepted: boolean;
+  leadingTeamId?: string;
+  bidAmountMinor?: number;
+  playerAuctionId: string;
+}
+
+export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
   const { draftId, teamId, leagueId, serverReceiptTime, sql, command } = ctx;
 
   // 1. Load draft — verify RUNNING and league_id matches token
@@ -207,7 +214,7 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
       type: 'BID_REJECTED',
       payload: { player_auction_id: command.player_auction_id, code: 'DRAFT_NOT_FOUND', reason: 'Draft not found' },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
   // Multi-draft isolation: verify league_id matches token
   if (draft.league_id !== leagueId) {
@@ -215,7 +222,7 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
       type: 'ERROR',
       payload: { code: 'LEAGUE_MISMATCH', reason: 'Token league does not match draft' },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
   if (draft.status !== 'RUNNING') {
     broadcast(draftId, {
@@ -226,7 +233,7 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
         reason: `Draft is ${draft.status}`,
       },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
   // 2. Load auction config
@@ -247,7 +254,7 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
       type: 'BID_REJECTED',
       payload: { player_auction_id: command.player_auction_id, code: 'NO_AUCTION_CONFIG', reason: 'Auction configuration missing' },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
   // 3. Load PlayerAuction
@@ -271,14 +278,14 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
       type: 'BID_REJECTED',
       payload: { player_auction_id: command.player_auction_id, code: 'AUCTION_NOT_FOUND', reason: 'PlayerAuction not found' },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
   if (auction.status !== 'OPEN') {
     broadcast(draftId, {
       type: 'BID_REJECTED',
       payload: { player_auction_id: command.player_auction_id, code: 'AUCTION_NOT_OPEN', reason: `Auction is ${auction.status}` },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
   // 4. Stale-state check for RELATIVE / NOMINATOR_MATCH
@@ -309,7 +316,7 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
           reason: 'Expected bid or version does not match current state',
         },
       });
-      return;
+      return { accepted: false, playerAuctionId: command.player_auction_id };
     }
   }
 
@@ -332,7 +339,7 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
         reason: `Bid ${command.bid_amount_minor} must exceed current ${auction.current_bid_minor}`,
       },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
   // 6. Load DraftTeamState for the bidding team — for max_legal_bid
@@ -352,7 +359,7 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
       type: 'BID_REJECTED',
       payload: { player_auction_id: command.player_auction_id, code: 'TEAM_STATE_NOT_FOUND', reason: 'Team draft state not found' },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
   const maxLegalBid = computeMaxLegalBid(
@@ -377,7 +384,7 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
         reason: `Bid ${command.bid_amount_minor} exceeds max legal bid ${maxLegalBid}`,
       },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
   // 7. Anti-snipe check
@@ -453,7 +460,7 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
       type: 'BID_REJECTED',
       payload: { player_auction_id: command.player_auction_id, code: 'TRANSACTION_FAILED', reason: 'Internal error' },
     });
-    return;
+    return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
   // 9. In-memory update after commit — broadcast BID_ACCEPTED
@@ -468,6 +475,13 @@ export async function processBidCommand(ctx: BidContext): Promise<void> {
       anti_snipe_extended: antiSnipeExtended,
     },
   });
+
+  return {
+    accepted: true,
+    leadingTeamId: teamId,
+    bidAmountMinor: command.bid_amount_minor,
+    playerAuctionId: command.player_auction_id,
+  };
 }
 
 // ─── NOMINATE_COMMAND processing ──────────────────────────────────────────────
@@ -487,7 +501,14 @@ export interface NominateContext {
   systemNominated?: boolean;
 }
 
-export async function processNominateCommand(ctx: NominateContext): Promise<void> {
+export interface NominateResult {
+  succeeded: boolean;
+  auctionId?: string;
+  openingBidMinor?: number;
+  nominatorTeamId?: string;
+}
+
+export async function processNominateCommand(ctx: NominateContext): Promise<NominateResult> {
   const { draftId, teamId, leagueId, sql, command, systemNominated = false } = ctx;
 
   // Load draft + auction config in parallel
@@ -510,18 +531,18 @@ export async function processNominateCommand(ctx: NominateContext): Promise<void
 
   const draft = draftRows[0];
   if (!draft || draft.league_id !== leagueId || draft.status !== 'RUNNING') {
-    return; // silently skip
+    return { succeeded: false }; // silently skip
   }
 
   const cfg = cfgRows[0];
-  if (!cfg) return;
+  if (!cfg) return { succeeded: false };
 
   if (command.opening_bid_minor < cfg.min_bid_minor) {
     broadcast(draftId, {
       type: 'ERROR',
       payload: { code: 'BID_TOO_LOW', reason: `Opening bid must be at least ${cfg.min_bid_minor}` },
     });
-    return;
+    return { succeeded: false };
   }
 
   // Check no current OPEN auction
@@ -535,7 +556,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<void
       type: 'ERROR',
       payload: { code: 'AUCTION_ALREADY_OPEN', reason: 'Another auction is currently OPEN' },
     });
-    return;
+    return { succeeded: false };
   }
 
   // Verify player is in the frozen dataset and not already nominated
@@ -553,7 +574,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<void
       type: 'ERROR',
       payload: { code: 'PLAYER_NOT_FOUND', reason: 'Player not in this draft dataset' },
     });
-    return;
+    return { succeeded: false };
   }
 
   // Check player hasn't been nominated already (AWARDED or OPEN)
@@ -569,7 +590,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<void
       type: 'ERROR',
       payload: { code: 'PLAYER_ALREADY_NOMINATED', reason: 'Player already nominated' },
     });
-    return;
+    return { succeeded: false };
   }
 
   const now = new Date();
@@ -614,7 +635,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<void
     });
   } catch (err) {
     console.error('[engine] NOMINATE transaction failed:', err);
-    return;
+    return { succeeded: false };
   }
 
   broadcast(draftId, {
@@ -629,6 +650,13 @@ export async function processNominateCommand(ctx: NominateContext): Promise<void
       system_nominated: systemNominated,
     },
   });
+
+  return {
+    succeeded: true,
+    auctionId: auctionId!,
+    openingBidMinor: command.opening_bid_minor,
+    nominatorTeamId: teamId,
+  };
 }
 
 // ─── PASS_NOMINATION processing ───────────────────────────────────────────────

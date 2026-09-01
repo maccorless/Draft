@@ -8,6 +8,8 @@
  * 4. Multi-draft isolation: verify draft.league_id === token.league_id on every command.
  * 5. On AUTHENTICATE: send STATE_SNAPSHOT + replay missed DraftEvents (F-MOD-003).
  * 6. Multi-window identity: multiple tabs share one logical team session (F-MOD-003).
+ * 7. Grace timer: on last WS close, start timer; if fires, transition to AUTO_AGENT (F-MOD-004).
+ * 8. Reconnect does NOT restore MANUAL control — owner must explicitly send RESUME_MANUAL.
  */
 import type { FastifyInstance } from 'fastify';
 import type { FastifyRequest } from 'fastify';
@@ -24,15 +26,25 @@ import {
   processPassNomination,
   registerTeamSession,
   unregisterTeamSession,
+  broadcast,
   type TokenClaims,
 } from '../auction/engine.js';
 import { buildDraftStateSnapshot } from '../session/routes.js';
+import {
+  handleGraceExpiry,
+  setControlMode,
+  upsertAutoAgentConfig,
+  triggerAutoAgentBidsOnNomination,
+  triggerAutoAgentBidsOnLeaderChange,
+} from '../auction/auto-agent.js';
 
 interface DraftParams {
   draftId: string;
 }
 
 const AUTH_TIMEOUT_MS = 5000;
+/** Grace period before AUTO_AGENT takeover after all WS connections drop. */
+const GRACE_PERIOD_MS = 30_000;
 
 export async function registerAuctionWsHandler(
   server: FastifyInstance,
@@ -121,16 +133,67 @@ export async function registerAuctionWsHandler(
           sessionClaims = claims;
           sessionTeamId = claims.team_id ?? claims.league_id; // commissioner uses league_id as identity
 
+          // ─── Check if team is reconnecting within grace period ─────────────
+          const rt = getOrCreateRuntime(draftId);
+          const wasInGrace = rt.graceTimers.has(sessionTeamId);
+
           // ─── Register in multi-window session tracking ─────────────────────
-          registerTeamSession(draftId, sessionTeamId, socket as unknown as WebSocket);
+          registerTeamSession(
+            draftId,
+            sessionTeamId,
+            socket as unknown as WebSocket,
+            GRACE_PERIOD_MS,
+            // Grace expired callback — runs in queue for atomicity with other commands
+            (dId, tId) => {
+              getOrCreateRuntime(dId).queue.enqueue(async () => {
+                await handleGraceExpiry(dId, tId, sql);
+              });
+            },
+          );
+
+          // If team had a grace timer running, broadcast TEAM_RECONNECTED
+          // (control_mode stays AUTO_AGENT if it was already set — no auto-resume)
+          if (wasInGrace) {
+            // Broadcast reconnect event to all clients
+            getOrCreateRuntime(draftId).queue.enqueue(async () => {
+              const teamStateRows = await sql<[{ control_mode: string }]>`
+                SELECT control_mode FROM draft_team_states
+                WHERE draft_id = ${draftId} AND team_id = ${sessionTeamId!}
+                LIMIT 1
+              `;
+              const currentMode = teamStateRows[0]?.control_mode ?? 'MANUAL';
+
+              // Insert TEAM_RECONNECTED event
+              try {
+                await sql.begin(async (tx) => {
+                  const seqRows = await tx<[{ max: number | null }]>`
+                    SELECT COALESCE(MAX(sequence), -1) + 1 AS max
+                    FROM draft_events WHERE draft_id = ${draftId}
+                  `;
+                  const seq = seqRows[0]?.max ?? 0;
+                  await tx`
+                    INSERT INTO draft_events
+                      (draft_id, sequence, event_type, team_id, payload, created_at)
+                    VALUES
+                      (${draftId}, ${seq}, 'TEAM_RECONNECTED', ${sessionTeamId!},
+                       ${JSON.stringify({ triggered_by: 'owner', control_mode: currentMode })}::jsonb, NOW())
+                  `;
+                });
+              } catch (err) {
+                console.error('[ws] TEAM_RECONNECTED event insert failed:', err);
+              }
+
+              broadcast(draftId, {
+                type: 'TEAM_RECONNECTED',
+                payload: { team_id: sessionTeamId!, triggered_by: 'owner' },
+              });
+            });
+          }
 
           // ─── Build and send STATE_SNAPSHOT ────────────────────────────────
-          // Only replay missed events when client explicitly provides last_seen_sequence
-          // (i.e., this is a reconnect, not an initial fresh connect).
           const hasLastSeen = typeof payload?.last_seen_sequence === 'number';
           const lastSeenSeq: number = hasLastSeen ? (payload!.last_seen_sequence as number) : -1;
 
-          // Load missed events (only on reconnect when last_seen_sequence is provided)
           const missedEvents = hasLastSeen ? await sql<Array<{
             sequence: number;
             event_type: string;
@@ -148,10 +211,8 @@ export async function registerAuctionWsHandler(
           const snapshot = await buildDraftStateSnapshot(sql, draftId, draft.status);
           snapshot.missed_events_replayed = missedEvents.length;
 
-          // Send STATE_SNAPSHOT first
           socket.send(JSON.stringify({ type: 'STATE_SNAPSHOT', payload: snapshot }));
 
-          // Replay missed events in sequence order
           for (const ev of missedEvents) {
             socket.send(JSON.stringify({
               type: ev.event_type,
@@ -188,7 +249,6 @@ export async function registerAuctionWsHandler(
             return;
           }
 
-          // Route command — also re-verify league_id per constraint #11
           const type = msgObj.type;
           const commandPayload = msgObj.payload as Record<string, unknown> ?? {};
 
@@ -205,7 +265,7 @@ export async function registerAuctionWsHandler(
               }));
               return;
             }
-            await processBidCommand({
+            const result = await processBidCommand({
               draftId,
               teamId,
               leagueId: claims.league_id,
@@ -223,9 +283,21 @@ export async function registerAuctionWsHandler(
                   : undefined,
               },
             });
+
+            // Trigger auto-agent bids for teams that just lost the lead
+            if (result.accepted && result.leadingTeamId === teamId) {
+              await triggerAutoAgentBidsOnLeaderChange(
+                draftId,
+                claims.league_id,
+                result.playerAuctionId,
+                result.bidAmountMinor!,
+                teamId,
+                sql,
+              );
+            }
           } else if (type === 'NOMINATE_COMMAND') {
             const teamId = claims.team_id ?? claims.league_id;
-            await processNominateCommand({
+            const nominateResult = await processNominateCommand({
               draftId,
               teamId,
               leagueId: claims.league_id,
@@ -236,11 +308,57 @@ export async function registerAuctionWsHandler(
                 opening_bid_minor: Number(commandPayload['opening_bid_minor'] ?? 100),
               },
             });
+
+            // Trigger auto-agent bids for all AUTO_AGENT teams except the nominator
+            if (nominateResult.succeeded && nominateResult.auctionId) {
+              await triggerAutoAgentBidsOnNomination(
+                draftId,
+                claims.league_id,
+                nominateResult.auctionId,
+                nominateResult.openingBidMinor!,
+                nominateResult.nominatorTeamId!,
+                sql,
+              );
+            }
           } else if (type === 'PASS_NOMINATION') {
             const teamId = claims.team_id;
             if (teamId) {
               await processPassNomination(draftId, teamId, claims.league_id, sql);
             }
+          } else if (type === 'SET_AUTO_AGENT_CONFIG') {
+            // Owner sets willingness_pct
+            const teamId = claims.team_id;
+            if (!teamId) {
+              socket.send(JSON.stringify({
+                type: 'ERROR',
+                payload: { code: 'NO_TEAM', reason: 'Commissioner cannot set auto-agent config' },
+              }));
+              return;
+            }
+            const willingnessPct = Number(commandPayload['willingness_pct'] ?? -1);
+            if (willingnessPct < 0 || willingnessPct > 1) {
+              socket.send(JSON.stringify({
+                type: 'ERROR',
+                payload: { code: 'INVALID_PARAM', reason: 'willingness_pct must be in [0, 1]' },
+              }));
+              return;
+            }
+            const cfgResult = await upsertAutoAgentConfig(draftId, teamId, willingnessPct, sql);
+            socket.send(JSON.stringify({
+              type: 'AUTO_AGENT_CONFIG_UPDATED',
+              payload: cfgResult,
+            }));
+          } else if (type === 'RESUME_MANUAL') {
+            // Owner explicitly restores MANUAL control — constraint #7
+            const teamId = claims.team_id;
+            if (!teamId) {
+              socket.send(JSON.stringify({
+                type: 'ERROR',
+                payload: { code: 'NO_TEAM', reason: 'Commissioner cannot resume manual control' },
+              }));
+              return;
+            }
+            await setControlMode(draftId, teamId, 'MANUAL', 'owner', sql);
           } else {
             socket.send(JSON.stringify({
               type: 'ERROR',
@@ -253,9 +371,18 @@ export async function registerAuctionWsHandler(
       socket.on('close', () => {
         clearTimeout(authTimer);
         if (sessionTeamId) {
-          unregisterTeamSession(draftId, sessionTeamId, socket as unknown as WebSocket);
+          unregisterTeamSession(
+            draftId,
+            sessionTeamId,
+            socket as unknown as WebSocket,
+            GRACE_PERIOD_MS,
+            (dId, tId) => {
+              getOrCreateRuntime(dId).queue.enqueue(async () => {
+                await handleGraceExpiry(dId, tId, sql);
+              });
+            },
+          );
         } else {
-          // Not yet authenticated — still remove from flat client set if registered early
           const rt = getOrCreateRuntime(draftId);
           rt.clients.delete(socket as unknown as WebSocket);
         }
@@ -264,7 +391,17 @@ export async function registerAuctionWsHandler(
       socket.on('error', () => {
         clearTimeout(authTimer);
         if (sessionTeamId) {
-          unregisterTeamSession(draftId, sessionTeamId, socket as unknown as WebSocket);
+          unregisterTeamSession(
+            draftId,
+            sessionTeamId,
+            socket as unknown as WebSocket,
+            GRACE_PERIOD_MS,
+            (dId, tId) => {
+              getOrCreateRuntime(dId).queue.enqueue(async () => {
+                await handleGraceExpiry(dId, tId, sql);
+              });
+            },
+          );
         } else {
           const rt = getOrCreateRuntime(draftId);
           rt.clients.delete(socket as unknown as WebSocket);
