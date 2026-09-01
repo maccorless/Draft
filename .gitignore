@@ -151,3 +151,6 @@ htmlcov/
 .agents/skills/testing-standards/
 .codex/hooks.json
 .codex/.aah-hooks-managed
+
+# Test runner output (JUnit XML, coverage)
+test-results/
