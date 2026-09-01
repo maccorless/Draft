@@ -92,6 +92,10 @@ into the root first, then run the same command. Commit the configs with this mod
 
 ## Test Config
 
+- command: DATABASE_URL=postgres://localhost/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! NODE_ENV=test SENDGRID_API_KEY=test-key npx vitest run --reporter=verbose server/src/__tests__/F-MOD-006_reports.test.ts
+- test_paths:
+  - server/src/__tests__/F-MOD-006_reports.test.ts
+
 ## Constraints
 
 ## Applicable Standards

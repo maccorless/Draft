@@ -707,6 +707,12 @@
         "server \u2014 default",
         "web \u2014 default"
       ],
+      "test_config": {
+        "command": "DATABASE_URL=postgres://localhost/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! NODE_ENV=test SENDGRID_API_KEY=test-key npx vitest run --reporter=verbose server/src/__tests__/F-MOD-006_reports.test.ts",
+        "test_paths": [
+          "server/src/__tests__/F-MOD-006_reports.test.ts"
+        ]
+      },
       "applicable_standards": [
         {
           "total_rules": 68,
