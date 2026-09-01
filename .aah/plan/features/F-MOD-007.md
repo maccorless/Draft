@@ -72,6 +72,11 @@ produces:
 
 ## Test Config
 
+- command: npx vitest run --reporter=default server/src/__tests__/F-MOD-007_data_adapters.test.ts web/src/__tests__/F-MOD-007_data_adapters.test.tsx
+- test_paths:
+  - server/src/__tests__/F-MOD-007_data_adapters.test.ts
+  - web/src/__tests__/F-MOD-007_data_adapters.test.tsx
+
 ## Constraints
 
 ## Applicable Standards
