@@ -28,6 +28,7 @@ erDiagram
     League ||--|| AuctionConfiguration : "configured by"
     League ||--|| RosterConfiguration : "uses"
     League ||--o{ Draft : "hosts"
+    League ||--o| WhammyConfig : "optionally configures"
 
     Team ||--o{ Membership : "has"
     Team ||--o{ DraftTeamState : "tracks in"
