@@ -570,7 +570,7 @@
       "passes": false
     },
     {
-      "status": "pending",
+      "status": "implementing",
       "id": "F-MOD-005",
       "title": "Commissioner Price Correction and Bounded Rollback",
       "module_ref": "MOD-005",
