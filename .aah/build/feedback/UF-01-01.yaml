@@ -1,0 +1,11 @@
+feedback_id: "UF-01-01"
+wave: 1
+source: "user"
+started_at: "2026-09-01T00:00:00Z"
+feedback_details: "Backend fails to start: server/src/auth/routes.ts imports LeagueAuthRequestSchema from @draft/shared-types but gets SyntaxError at boot. Root cause: shared-types/package.json missing \"type\": \"module\" — Node.js treats the package as CJS, so ESM named imports fail at runtime. Tests passed because vitest uses its own resolver. Fix: add type=module to shared-types/package.json."
+steps:
+  - phase: direct_repair
+    input: "Add \"type\": \"module\" to shared-types/package.json. No spec change, no interface change, no blast radius. Tests already pass."
+    output: "Added \"type\": \"module\" to shared-types/package.json. ESM named import error resolved. 20/20 tests still pass. Boot now fails on PostgresError: database draft_dev does not exist — separate setup issue, not a code bug."
+    completed_at: "2026-09-01T09:17:00Z"
+status: completed
