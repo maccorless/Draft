@@ -145,6 +145,11 @@ export const whammyConfigs = pgTable('whammy_configs', {
   enabled: boolean('enabled').notNull().default(false),
   max_amount_minor: integer('max_amount_minor').notNull(),
   allowed_event_types: text('allowed_event_types').array().notNull().default([]),
+  allow_positive: boolean('allow_positive').notNull().default(true),
+  allow_negative: boolean('allow_negative').notNull().default(true),
+  max_per_team: integer('max_per_team'),
+  max_per_draft: integer('max_per_draft'),
+  commissioner_approval_required: boolean('commissioner_approval_required').notNull().default(false),
 });
 
 // ─── Player Dataset ───────────────────────────────────────────────────────────
@@ -318,6 +323,30 @@ export const rosterEntries = pgTable('roster_entries', {
     .defaultNow(),
 });
 
+export const whammyEventStatusEnum = pgEnum('whammy_event_status', [
+  'PENDING_APPROVAL',
+  'APPLIED',
+  'REJECTED',
+  'REVERSED',
+]);
+
+export const whammyEvents = pgTable('whammy_events', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  draft_id: uuid('draft_id')
+    .notNull()
+    .references(() => drafts.id),
+  team_id: uuid('team_id')
+    .notNull()
+    .references(() => teams.id),
+  amount_minor: integer('amount_minor').notNull(),
+  description: text('description').notNull(),
+  status: whammyEventStatusEnum('status').notNull().default('PENDING_APPROVAL'),
+  budget_ledger_entry_id: uuid('budget_ledger_entry_id'),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const budgetLedgerEntries = pgTable('budget_ledger_entries', {
   id: uuid('id').primaryKey().defaultRandom(),
   draft_id: uuid('draft_id')
@@ -327,6 +356,7 @@ export const budgetLedgerEntries = pgTable('budget_ledger_entries', {
     .notNull()
     .references(() => teams.id),
   acquisition_id: uuid('acquisition_id').references(() => acquisitions.id),
+  reference_id: uuid('reference_id'),
   amount_minor: integer('amount_minor').notNull(),
   entry_type: budgetEntryTypeEnum('entry_type').notNull(),
   active: boolean('active').notNull().default(true),
