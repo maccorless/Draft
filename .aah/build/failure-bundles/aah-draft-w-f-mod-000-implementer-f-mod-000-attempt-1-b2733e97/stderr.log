@@ -1,0 +1,1 @@
+Missing required environment keys ['DATABASE_URL', 'JWT_SECRET', 'SENDGRID_API_KEY', 'FANTASYPROS_API_KEY', 'NODE_ENV']: add values to the project root .env (see .env.example), then re-run.

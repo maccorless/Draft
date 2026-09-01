@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "run_id": "aah-draft-w-f-mod-000-implementer-f-mod-000-attempt-1-9cb025eb",
+  "created_at": "2026-09-01T15:14:03.164627+00:00",
+  "subject": {
+    "commit_sha": "6f6b9c1e428a82c3ea22b057fde548a5551a4d3c1d465fee21966dfefcbc8d7f",
+    "branch": "main",
+    "rel_path": "."
+  },
+  "execution": {
+    "argv": [
+      "mkdir",
+      "-p",
+      "test-results",
+      "&&",
+      "DATABASE_URL=postgres://localhost/draft_test",
+      "JWT_SECRET=test-secret-at-least-32-chars-long",
+      "npx",
+      "vitest",
+      "run",
+      "--reporter=default",
+      "--reporter=junit",
+      "--outputFile=test-results/junit.xml"
+    ],
+    "cwd": ".",
+    "adapter": "Node.js,TypeScript,Fastify,PostgreSQL,Drizzle,React,Vite,Zod,Vitest,Railway,ws",
+    "seed": null,
+    "started_at": "2026-09-01T15:14:03.063019+00:00",
+    "finished_at": "2026-09-01T15:14:03.163607+00:00",
+    "exit_code": null
+  },
+  "tool_versions": {
+    "python": "3.12.13",
+    "pytest": null,
+    "docker": null
+  },
+  "cleanup": {
+    "transport": "none",
+    "action": "cleanup_namespace",
+    "namespace": "aah-draft-w-f-mod-000-implementer-f-mod-000-attempt-1-9cb025eb",
+    "removed": [],
+    "leftover": [],
+    "errors": [],
+    "stopped": true,
+    "timestamp": "2026-09-01T15:14:03.162740+00:00"
+  },
+  "diagnostic": null,
+  "logs": {
+    "stderr": {
+      "file": "stderr.log",
+      "sha256": "080957eaa7ae3f2efb89a33f9997aeb99eecde6dd746035f054970248955ff97",
+      "bytes": 189
+    }
+  },
+  "dropped_log_streams": [],
+  "retention": {
+    "local_log_days": 30,
+    "metadata_retention": "milestone",
+    "source": "fixed"
+  }
+}
