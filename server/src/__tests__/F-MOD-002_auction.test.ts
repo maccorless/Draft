@@ -760,6 +760,12 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     expect(rosterRows.length).toBe(1);
     expect(rosterRows[0]!.active).toBe(true);
 
+    // An award always advances the nomination turn (own transaction, after the
+    // PLAYER_AWARDED broadcast) — wait for it so cleanup doesn't race a
+    // still-in-flight draft_events insert against DELETE FROM drafts.
+    await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
+
     ws1.close();
     ws2.close();
   }, 10000);
@@ -793,6 +799,12 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     expect(award.type).toBe('PLAYER_AWARDED');
     // QB should go to the QB slot (priority=1, is_starter=true)
     expect(award.payload?.['roster_slot']).toBe('QB');
+
+    // An award always advances the nomination turn (own transaction, after the
+    // PLAYER_AWARDED broadcast) — wait for it so cleanup doesn't race a
+    // still-in-flight draft_events insert against DELETE FROM drafts.
+    await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
 
     ws1.close();
     ws2.close();

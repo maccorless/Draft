@@ -273,6 +273,12 @@ describe.skipIf(SKIP_DB)('F-MOD-010 War Room read endpoints', () => {
     await sql`UPDATE player_auctions SET rebid_deadline = NOW() - INTERVAL '1 second' WHERE id = ${auctionId}`;
     const [award1] = await Promise.all([waitForMessage(ws1, 4000), waitForMessage(ws2, 4000)]);
     expect(award1.type).toBe('PLAYER_AWARDED');
+
+    // An award always advances the nomination turn (own transaction, after the
+    // PLAYER_AWARDED broadcast) — wait for it so cleanup doesn't race a
+    // still-in-flight draft_events insert against DELETE FROM drafts.
+    await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
     ws1.close();
     ws2.close();
 
@@ -300,6 +306,57 @@ describe.skipIf(SKIP_DB)('F-MOD-010 War Room read endpoints', () => {
     // Nomination sets the opening price directly — no bid_attempts row is written
     // unless a competing BID_COMMAND is placed, which this test doesn't send.
     expect(activity.recent[0]!.bid_count).toBe(0);
+  }, 10000);
+
+  it('test_F_MOD_010_nomination_turn_advances_to_next_team_after_award', async () => {
+    // Regression test: an award previously never advanced nomination_cursor,
+    // so the same team could nominate forever — this pins the fix.
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    const [nom1] = await Promise.all([
+      waitForMessage(ws1, 4000),
+      waitForMessage(ws2, 4000),
+      Promise.resolve().then(() =>
+        ws1.send(JSON.stringify({
+          type: 'NOMINATE_COMMAND',
+          payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+        })),
+      ),
+    ]);
+    const auctionId = String(nom1.payload?.['player_auction_id'] ?? '');
+
+    await sql`UPDATE player_auctions SET rebid_deadline = NOW() - INTERVAL '1 second' WHERE id = ${auctionId}`;
+    await Promise.all([waitForMessage(ws1, 4000), waitForMessage(ws2, 4000)]); // PLAYER_AWARDED
+
+    const [turnChanged1, turnChanged2] = await Promise.all([
+      waitForMessage(ws1, 4000),
+      waitForMessage(ws2, 4000),
+    ]);
+    expect(turnChanged1.type).toBe('NOMINATION_TURN_CHANGED');
+    expect(turnChanged1.payload?.['current_nominator_team_id']).toBe(team2Id);
+    expect(turnChanged2.payload?.['current_nominator_team_id']).toBe(team2Id);
+    ws1.close();
+    ws2.close();
+
+    // A fresh connection (no NOMINATION_TURN_CHANGED heard live) must also see
+    // the correct next nominator from the snapshot alone.
+    const ws3 = new WebSocket(`ws://localhost:${serverPort}/ws/drafts/${draftId}`);
+    const snapshot = await new Promise<{ payload: Record<string, unknown> }>((resolve, reject) => {
+      ws3.on('open', () => {
+        ws3.send(JSON.stringify({ type: 'AUTHENTICATE', payload: { token: team2Token } }));
+      });
+      ws3.on('message', (data: Buffer | string) => {
+        const msg = JSON.parse(data.toString());
+        if (msg.type === 'STATE_SNAPSHOT') resolve(msg);
+      });
+      setTimeout(() => reject(new Error('timed out')), 4000);
+    });
+    expect(snapshot.payload['current_nominator_team_id']).toBe(team2Id);
+    ws3.close();
   }, 10000);
 
   it('test_F_MOD_010_roster_grid_rejects_token_from_a_different_league', async () => {

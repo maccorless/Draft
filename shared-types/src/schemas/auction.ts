@@ -78,6 +78,11 @@ export const NominationStartedEventSchema = z.object({
   payload: z.object({
     player_auction_id: z.string().uuid(),
     player_name: z.string(),
+    position: z.string(),
+    nfl_team: z.string(),
+    tier: z.number().int().nullable(),
+    aav_minor: z.number().int(),
+    projected_points: z.number().nullable(),
     nominator_team_id: z.string().uuid(),
     opening_bid_minor: z.number().int(),
     nomination_deadline_ts: z.number().int(),

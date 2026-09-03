@@ -148,6 +148,28 @@ export async function buildDraftStateSnapshot(
     WHERE draft_id = ${draftId}
   `;
 
+  // Whose turn it is to nominate — derived from nomination_cursor + draft_order
+  // the same way engine.ts's turn-advance logic resolves it. There is no
+  // broadcast event for this until the *first* turn changes (draft start
+  // doesn't announce a nominator), so a client attaching before that has
+  // nothing else to go on.
+  let currentNominatorTeamId: string | null = null;
+  const draftRows = await sql<Array<{ nomination_cursor: number }>>`
+    SELECT nomination_cursor FROM drafts WHERE id = ${draftId} LIMIT 1
+  `;
+  if (draftRows[0]) {
+    const orderedTeams = await sql<Array<{ id: string }>>`
+      SELECT t.id FROM teams t
+      JOIN drafts d ON d.league_id = t.league_id
+      WHERE d.id = ${draftId}
+      ORDER BY t.draft_order ASC
+    `;
+    if (orderedTeams.length > 0) {
+      const idx = draftRows[0].nomination_cursor % orderedTeams.length;
+      currentNominatorTeamId = orderedTeams[idx]?.id ?? null;
+    }
+  }
+
   // Load active auction (if any), enriched with player details so the Draft
   // Room can render on initial load/reconnect without a second round trip —
   // live clients also get player_name etc. via the NOMINATION_STARTED broadcast,
@@ -195,6 +217,7 @@ export async function buildDraftStateSnapshot(
       roster_filled_count: t.roster_filled_count,
       control_mode: t.control_mode,
     })),
+    current_nominator_team_id: currentNominatorTeamId,
     current_auction: auction
       ? {
           player_auction_id: auction.id,
@@ -224,6 +247,7 @@ export async function buildDraftStateSnapshot(
 export interface DraftStateSnapshot {
   draft_id: string;
   status: string;
+  current_nominator_team_id: string | null;
   teams: Array<{
     team_id: string;
     remaining_budget_minor: number;

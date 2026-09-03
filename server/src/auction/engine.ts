@@ -564,9 +564,22 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
     return { succeeded: false };
   }
 
-  // Verify player is in the frozen dataset and not already nominated
-  const playerRows = await sql<[{ id: string; name: string; position: string }]>`
-    SELECT pde.id, p.name, p.position
+  // Verify player is in the frozen dataset and not already nominated.
+  // Full detail (not just id/name/position) is selected here so the
+  // NOMINATION_STARTED broadcast below can carry it — clients otherwise have
+  // no way to know a newly-nominated player's team/tier/AAV until a second
+  // round trip, and carrying forward the *previous* auction's values would
+  // be actively wrong.
+  const playerRows = await sql<[{
+    id: string;
+    name: string;
+    position: string;
+    nfl_team: string;
+    tier: number | null;
+    aav_minor: number;
+    projected_points: string | null;
+  }]>`
+    SELECT pde.id, p.name, p.position, p.nfl_team, pde.tier, pde.aav_minor, pde.projected_points
     FROM player_dataset_entries pde
     JOIN players p ON p.id = pde.player_id
     WHERE pde.id = ${command.player_dataset_entry_id}
@@ -648,6 +661,11 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
     payload: {
       player_auction_id: auctionId!,
       player_name: player.name,
+      position: player.position,
+      nfl_team: player.nfl_team,
+      tier: player.tier,
+      aav_minor: player.aav_minor,
+      projected_points: player.projected_points !== null ? Number(player.projected_points) : null,
       nominator_team_id: teamId,
       opening_bid_minor: command.opening_bid_minor,
       nomination_deadline_ts: nominationDeadline.getTime(),
@@ -664,36 +682,33 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
   };
 }
 
-// ─── PASS_NOMINATION processing ───────────────────────────────────────────────
+// ─── Nomination turn advance (shared: PASS_NOMINATION and post-award) ─────────
 
-export async function processPassNomination(
-  draftId: string,
-  teamId: string,
-  leagueId: string,
+/**
+ * Advances nomination_cursor to the next team (draft_order order, wrapping)
+ * and broadcasts NOMINATION_TURN_CHANGED. Called both when an owner explicitly
+ * passes their nomination, and after every awarded pick — nomination order is
+ * a fixed round-robin independent of who wins each auction, so a normal award
+ * must advance the turn exactly like an explicit pass does.
+ */
+async function advanceNominationTurn(
   sql: postgres.Sql,
+  draftId: string,
+  leagueId: string,
 ): Promise<void> {
-  // Load draft
-  const draftRows = await sql<[{
-    id: string;
-    league_id: string;
-    status: string;
-    nomination_cursor: number;
-  }]>`
-    SELECT id, league_id, status, nomination_cursor
-    FROM drafts WHERE id = ${draftId} LIMIT 1
+  const draftRows = await sql<[{ nomination_cursor: number }]>`
+    SELECT nomination_cursor FROM drafts WHERE id = ${draftId} LIMIT 1
   `;
   const draft = draftRows[0];
-  if (!draft || draft.league_id !== leagueId || draft.status !== 'RUNNING') return;
+  if (!draft) return;
 
-  // Get all teams ordered by draft_order
   const teamsRows = await sql<Array<{ id: string; draft_order: number }>>`
     SELECT id, draft_order FROM teams WHERE league_id = ${leagueId}
     ORDER BY draft_order ASC
   `;
   if (teamsRows.length === 0) return;
 
-  const currentCursor = draft.nomination_cursor;
-  const newCursor = (currentCursor + 1) % teamsRows.length;
+  const newCursor = (draft.nomination_cursor + 1) % teamsRows.length;
   const nextTeam = teamsRows[newCursor];
   if (!nextTeam) return;
 
@@ -719,6 +734,24 @@ export async function processPassNomination(
       nomination_deadline_ts: nominationDeadlineMs,
     },
   });
+}
+
+export async function processPassNomination(
+  draftId: string,
+  teamId: string,
+  leagueId: string,
+  sql: postgres.Sql,
+): Promise<void> {
+  const draftRows = await sql<[{ id: string; league_id: string; status: string }]>`
+    SELECT id, league_id, status FROM drafts WHERE id = ${draftId} LIMIT 1
+  `;
+  const draft = draftRows[0];
+  if (!draft || draft.league_id !== leagueId || draft.status !== 'RUNNING') return;
+  // NOTE: pre-existing gap, unrelated to this refactor — teamId isn't checked
+  // against the current nominator, so any team can currently pass on another's
+  // turn. Preserved as-is; not part of this fix's scope.
+  void teamId;
+  await advanceNominationTurn(sql, draftId, leagueId);
 }
 
 // ─── Award timer ──────────────────────────────────────────────────────────────
@@ -960,10 +993,14 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
     },
   });
 
-  // Broadcast DRAFT_COMPLETE after commit if draft just completed
+  // Broadcast DRAFT_COMPLETE after commit if draft just completed; otherwise
+  // the nomination turn always advances after an award, same as an explicit
+  // pass — round-robin nomination order doesn't depend on who won the pick.
   if (draftCompletedMap.get(draftId)) {
     draftCompletedMap.delete(draftId);
     broadcast(draftId, { type: 'DRAFT_COMPLETE', payload: { draft_id: draftId } });
+  } else {
+    await advanceNominationTurn(sql, draftId, leagueId);
   }
 }
 
