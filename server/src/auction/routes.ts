@@ -124,7 +124,7 @@ export async function registerDraftRoutes(
       const totalRosterSize = rosterCfg?.total_roster_size ?? 0;
 
       // Get all teams for this league
-      const teamsRows = await sql<[{ id: string }]>`
+      const teamsRows = await sql<Array<{ id: string }>>`
         SELECT id FROM teams WHERE league_id = ${draft.league_id}
       `;
 
@@ -142,7 +142,7 @@ export async function registerDraftRoutes(
             WHERE draft_id = ${draft.id} AND team_id = ${team.id}
             LIMIT 1
           `;
-          if (existing.length === 0) {
+          if (!existing[0]) {
             await tx`
               INSERT INTO draft_team_states
                 (draft_id, team_id, remaining_budget_minor, roster_filled_count,

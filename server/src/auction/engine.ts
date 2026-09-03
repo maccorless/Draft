@@ -686,7 +686,7 @@ export async function processPassNomination(
   if (!draft || draft.league_id !== leagueId || draft.status !== 'RUNNING') return;
 
   // Get all teams ordered by draft_order
-  const teamsRows = await sql<[{ id: string; draft_order: number }]>`
+  const teamsRows = await sql<Array<{ id: string; draft_order: number }>>`
     SELECT id, draft_order FROM teams WHERE league_id = ${leagueId}
     ORDER BY draft_order ASC
   `;

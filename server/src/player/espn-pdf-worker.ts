@@ -92,8 +92,9 @@ async function run(): Promise<void> {
   let pdfDoc: Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise']>;
   try {
     const data = new Uint8Array(pdfBuffer);
-    // workerSrc = '' alone doesn't stop pdfjs from trying to spawn a worker; disableWorker is required.
-    pdfDoc = await pdfjsLib.getDocument({ data, disableWorker: true }).promise;
+    // pdfjs-dist auto-disables its worker when it detects a Node.js environment
+    // (see PDFWorker's static init block) — no explicit option needed or supported.
+    pdfDoc = await pdfjsLib.getDocument({ data }).promise;
   } catch (parseErr) {
     // Defensive: PDF failed to parse at all — return errors, not a 500.
     errors.push({ row: 0, message: `Failed to parse PDF: ${String(parseErr)}` });
