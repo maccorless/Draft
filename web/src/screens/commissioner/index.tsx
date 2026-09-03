@@ -7,16 +7,7 @@
  * - DatasetImport section with CSV upload dropzone and ImportResult display
  */
 import React, { useState } from 'react';
-import {
-  Gear,
-  UploadSimple,
-  Gavel,
-  ArrowCounterClockwise,
-  UsersThree,
-  CircleNotch,
-  CheckCircle,
-  Snowflake,
-} from '@phosphor-icons/react';
+import { Gear, UploadSimple, Gavel, ArrowCounterClockwise, UsersThree } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 
 import { DatasetImport } from './DatasetImport.js';
@@ -54,18 +45,11 @@ interface DatasetStatusIndicatorProps {
   onCreateDraft?: () => void;
 }
 
-const STATUS_ICON: Record<DatasetStatus, Icon> = {
-  DRAFT: CircleNotch,
-  VALIDATED: CheckCircle,
-  FROZEN: Snowflake,
-};
-
 export function DatasetStatusIndicator({
   status,
   onCreateDraft,
 }: DatasetStatusIndicatorProps): React.ReactElement {
   const isFrozen = status === 'FROZEN';
-  const StatusIcon = status ? STATUS_ICON[status] : null;
 
   return (
     <div className="dataset-status" aria-label="Dataset status" data-testid="dataset-status">
@@ -73,7 +57,7 @@ export function DatasetStatusIndicator({
         className={`dataset-status__pill dataset-status__pill--${(status ?? 'none').toLowerCase()}`}
         data-testid="dataset-status-value"
       >
-        {StatusIcon && <StatusIcon size={14} weight="bold" />}
+        <span className="dataset-status__dot" aria-hidden="true" />
         {status ?? 'None'}
       </span>
       <button

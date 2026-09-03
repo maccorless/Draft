@@ -1,50 +1,71 @@
 /**
  * Draft Platform — design tokens.
  *
- * Style direction: a calm, authoritative operations console (not a marketing
- * site). The commissioner runs a live, time-pressured auction here, so the
- * palette favors clarity and low visual noise over decoration — Swiss-
- * Modernism-influenced grid discipline, a single navy/blue brand pair, and
- * status color used only where it's meaningful (dataset state, danger zones).
+ * Style direction: "Draft Night" — a broadcast control-room console, not a
+ * SaaS admin panel. The commissioner runs a live, time-pressured 12-team
+ * auction here; the console is the operator desk behind a live broadcast:
+ * dark chrome for the command surfaces (header, nav, danger zone), a warm
+ * paper-toned work surface for actual reading/data-entry, and literal LED-
+ * style indicators for state instead of soft pill badges. Bebas Neue is
+ * used sparingly for the "on air" moments (the console title, big empty-
+ * state headings) — everything else stays in IBM Plex Sans/Mono, which
+ * reads technical and precise without shouting.
  */
 :root {
-  /* ── Color: surfaces ─────────────────────────────────────────────────── */
-  --color-bg: #f8fafc;
-  --color-surface: #ffffff;
-  --color-surface-alt: #f1f5f9;
-  --color-border: #e2e8f0;
-  --color-border-strong: #cbd5e1;
+  /* ── Color: work surface (warm paper, not clinical blue-grey) ──────────── */
+  --color-bg: #f6f2e9;
+  --color-surface: #fffdf8;
+  --color-surface-alt: #efe9db;
+  --color-border: #ddd3bd;
+  --color-border-strong: #c4b696;
 
-  /* ── Color: text ─────────────────────────────────────────────────────── */
-  --color-text: #0f172a;
-  --color-text-muted: #475569;
-  --color-text-subtle: #94a3b8;
-  --color-text-on-primary: #ffffff;
+  /* ── Color: text on work surface ─────────────────────────────────────── */
+  --color-text: #1c1912;
+  --color-text-muted: #5c5442;
+  --color-text-subtle: #6f6552;
 
-  /* ── Color: brand ────────────────────────────────────────────────────── */
-  --color-primary: #1e3a5f;
-  --color-primary-hover: #16293f;
-  --color-accent: #2563eb;
-  --color-accent-hover: #1d4ed8;
-  --color-accent-bg: #eff6ff;
+  /* ── Color: control-desk chrome (header/nav) ────────────────────────── */
+  --color-chrome: #101a2e;
+  --color-chrome-raised: #182848;
+  --color-chrome-border: #2a3a5c;
+  --color-text-on-chrome: #f4efe2;
+  --color-text-on-chrome-muted: #97a3bf;
 
-  /* ── Color: status ───────────────────────────────────────────────────── */
-  --color-success: #059669;
-  --color-success-bg: #ecfdf5;
-  --color-success-border: #a7f3d0;
-  --color-warning: #b45309;
-  --color-warning-bg: #fffbeb;
-  --color-warning-border: #fde68a;
-  --color-danger: #dc2626;
-  --color-danger-hover: #b91c1c;
-  --color-danger-bg: #fef2f2;
-  --color-danger-border: #fecaca;
-  --color-neutral: #64748b;
-  --color-neutral-bg: #f1f5f9;
+  /* ── Color: brand / interactive ──────────────────────────────────────── */
+  --color-accent: #3aa6ff;
+  --color-accent-hover: #62b8ff;
+  --color-accent-bg: #e7f2ff;
+  --color-text-on-accent: #0a1830;
+
+  /* ── Color: status (LED colors — vivid, meant to read as lights) ──────── */
+  --color-led-amber: #ffb02e;
+  --color-led-blue: #3aa6ff;
+  --color-led-green: #3ddc97;
+  --color-led-red: #ff5d5d;
+  --color-led-off: #4a5473;
+
+  /* Status colors as used on the light work surface (text/bg, WCAG-safe) */
+  --color-success: #0d7a52;
+  --color-success-bg: #e3f6ec;
+  --color-success-border: #a9dfc3;
+  --color-warning: #a15c00;
+  --color-warning-bg: #fdf0dc;
+  --color-warning-border: #edc887;
+  --color-danger: #c8351f;
+  --color-danger-hover: #a8291a;
+  --color-danger-bg: #fbe8e3;
+  --color-danger-border: #eeb7a8;
+  --color-neutral: #6b6250;
+  --color-neutral-bg: #efe9db;
 
   /* ── Typography ──────────────────────────────────────────────────────── */
-  --font-heading: 'Lexend', -apple-system, 'Segoe UI', system-ui, sans-serif;
-  --font-body: 'Source Sans 3', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  /* Bebas Neue: sparing use — console title, empty-state headings, big
+     numerals. Never body copy or long labels — it gets illegible past a
+     handful of characters. */
+  --font-display: 'Bebas Neue', 'Arial Narrow', sans-serif;
+  --font-heading: 'IBM Plex Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'IBM Plex Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;
@@ -52,14 +73,15 @@
   --text-lg: 1.125rem;
   --text-xl: 1.375rem;
   --text-2xl: 1.75rem;
+  --text-display: 2rem;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  --line-height-tight: 1.25;
-  --line-height-base: 1.5;
+  --line-height-tight: 1.2;
+  --line-height-base: 1.55;
 
   /* ── Spacing (8px base, dashboard-dense but touch-friendly) ─────────── */
   --space-1: 4px;
@@ -73,26 +95,33 @@
   --space-12: 48px;
 
   /* ── Shape ───────────────────────────────────────────────────────────── */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
   --radius-pill: 999px;
 
   /* ── Elevation ───────────────────────────────────────────────────────── */
-  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 4px 16px rgba(15, 23, 42, 0.08);
+  --shadow-sm: 0 1px 2px rgba(16, 26, 46, 0.08);
+  --shadow-md: 0 8px 24px rgba(16, 26, 46, 0.16);
+  --shadow-chrome: 0 4px 20px rgba(0, 0, 0, 0.35);
 
-  /* ── Motion (subtle — this is an ops console, not a landing page) ──── */
-  --transition-fast: 120ms ease;
-  --transition-base: 180ms ease;
+  /* ── Motion ──────────────────────────────────────────────────────────── */
+  /* Split duration/easing so both can be composed into `animation:` shorthand
+     (which only accepts one timing-function) as well as `transition:`. */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease-base: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: var(--duration-fast) ease;
+  --transition-base: var(--duration-base) var(--ease-base);
 
   /* ── Layout ──────────────────────────────────────────────────────────── */
-  --header-height: 64px;
   --content-max-width: 1120px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
     --transition-fast: 0ms;
     --transition-base: 0ms;
   }
