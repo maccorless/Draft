@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useSearchParams } from 'react-router-dom';
 
 const styles = {
   center: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', minHeight: '100vh', fontFamily: 'sans-serif' },
@@ -10,6 +10,8 @@ const styles = {
 };
 import { Lobby } from './screens/lobby/index.js';
 import { CommissionerConsole } from './screens/commissioner/index.js';
+import { DraftRoom } from './screens/draft-room/index.js';
+import { WarRoom } from './screens/war-room/index.js';
 
 // Relative — goes through Vite's dev proxy (web/vite.config.ts) to the backend,
 // so it works regardless of which port the backend actually listens on.
@@ -18,12 +20,39 @@ const API = '';
 // ── Auth state ────────────────────────────────────────────────────────────────
 
 interface League { id: string; name: string }
+interface Team { id: string; name: string; draft_order: number }
 interface AuthState {
   token: string;
   role: 'COMMISSIONER' | 'OWNER';
   leagueId: string;
   leagueName: string;
+  teamId?: string;
   teamName?: string;
+}
+
+// Session-scoped (not persisted across browser restarts) — matches the token's
+// own ~48h lifetime and lets a second "synchronized window" (Draft Room + War
+// Room open together, per PRD) share the same team identity without logging
+// in twice, while still respecting the "no account, session-scoped" auth model.
+const AUTH_STORAGE_KEY = 'draft.auth';
+
+function loadStoredAuth(): AuthState | null {
+  try {
+    const raw = sessionStorage.getItem(AUTH_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as AuthState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeAuth(auth: AuthState | null): void {
+  try {
+    if (auth) sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+    else sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  } catch {
+    // sessionStorage unavailable (e.g. private browsing) — session just won't
+    // survive opening a second window; not fatal.
+  }
 }
 
 // ── Site password screen ──────────────────────────────────────────────────────
@@ -81,11 +110,35 @@ function LeagueLogin({
 }) {
   const [leagueId, setLeagueId] = useState(leagues[0]?.id ?? '');
   const [role, setRole] = useState<'COMMISSIONER' | 'OWNER'>('COMMISSIONER');
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [teamId, setTeamId] = useState('');
+  const [teamsError, setTeamsError] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const league = leagues.find(l => l.id === leagueId);
+
+  // Owner path (screen-information-architecture.md §0 step 4): fetch this
+  // league's teams so the owner can pick which one they're signing into.
+  // No league JWT exists yet at this point — gated by the site password
+  // instead, same model as /auth/site.
+  React.useEffect(() => {
+    if (role !== 'OWNER' || !leagueId) { setTeams([]); return; }
+    setTeamsError('');
+    fetch(`${API}/auth/league/${leagueId}/teams`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ site_password: sitePass }),
+    })
+      .then(async res => {
+        if (!res.ok) { setTeamsError('Could not load teams for this league'); return; }
+        const data = await res.json();
+        setTeams(data.teams ?? []);
+        setTeamId(data.teams?.[0]?.id ?? '');
+      })
+      .catch(() => setTeamsError('Could not load teams for this league'));
+  }, [role, leagueId, sitePass]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -95,11 +148,21 @@ function LeagueLogin({
       const res = await fetch(`${API}/auth/league/${leagueId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, password: pass }),
+        body: JSON.stringify(
+          role === 'OWNER' ? { role, team_id: teamId, password: pass } : { role, password: pass },
+        ),
       });
       if (!res.ok) { setError('Wrong password'); return; }
       const { token } = await res.json();
-      onAuth({ token, role, leagueId, leagueName: league?.name ?? '', teamName: role === 'OWNER' ? 'My Team' : undefined });
+      const team = teams.find(t => t.id === teamId);
+      onAuth({
+        token,
+        role,
+        leagueId,
+        leagueName: league?.name ?? '',
+        teamId: role === 'OWNER' ? teamId : undefined,
+        teamName: role === 'OWNER' ? (team?.name ?? 'My Team') : undefined,
+      });
     } catch {
       setError('Server error');
     } finally {
@@ -120,10 +183,22 @@ function LeagueLogin({
           <option value="COMMISSIONER">Commissioner</option>
           <option value="OWNER">Owner</option>
         </select>
+        {role === 'OWNER' && (
+          <>
+            <label>Team</label>
+            {teamsError ? (
+              <p style={styles.error}>{teamsError}</p>
+            ) : (
+              <select value={teamId} onChange={e => setTeamId(e.target.value)} style={styles.input}>
+                {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            )}
+          </>
+        )}
         <label>Password</label>
         <input type="password" value={pass} onChange={e => setPass(e.target.value)} style={styles.input} />
         {error && <p style={styles.error}>{error}</p>}
-        <button type="submit" disabled={loading} style={styles.btn}>
+        <button type="submit" disabled={loading || (role === 'OWNER' && !teamId)} style={styles.btn}>
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
@@ -164,6 +239,90 @@ function CommissionerRoute({ auth }: { auth: AuthState }) {
       datasetStatus={datasetStatus}
     />
   );
+}
+
+// ── Owner landing: find the league's draft, route to the right place ──────────
+
+interface DraftSummary {
+  id: string;
+  status: 'CREATED' | 'RUNNING' | 'PAUSED' | 'COMPLETE';
+}
+
+const STATUS_PRIORITY: Record<DraftSummary['status'], number> = {
+  RUNNING: 0,
+  PAUSED: 1,
+  CREATED: 2,
+  COMPLETE: 3,
+};
+
+function pickActiveDraft(drafts: DraftSummary[]): DraftSummary | null {
+  if (drafts.length === 0) return null;
+  return [...drafts].sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status])[0] ?? null;
+}
+
+function DraftGateway({ auth }: { auth: AuthState }) {
+  const [drafts, setDrafts] = useState<DraftSummary[] | null>(null);
+  const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    fetch(`${API}/leagues/${auth.leagueId}/drafts`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+      .then(async res => {
+        if (!res.ok) { setError(`Failed to load drafts (${res.status})`); return; }
+        const data = await res.json();
+        setDrafts(data.drafts ?? []);
+      })
+      .catch(() => setError('Cannot reach server'));
+  }, [auth.leagueId, auth.token]);
+
+  if (error) return <div style={styles.center}><p style={styles.error}>{error}</p></div>;
+  if (drafts === null) return <div style={styles.center}><p>Loading…</p></div>;
+
+  const active = pickActiveDraft(drafts);
+
+  if (active && (active.status === 'RUNNING' || active.status === 'PAUSED')) {
+    return <Navigate to={`/draft-room?draftId=${active.id}`} replace />;
+  }
+
+  return (
+    <div>
+      <Lobby
+        leagueName={auth.leagueName}
+        teamName={auth.teamName ?? 'My Team'}
+        scheduledAt={null}
+        draftStatus={active?.status ?? 'CREATED'}
+      />
+      {active && (
+        <div style={{ ...styles.center, minHeight: 'auto', paddingBottom: 32 }}>
+          <a
+            href={`/war-room?draftId=${active.id}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: '#1a73e8' }}
+          >
+            Open War Room ↗
+          </a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Draft Room / War Room routes (draftId from URL — each is its own window) ──
+
+function DraftRoomRoute({ auth }: { auth: AuthState }) {
+  const [params] = useSearchParams();
+  const draftId = params.get('draftId');
+  if (!draftId) return <div style={styles.center}><p style={styles.error}>Missing draftId</p></div>;
+  return <DraftRoom draftId={draftId} leagueId={auth.leagueId} token={auth.token} teamId={auth.teamId ?? null} />;
+}
+
+function WarRoomRoute({ auth }: { auth: AuthState }) {
+  const [params] = useSearchParams();
+  const draftId = params.get('draftId');
+  if (!draftId) return <div style={styles.center}><p style={styles.error}>Missing draftId</p></div>;
+  return <WarRoom draftId={draftId} leagueId={auth.leagueId} token={auth.token} teamId={auth.teamId ?? null} />;
 }
 
 // ponytail: localhost-only dev shortcut, skips the two login screens using the seed.ts credentials
@@ -211,7 +370,12 @@ export function App() {
   const [step, setStep] = useState<'site' | 'league' | 'app'>('site');
   const [leagues, setLeagues] = useState<League[]>([]);
   const [sitePass, setSitePass] = useState('');
-  const [auth, setAuth] = useState<AuthState | null>(null);
+  const [auth, setAuthState] = useState<AuthState | null>(() => loadStoredAuth());
+
+  function setAuth(a: AuthState | null): void {
+    storeAuth(a);
+    setAuthState(a);
+  }
 
   if (!auth && IS_LOCALHOST) {
     return <DevAutoLogin onAuth={setAuth} />;
@@ -233,14 +397,9 @@ export function App() {
             : <Navigate to="/lobby" replace />
         } />
         <Route path="/commissioner" element={<CommissionerRoute auth={auth} />} />
-        <Route path="/lobby" element={
-          <Lobby
-            leagueName={auth.leagueName}
-            teamName={auth.teamName ?? 'My Team'}
-            scheduledAt={null}
-            draftStatus="CREATED"
-          />
-        } />
+        <Route path="/lobby" element={<DraftGateway auth={auth} />} />
+        <Route path="/draft-room" element={<DraftRoomRoute auth={auth} />} />
+        <Route path="/war-room" element={<WarRoomRoute auth={auth} />} />
       </Routes>
     </BrowserRouter>
   );

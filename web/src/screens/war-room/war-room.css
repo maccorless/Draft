@@ -1,0 +1,509 @@
+.war-room {
+  min-height: 100vh;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.war-room__topbar {
+  background: var(--color-chrome);
+  background-image: linear-gradient(180deg, var(--color-chrome-raised) 0%, var(--color-chrome) 70%);
+  box-shadow: var(--shadow-chrome);
+  padding: var(--space-3) var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.war-room__title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  letter-spacing: 0.02em;
+  color: var(--color-text-on-chrome);
+}
+
+.war-room__conn {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  color: var(--color-text-on-chrome-muted);
+}
+
+.war-room__conn--open {
+  color: var(--color-led-green);
+}
+
+/* ── Grid layout per screen-information-architecture.md §15 ───────────────── */
+
+.war-room__grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 0.9fr;
+  grid-template-rows: auto auto auto;
+  grid-template-areas:
+    'intel  intel  prep'
+    'tier   tier   prep'
+    'grid   grid   grid'
+    'activity activity market';
+  gap: var(--space-4);
+  padding: var(--space-4);
+  max-width: 1500px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.war-room__player-intel { grid-area: intel; }
+.war-room__tier-board { grid-area: tier; }
+.war-room__prep { grid-area: prep; }
+.war-room__roster-grid { grid-area: grid; }
+.war-room__activity { grid-area: activity; }
+.war-room__market { grid-area: market; }
+
+@media (max-width: 1100px) {
+  .war-room__grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'intel'
+      'prep'
+      'tier'
+      'grid'
+      'activity'
+      'market';
+  }
+}
+
+.war-room__panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  min-width: 0;
+}
+
+.war-room__panel-heading {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.war-room__panel-subheading {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-subtle);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.war-room__idle,
+.war-room__idle-small {
+  color: var(--color-text-subtle);
+}
+
+.war-room__idle-small {
+  font-size: var(--text-sm);
+}
+
+.war-room__mono {
+  font-family: var(--font-mono);
+}
+
+/* ── Player Intelligence ─────────────────────────────────────────────────── */
+
+.war-room__player-name {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.war-room__player-meta {
+  color: var(--color-text-muted);
+  margin: var(--space-1) 0 var(--space-4);
+}
+
+.war-room__player-stats {
+  display: flex;
+  gap: var(--space-8);
+  margin: 0;
+}
+
+.war-room__player-stats dt {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.war-room__player-stats dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  color: var(--color-text);
+}
+
+.war-room__my-target {
+  color: var(--color-accent);
+}
+
+.war-room__target-form {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.war-room__target-form label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.war-room__target-prefix {
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+}
+
+.war-room__target-form input {
+  width: 100px;
+  min-height: 40px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+}
+
+.war-room__target-form button {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-weight: var(--font-weight-semibold);
+}
+
+.war-room__target-form button:disabled {
+  background: var(--color-neutral-bg);
+  color: var(--color-text-subtle);
+}
+
+/* ── Tier board ──────────────────────────────────────────────────────────── */
+
+.war-room__player-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.war-room__player-list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.war-room__player-list-item--active {
+  background: var(--color-accent-bg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.war-room__player-list-tag {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent);
+  letter-spacing: 0.06em;
+}
+
+.war-room__player-list-aav {
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+
+.war-room__comparable-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.war-room__comparable-table th {
+  text-align: left;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.war-room__comparable-table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* ── My Preparation ──────────────────────────────────────────────────────── */
+
+.war-room__prep-tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.war-room__prep-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.war-room__prep-tab--active {
+  color: var(--color-accent);
+  border-bottom-color: var(--color-accent);
+  font-weight: var(--font-weight-semibold);
+}
+
+.war-room__prep-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.war-room__prep-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.war-room__prep-item:hover {
+  background: var(--color-surface-alt);
+}
+
+.war-room__queue-pos {
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+}
+
+.war-room__prep-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.war-room__prep-actions button {
+  min-width: 32px;
+  min-height: 32px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.war-room__prep-actions button:disabled {
+  opacity: 0.4;
+}
+
+.war-room__prep-nominate {
+  border-color: var(--color-accent) !important;
+  color: var(--color-accent);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  padding: 0 var(--space-2);
+  width: auto !important;
+}
+
+.war-room__prep-remove {
+  color: var(--color-danger);
+}
+
+.war-room__prep-add {
+  padding-top: var(--space-2);
+}
+
+.war-room__prep-add button {
+  width: 100%;
+  min-height: 40px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+}
+
+/* ── Roster/Budget Grid ──────────────────────────────────────────────────── */
+
+.war-room__grid-scroll {
+  overflow-x: auto;
+}
+
+.war-room__grid-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.war-room__grid-table th {
+  text-align: left;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border-strong);
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+}
+
+.war-room__grid-table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.war-room__grid-team-name {
+  font-weight: var(--font-weight-semibold);
+}
+
+.war-room__grid-row--leading {
+  background: var(--color-accent-bg);
+}
+
+.war-room__slot--open {
+  color: var(--color-success);
+  font-family: var(--font-mono);
+}
+
+.war-room__slot--filled {
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+}
+
+.war-room__auto-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-led-blue);
+  box-shadow: 0 0 4px var(--color-led-blue);
+}
+
+/* ── Recent Activity ─────────────────────────────────────────────────────── */
+
+.war-room__activity-active {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--color-accent-bg);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.war-room__activity-label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+}
+
+.war-room__activity-label--sold {
+  color: var(--color-success);
+}
+
+.war-room__activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.war-room__activity-item {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--text-sm);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.war-room__activity-item:last-child {
+  border-bottom: none;
+}
+
+.war-room__activity-meta {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+/* ── Market Context ──────────────────────────────────────────────────────── */
+
+.war-room__market-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.war-room__market-stats > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.war-room__market-stats dt {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.war-room__market-stats dd {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.war-room__market-positions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.war-room__market-positions li {
+  display: flex;
+  justify-content: space-between;
+}

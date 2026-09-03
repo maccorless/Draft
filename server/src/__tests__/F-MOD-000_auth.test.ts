@@ -199,6 +199,48 @@ describe.skipIf(SKIP_DB)('F-MOD-000 auth routes', () => {
     expect(response.statusCode).toBe(401);
     expect(response.json<{ code: string }>().code).toBe('INVALID_CREDENTIALS');
   });
+
+  // ── POST /auth/league/:id/teams (owner login step 4: team picker) ─────────
+
+  it('test_F_MOD_000_auth_league_teams_correct_site_password_returns_team_names', async () => {
+    const response = await server.inject({
+      method: 'POST',
+      url: `/auth/league/${testLeagueId}/teams`,
+      payload: { site_password: 'site-pass' },
+    });
+    expect(response.statusCode).toBe(200);
+    const body = response.json<{ teams: Array<{ id: string; name: string; draft_order: number }> }>();
+    expect(body.teams).toEqual([{ id: testTeamId, name: 'Team A', draft_order: 1 }]);
+  });
+
+  it('test_F_MOD_000_auth_league_teams_wrong_site_password_returns_401', async () => {
+    const response = await server.inject({
+      method: 'POST',
+      url: `/auth/league/${testLeagueId}/teams`,
+      payload: { site_password: 'wrong-password' },
+    });
+    expect(response.statusCode).toBe(401);
+    expect(response.json<{ code: string }>().code).toBe('INVALID_CREDENTIALS');
+  });
+
+  it('test_F_MOD_000_auth_league_teams_never_discloses_password_hashes', async () => {
+    const response = await server.inject({
+      method: 'POST',
+      url: `/auth/league/${testLeagueId}/teams`,
+      payload: { site_password: 'site-pass' },
+    });
+    expect(response.body).not.toContain('team_password_hash');
+    expect(response.body).not.toContain('_hash');
+  });
+
+  it('test_F_MOD_000_auth_league_teams_unknown_league_returns_404', async () => {
+    const response = await server.inject({
+      method: 'POST',
+      url: `/auth/league/00000000-0000-0000-0000-000000000000/teams`,
+      payload: { site_password: 'site-pass' },
+    });
+    expect(response.statusCode).toBe(404);
+  });
 });
 
 describe.skipIf(SKIP_DB)('F-MOD-000 rate limiting', () => {

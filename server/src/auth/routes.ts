@@ -158,6 +158,50 @@ export async function registerAuthRoutes(
       return reply.send({ token, expires_in: JWT_EXPIRES_IN });
     },
   );
+
+  /**
+   * POST /auth/league/:id/teams
+   * Owner login step 4 (screen-information-architecture.md §0): before a team
+   * password can be entered, the owner needs to see which teams exist. Gated
+   * by the site password (same security model as /auth/site) rather than a
+   * league JWT — no such JWT exists yet at this point in the login flow, and
+   * team names aren't secret within a league that's already passed the site
+   * gate. Returns names/order only, never password hashes.
+   */
+  server.post<{ Params: { id: string } }>(
+    '/auth/league/:id/teams',
+    { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    async (req, reply) => {
+      const parse = SiteAuthRequestSchema.safeParse(req.body);
+      if (!parse.success) {
+        return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid request body' });
+      }
+
+      const league_id = req.params.id;
+      const [league] = await db
+        .select({ site_password_hash: leagues.site_password_hash })
+        .from(leagues)
+        .where(eq(leagues.id, league_id))
+        .limit(1);
+
+      if (!league) {
+        return reply.status(404).send({ code: 'NOT_FOUND', message: 'League not found' });
+      }
+
+      const ok = await verify(parse.data.site_password, league.site_password_hash);
+      if (!ok) {
+        return reply.status(401).send({ code: 'INVALID_CREDENTIALS', message: 'Invalid site password' });
+      }
+
+      const teamList = await db
+        .select({ id: teams.id, name: teams.name, draft_order: teams.draft_order })
+        .from(teams)
+        .where(eq(teams.league_id, league_id))
+        .orderBy(teams.draft_order);
+
+      return reply.send({ teams: teamList });
+    },
+  );
 }
 
 /** Utility to hash a password — exported for use in seed.ts */
