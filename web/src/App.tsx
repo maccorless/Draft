@@ -168,8 +168,9 @@ function CommissionerRoute({ auth }: { auth: AuthState }) {
 
 // ponytail: localhost-only dev shortcut, skips the two login screens using the seed.ts credentials
 const IS_LOCALHOST = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-const DEV_SITE_PASSWORD = 'draft2026';
-const DEV_COMMISSIONER_PASSWORD = 'commish2026';
+// Must match server/db/seed.ts's SITE_PASSWORD / COMMISSIONER_PASSWORD exactly.
+const DEV_SITE_PASSWORD = 'draft2026!';
+const DEV_COMMISSIONER_PASSWORD = 'commissioner2026!';
 
 // Commissioner-only: OWNER auto-login would need a team_id, which requires an
 // authed call to fetch — chicken-and-egg for a pre-login shortcut.
