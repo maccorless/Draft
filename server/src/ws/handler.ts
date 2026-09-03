@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import type { SocketStream } from '@fastify/websocket';
+import type WebSocket from 'ws';
 import { eq } from 'drizzle-orm';
 
 import { leagues, teams } from '../../db/schema/index.js';
@@ -12,10 +12,8 @@ export async function registerWsHandler(
   server: FastifyInstance,
   db: PostgresJsDatabase,
 ): Promise<void> {
-  // @fastify/websocket@9 passes a SocketStream (Duplex); the WebSocket is at .socket
-  server.get('/ws', { websocket: true }, (connection: SocketStream) => {
-    const socket = connection.socket;
-
+  // @fastify/websocket@11 passes the raw WebSocket directly (no SocketStream wrapper)
+  server.get('/ws', { websocket: true }, (socket: WebSocket) => {
     // Start auth timeout — close socket if AUTH not received within 5 seconds
     const authTimer = setTimeout(() => {
       if (socket.readyState === socket.OPEN) {

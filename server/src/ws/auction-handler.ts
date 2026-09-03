@@ -13,7 +13,6 @@
  */
 import type { FastifyInstance } from 'fastify';
 import type { FastifyRequest } from 'fastify';
-import type { SocketStream } from '@fastify/websocket';
 import type WebSocket from 'ws';
 
 import postgres from 'postgres';
@@ -54,8 +53,7 @@ export async function registerAuctionWsHandler(
   server.get<{ Params: DraftParams }>(
     '/ws/drafts/:draftId',
     { websocket: true },
-    (connection: SocketStream, req: FastifyRequest<{ Params: DraftParams }>) => {
-      const socket = connection.socket;
+    (socket: WebSocket, req: FastifyRequest<{ Params: DraftParams }>) => {
       const draftId = req.params.draftId;
 
       let authenticated = false;

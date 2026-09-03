@@ -246,7 +246,14 @@ export async function registerPlayerRoutes(
 
       // Read multipart file
       // req.file() is added by @fastify/multipart; we cast to access it
-      const data = await (req as typeof req & { file: () => Promise<import('@fastify/multipart').MultipartFile | undefined> }).file();
+      // @fastify/multipart's .file() throws (rather than resolving undefined) on a
+      // malformed/empty multipart body — both cases mean "no file uploaded" here.
+      let data: import('@fastify/multipart').MultipartFile | undefined;
+      try {
+        data = await (req as typeof req & { file: () => Promise<import('@fastify/multipart').MultipartFile | undefined> }).file();
+      } catch {
+        data = undefined;
+      }
       if (!data) {
         return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'No file uploaded' });
       }
@@ -376,7 +383,14 @@ export async function registerPlayerRoutes(
       const dataset = await findDataset(db, datasetId, leagueId, reply);
       if (!dataset) return;
 
-      const data = await (req as typeof req & { file: () => Promise<import('@fastify/multipart').MultipartFile | undefined> }).file();
+      // @fastify/multipart's .file() throws (rather than resolving undefined) on a
+      // malformed/empty multipart body — both cases mean "no file uploaded" here.
+      let data: import('@fastify/multipart').MultipartFile | undefined;
+      try {
+        data = await (req as typeof req & { file: () => Promise<import('@fastify/multipart').MultipartFile | undefined> }).file();
+      } catch {
+        data = undefined;
+      }
       if (!data) {
         return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'No file uploaded' });
       }
@@ -409,7 +423,14 @@ export async function registerPlayerRoutes(
       const dataset = await findDataset(db, datasetId, leagueId, reply);
       if (!dataset) return;
 
-      const data = await (req as typeof req & { file: () => Promise<import('@fastify/multipart').MultipartFile | undefined> }).file();
+      // @fastify/multipart's .file() throws (rather than resolving undefined) on a
+      // malformed/empty multipart body — both cases mean "no file uploaded" here.
+      let data: import('@fastify/multipart').MultipartFile | undefined;
+      try {
+        data = await (req as typeof req & { file: () => Promise<import('@fastify/multipart').MultipartFile | undefined> }).file();
+      } catch {
+        data = undefined;
+      }
       if (!data) {
         return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'No file uploaded' });
       }

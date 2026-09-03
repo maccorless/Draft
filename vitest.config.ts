@@ -4,14 +4,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    environmentMatchGlobs: [
-      ['web/**', 'jsdom'],
-    ],
-    include: [
-      'server/src/**/*.test.ts',
-      'shared-types/src/**/*.test.ts',
-      'web/src/**/*.test.tsx',
-    ],
     testTimeout: 15000,
     hookTimeout: 15000,
     // Integration tests share draft_test DB — run files sequentially to prevent state leakage
@@ -25,5 +17,28 @@ export default defineConfig({
       SENDGRID_API_KEY: 'test-sendgrid-key-placeholder',
       FANTASYPROS_API_KEY: 'test-fantasypros-key-placeholder',
     },
+    // environmentMatchGlobs was removed in Vitest 5 — projects replaces it for
+    // per-directory environment overrides (web needs jsdom, everything else node).
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          include: [
+            'server/src/**/*.test.ts',
+            'shared-types/src/**/*.test.ts',
+          ],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: 'web',
+          environment: 'jsdom',
+          include: ['web/src/**/*.test.tsx'],
+        },
+      },
+    ],
   },
 });

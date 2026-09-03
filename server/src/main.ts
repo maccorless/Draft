@@ -1,7 +1,7 @@
 // Env check MUST be first — exits before any other module reads env vars.
 import './config/env-check.cjs';
 
-import Fastify from 'fastify';
+import Fastify, { type FastifyError } from 'fastify';
 import fastifyCors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
 import fastifyRateLimit from '@fastify/rate-limit';
@@ -108,7 +108,7 @@ export async function buildServer() {
   await server.register(fastifyWebsocket);
 
   // Error handler — returns { code, message } for HTTP errors
-  server.setErrorHandler((error, _req, reply) => {
+  server.setErrorHandler((error: FastifyError, _req, reply) => {
     const statusCode = error.statusCode ?? 500;
     reply.status(statusCode).send({
       code: error.code ?? 'INTERNAL_ERROR',
