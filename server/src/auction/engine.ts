@@ -617,6 +617,20 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
 
   let auctionId: string;
   let seq: number;
+  let nominationPayload: {
+    player_auction_id: string;
+    player_name: string;
+    position: string;
+    nfl_team: string;
+    tier: number | null;
+    aav_minor: number;
+    projected_points: number | null;
+    nominator_team_id: string;
+    opening_bid_minor: number;
+    nomination_deadline_ts: number;
+    second_bid_deadline_ts: number;
+    system_nominated: boolean;
+  };
 
   try {
     await sql.begin(async (tx) => {
@@ -636,6 +650,30 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
       `;
       auctionId = auctionRows[0]!.id;
 
+      // Built once and reused for both the persisted draft_event and the live
+      // broadcast below — reconnect replay sends exactly this same payload
+      // shape (session/routes.ts's WS handler merges in sequence/team_id/
+      // player_auction_id/created_at itself), so a reconnecting client must
+      // see byte-identical data to a client that was live for the original
+      // broadcast. Two separately-hand-written payload literals previously
+      // drifted apart (the persisted one was missing nominator_team_id,
+      // position, etc. entirely), which silently corrupted a reconnecting
+      // client's state during replay.
+      nominationPayload = {
+        player_auction_id: auctionId!,
+        player_name: player.name,
+        position: player.position,
+        nfl_team: player.nfl_team,
+        tier: player.tier,
+        aav_minor: player.aav_minor,
+        projected_points: player.projected_points !== null ? Number(player.projected_points) : null,
+        nominator_team_id: teamId,
+        opening_bid_minor: command.opening_bid_minor,
+        nomination_deadline_ts: nominationDeadline.getTime(),
+        second_bid_deadline_ts: secondBidDeadline.getTime(),
+        system_nominated: systemNominated,
+      };
+
       seq = await nextDraftEventSequence(tx, draftId);
       await tx`
         INSERT INTO draft_events
@@ -643,11 +681,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
         VALUES
           (${draftId}, ${seq}, 'NOMINATION_STARTED',
            ${teamId}, ${auctionId},
-           ${JSON.stringify({
-             player_name: player.name,
-             opening_bid_minor: command.opening_bid_minor,
-             system_nominated: systemNominated,
-           })}::jsonb,
+           ${JSON.stringify(nominationPayload)}::jsonb,
            NOW())
       `;
     });
@@ -656,23 +690,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
     return { succeeded: false };
   }
 
-  broadcast(draftId, {
-    type: 'NOMINATION_STARTED',
-    payload: {
-      player_auction_id: auctionId!,
-      player_name: player.name,
-      position: player.position,
-      nfl_team: player.nfl_team,
-      tier: player.tier,
-      aav_minor: player.aav_minor,
-      projected_points: player.projected_points !== null ? Number(player.projected_points) : null,
-      nominator_team_id: teamId,
-      opening_bid_minor: command.opening_bid_minor,
-      nomination_deadline_ts: nominationDeadline.getTime(),
-      second_bid_deadline_ts: secondBidDeadline.getTime(),
-      system_nominated: systemNominated,
-    },
-  });
+  broadcast(draftId, { type: 'NOMINATION_STARTED', payload: nominationPayload! });
 
   return {
     succeeded: true,
@@ -717,23 +735,28 @@ async function advanceNominationTurn(
   `;
   const nominationDeadlineMs = Date.now() + (cfgRows2[0]?.nomination_timer_ms ?? 90000);
 
+  // Same reasoning as NOMINATION_STARTED above: one payload object for both
+  // the persisted event and the broadcast, so replay can never drift from
+  // what a live client saw. This previously persisted `next_team_id` while
+  // broadcasting `current_nominator_team_id` — a reconnecting client (which
+  // reads the replayed event, not the live one) silently got `undefined`
+  // for the current nominator.
+  const turnChangedPayload = {
+    current_nominator_team_id: nextTeam.id,
+    nomination_deadline_ts: nominationDeadlineMs,
+  };
+
   await sql.begin(async (tx) => {
     await tx`UPDATE drafts SET nomination_cursor = ${newCursor} WHERE id = ${draftId}`;
     const seq = await nextDraftEventSequence(tx, draftId);
     await tx`
       INSERT INTO draft_events (draft_id, sequence, event_type, team_id, payload, created_at)
       VALUES (${draftId}, ${seq}, 'NOMINATION_TURN_CHANGED', ${nextTeam.id},
-              ${JSON.stringify({ next_team_id: nextTeam.id })}::jsonb, NOW())
+              ${JSON.stringify(turnChangedPayload)}::jsonb, NOW())
     `;
   });
 
-  broadcast(draftId, {
-    type: 'NOMINATION_TURN_CHANGED',
-    payload: {
-      current_nominator_team_id: nextTeam.id,
-      nomination_deadline_ts: nominationDeadlineMs,
-    },
-  });
+  broadcast(draftId, { type: 'NOMINATION_TURN_CHANGED', payload: turnChangedPayload });
 }
 
 export async function processPassNomination(

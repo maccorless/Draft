@@ -124,10 +124,21 @@ function reducer(state: AuctionState, action: Action): AuctionState {
         currentAuction: {
           player_auction_id: String(p['player_auction_id']),
           current_bid_minor: Number(p['opening_bid_minor']),
-          leading_team_id: null,
-          auction_version: 0,
+          // The nominator IS the leader at the opening price from creation
+          // (server/src/auction/engine.ts's INSERT sets current_leader_id =
+          // the nominator, auction_version = 1) — never null/0. Getting this
+          // wrong here means every first competing bid gets rejected as
+          // stale (expected_auction_version mismatch against the DB).
+          leading_team_id: String(p['nominator_team_id']),
+          auction_version: 1,
           nomination_deadline_ts: Number(p['nomination_deadline_ts']),
-          rebid_deadline_ts: 0,
+          // The DB column this mirrors is dual-purpose: engine.ts's INSERT
+          // pre-populates it with the second-bid deadline (not null), then
+          // overwrites it with the real rebid deadline once a competing bid
+          // lands. So it's NOT a reliable "has anyone bid yet" signal —
+          // auction_version (1 at creation, 2+ after the first bid) is; see
+          // DraftRoom's isSecondBid.
+          rebid_deadline_ts: Number(p['second_bid_deadline_ts']),
           nominator_team_id: String(p['nominator_team_id']),
           player_name: String(p['player_name']),
           position: String(p['position'] ?? ''),
@@ -270,7 +281,6 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
   const wsRef = useRef<WebSocket | null>(null);
   const lastSeenSeqRef = useRef<number>(-1);
   const reconnectAttemptRef = useRef(0);
-  const closedByUsRef = useRef(false);
 
   useEffect(() => {
     lastSeenSeqRef.current = state.asOfSequence;
@@ -278,11 +288,21 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
 
   useEffect(() => {
     if (!draftId || !token) return;
-    closedByUsRef.current = false;
 
+    // "Was this close intentional" can't be a single flag shared across every
+    // socket this effect ever creates — under React 18 StrictMode's dev-mode
+    // double-invoke (mount, cleanup, mount again), a shared ref gets reset by
+    // the *second* mount before the *first* socket's belated close event
+    // fires, so that stale close reads it as unintentional and reconnects —
+    // leaving two live sockets both processing every broadcast (visible as
+    // duplicate bid-ladder entries). Comparing identity against wsRef.current
+    // instead means a superseded socket's close is always correctly ignored,
+    // regardless of timing.
+    let cancelled = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
     function connect(): void {
+      if (cancelled) return;
       dispatch({ type: 'CONNECTION', status: reconnectAttemptRef.current > 0 ? 'reconnecting' : 'connecting' });
 
       const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -297,6 +317,7 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
       };
 
       ws.onmessage = (event: MessageEvent<string>) => {
+        if (wsRef.current !== ws) return; // superseded — ignore its late messages too
         try {
           const msg = JSON.parse(event.data) as { type: string; payload?: Record<string, unknown> };
           if (msg.type === 'STATE_SNAPSHOT') {
@@ -310,7 +331,7 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
       };
 
       ws.onclose = () => {
-        if (closedByUsRef.current) return;
+        if (cancelled || wsRef.current !== ws) return;
         dispatch({ type: 'CONNECTION', status: 'reconnecting' });
         const delay = Math.min(1000 * 2 ** reconnectAttemptRef.current, 15000);
         reconnectAttemptRef.current += 1;
@@ -325,7 +346,7 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
     connect();
 
     return () => {
-      closedByUsRef.current = true;
+      cancelled = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       wsRef.current?.close();
       wsRef.current = null;

@@ -136,7 +136,13 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
   const myGridTeam = teamId ? rosterGrid.find((t) => t.team_id === teamId) ?? null : null;
 
   const auction = ws.currentAuction;
-  const isSecondBid = auction && auction.leading_team_id === null;
+  // Neither leading_team_id (the nominator leads at the opening price from
+  // creation) nor rebid_deadline_ts (pre-populated at creation, dual-purpose
+  // column) can tell second-bid from rebid phase. auction_version can:
+  // engine.ts creates every auction at version 1 and increments on the first
+  // accepted competing bid, so ===1 means "nobody has bid against the
+  // nominator yet" reliably.
+  const isSecondBid = !!auction && auction.auction_version === 1;
   const deadline = auction ? (isSecondBid ? auction.nomination_deadline_ts : auction.rebid_deadline_ts) : null;
   const secondsLeft = useCountdown(deadline);
 
@@ -162,7 +168,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
     ws.nominatorMatchAvailable &&
     isNominatorOfOpen &&
     !isLeading &&
-    auction.leading_team_id !== null
+    !isSecondBid // only meaningful once someone has actually outbid the opening price
   );
 
   const isMyNominationTurn = !auction && teamId !== null && ws.currentNominatorTeamId === teamId;
@@ -321,9 +327,8 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
                   {formatMoney(auction.current_bid_minor)}
                 </div>
                 <div className="draft-room__leader" data-testid="current-leader">
-                  {auction.leading_team_id
-                    ? rosterGrid.find((t) => t.team_id === auction.leading_team_id)?.team_name ?? 'Leading team'
-                    : 'Opening bid — no leader yet'}
+                  {isSecondBid ? 'Nominated by ' : 'Leading: '}
+                  {rosterGrid.find((t) => t.team_id === auction.leading_team_id)?.team_name ?? 'Unknown team'}
                 </div>
                 <div className={`draft-room__timer${secondsLeft <= 5 ? ' draft-room__timer--urgent' : ''}`} data-testid="timer">
                   {secondsLeft}s
