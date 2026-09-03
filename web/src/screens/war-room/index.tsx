@@ -100,6 +100,13 @@ async function authedJson<T>(url: string, token: string, init?: RequestInit): Pr
 
 type PrepTab = 'watchlist' | 'queue' | 'targets';
 
+const CONNECTION_LABEL: Record<string, string> = {
+  open: 'Live',
+  connecting: 'Connecting…',
+  reconnecting: 'Reconnecting…',
+  closed: 'Offline',
+};
+
 export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): React.ReactElement {
   const ws = useAuctionSocket(draftId, token);
   const [rosterSlots, setRosterSlots] = useState<RosterSlotDef[]>([]);
@@ -296,7 +303,9 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
     <div className="war-room">
       <header className="war-room__topbar">
         <span className="war-room__title">War Room</span>
-        <span className={`war-room__conn war-room__conn--${ws.connectionStatus}`}>{ws.connectionStatus}</span>
+        <span className={`war-room__conn war-room__conn--${ws.connectionStatus}`}>
+          {CONNECTION_LABEL[ws.connectionStatus] ?? ws.connectionStatus}
+        </span>
       </header>
 
       <div className="war-room__grid">
