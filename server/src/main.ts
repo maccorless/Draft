@@ -25,6 +25,7 @@ import { registerReportRoutes } from './draft/reports.js';
 import { registerStrategyRoutes } from './draft/strategy.js';
 import { registerWhammyRoutes } from './draft/whammy.js';
 import { registerWarRoomRoutes } from './draft/war-room.js';
+import { registerDevRoutes } from './dev/routes.js';
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
 const HOST = process.env['HOST'] ?? '0.0.0.0';
@@ -131,6 +132,11 @@ export async function buildServer() {
   await registerStrategyRoutes(server, sql);
   await registerWhammyRoutes(server, sql);
   await registerWarRoomRoutes(server, sql);
+
+  // Wipes-and-reseeds the whole DB — never expose outside local/dev use.
+  if (process.env['NODE_ENV'] !== 'production') {
+    await registerDevRoutes(server, db, sql);
+  }
 
   return server;
 }

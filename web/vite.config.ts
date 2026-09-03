@@ -20,6 +20,7 @@ export default defineConfig({
       '/players': 'http://127.0.0.1:3000',
       '/drafts': 'http://127.0.0.1:3000',
       '/health': 'http://127.0.0.1:3000',
+      '/dev': 'http://127.0.0.1:3000',
     },
   },
 });

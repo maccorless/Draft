@@ -13,6 +13,7 @@ import type { Icon } from '@phosphor-icons/react';
 import { DatasetImport } from './DatasetImport.js';
 import { AmbiguityResolution } from './AmbiguityResolution.js';
 import type { AmbiguousRow } from './AmbiguityResolution.js';
+import { DevTools } from './DevTools.js';
 import './commissioner-console.css';
 
 export type DatasetStatus = 'DRAFT' | 'VALIDATED' | 'FROZEN';
@@ -143,7 +144,12 @@ export function CommissionerConsole({
 
       <main className="commissioner-console__content" aria-label={`${activeLabel} content`}>
         <div className="commissioner-console__panel" data-testid={`section-${activeSection}`}>
-          {activeSection === 'league-setup' && <ComingSoon label="League Setup" />}
+          {activeSection === 'league-setup' && (
+            <>
+              <ComingSoon label="League Setup" />
+              <DevTools />
+            </>
+          )}
 
           {activeSection === 'dataset-import' && (
             <>

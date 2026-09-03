@@ -344,10 +344,10 @@ function DevAutoLogin({ onAuth }: { onAuth: (auth: AuthState) => void }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ site_password: DEV_SITE_PASSWORD }),
         });
-        if (!siteRes.ok) { setError(`Dev auto-login failed at site step (${siteRes.status}) — re-run seed.ts?`); return; }
+        if (!siteRes.ok) { setError(`Dev auto-login failed at site step (${siteRes.status}) — re-run npm run db:seed?`); return; }
         const { leagues }: { leagues: League[] } = await siteRes.json();
         const league = leagues[0];
-        if (!league) { setError('No leagues found — run server/src/seed.ts'); return; }
+        if (!league) { setError('No leagues found — run npm run db:seed (from server/), or use Reload Test Data in the Commissioner Console'); return; }
 
         const leagueRes = await fetch(`${API}/auth/league/${league.id}`, {
           method: 'POST',
