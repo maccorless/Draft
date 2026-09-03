@@ -11,7 +11,9 @@ const styles = {
 import { Lobby } from './screens/lobby/index.js';
 import { CommissionerConsole } from './screens/commissioner/index.js';
 
-const API = 'http://127.0.0.1:3001';
+// Relative — goes through Vite's dev proxy (web/vite.config.ts) to the backend,
+// so it works regardless of which port the backend actually listens on.
+const API = '';
 
 // ── Auth state ────────────────────────────────────────────────────────────────
 
@@ -46,7 +48,7 @@ function SiteLogin({ onLeagues }: { onLeagues: (leagues: League[], sitePass: str
       const { leagues } = await res.json();
       onLeagues(leagues, pass);
     } catch {
-      setError('Cannot reach server at localhost:3001');
+      setError('Cannot reach server');
     } finally {
       setLoading(false);
     }
@@ -196,7 +198,7 @@ function DevAutoLogin({ onAuth }: { onAuth: (auth: AuthState) => void }) {
         const { token } = await leagueRes.json();
         onAuth({ token, role: 'COMMISSIONER', leagueId: league.id, leagueName: league.name });
       } catch {
-        setError('Cannot reach server at ' + API);
+        setError('Cannot reach server');
       }
     })();
   }, [onAuth]);
