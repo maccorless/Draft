@@ -148,17 +148,34 @@ export async function buildDraftStateSnapshot(
     WHERE draft_id = ${draftId}
   `;
 
-  // Load active auction (if any)
+  // Load active auction (if any), enriched with player details so the Draft
+  // Room can render on initial load/reconnect without a second round trip —
+  // live clients also get player_name etc. via the NOMINATION_STARTED broadcast,
+  // but a client attaching mid-auction only has this snapshot to go on.
   const auctionRows = await sql<Array<{
     id: string;
     current_bid_minor: number;
     current_leader_id: string | null;
     auction_version: number;
+    nomination_deadline: Date | null;
     rebid_deadline: Date | null;
+    nominator_team_id: string | null;
+    player_name: string;
+    position: string;
+    nfl_team: string;
+    tier: number | null;
+    aav_minor: number;
+    projected_points: string | null;
   }>>`
-    SELECT id, current_bid_minor, current_leader_id, auction_version, rebid_deadline
-    FROM player_auctions
-    WHERE draft_id = ${draftId} AND status = 'OPEN'
+    SELECT
+      pa.id, pa.current_bid_minor, pa.current_leader_id, pa.auction_version,
+      pa.nomination_deadline, pa.rebid_deadline, pa.nominator_team_id,
+      p.name AS player_name, p.position, p.nfl_team,
+      pde.tier, pde.aav_minor, pde.projected_points
+    FROM player_auctions pa
+    JOIN player_dataset_entries pde ON pde.id = pa.dataset_player_id
+    JOIN players p ON p.id = pde.player_id
+    WHERE pa.draft_id = ${draftId} AND pa.status = 'OPEN'
     LIMIT 1
   `;
   const auction = auctionRows[0] ?? null;
@@ -184,9 +201,19 @@ export async function buildDraftStateSnapshot(
           current_bid_minor: auction.current_bid_minor,
           leading_team_id: auction.current_leader_id,
           auction_version: auction.auction_version,
+          nomination_deadline_ts: auction.nomination_deadline
+            ? new Date(auction.nomination_deadline as unknown as string | Date).getTime()
+            : 0,
           rebid_deadline_ts: auction.rebid_deadline
             ? new Date(auction.rebid_deadline as unknown as string | Date).getTime()
             : 0,
+          nominator_team_id: auction.nominator_team_id,
+          player_name: auction.player_name,
+          position: auction.position,
+          nfl_team: auction.nfl_team,
+          tier: auction.tier,
+          aav_minor: auction.aav_minor,
+          projected_points: auction.projected_points !== null ? Number(auction.projected_points) : null,
         }
       : null,
     as_of_sequence: asOfSequence,
@@ -208,7 +235,15 @@ export interface DraftStateSnapshot {
     current_bid_minor: number;
     leading_team_id: string | null;
     auction_version: number;
+    nomination_deadline_ts: number;
     rebid_deadline_ts: number;
+    nominator_team_id: string | null;
+    player_name: string;
+    position: string;
+    nfl_team: string;
+    tier: number | null;
+    aav_minor: number;
+    projected_points: number | null;
   } | null;
   as_of_sequence: number;
   missed_events_replayed: number;
