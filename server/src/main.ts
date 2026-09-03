@@ -2,6 +2,7 @@
 import './config/env-check.cjs';
 
 import Fastify from 'fastify';
+import fastifyCors from '@fastify/cors';
 import fastifyJwt from '@fastify/jwt';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyWebsocket from '@fastify/websocket';
@@ -76,6 +77,11 @@ export async function buildServer() {
     logger: {
       level: process.env['LOG_LEVEL'] ?? 'info',
     },
+  });
+
+  await server.register(fastifyCors, {
+    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    credentials: true,
   });
 
   await server.register(fastifyJwt, {

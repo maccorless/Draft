@@ -918,13 +918,16 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
     `;
 
     // ─── Draft completion check (constraint: same transaction as last award) ──
-    // After marking this auction AWARDED, check if any remain non-AWARDED.
-    const [remaining] = await tx<[{ cnt: number }]>`
+    // A draft is complete when every team's roster is full — NOT when every
+    // player_auctions row created so far happens to be AWARDED (that table only
+    // holds nominated players, so with no auction currently open the count of
+    // non-AWARDED rows is trivially 0 after literally the first pick).
+    const [unfilled] = await tx<[{ cnt: number }]>`
       SELECT COUNT(*)::int AS cnt
-      FROM player_auctions
-      WHERE draft_id = ${draftId} AND status != 'AWARDED'
+      FROM draft_team_states
+      WHERE draft_id = ${draftId} AND required_remaining_spots > 0
     `;
-    if ((remaining?.cnt ?? 1) === 0) {
+    if ((unfilled?.cnt ?? 1) === 0) {
       // All auctions awarded — complete the draft
       await tx`
         UPDATE drafts
@@ -942,7 +945,7 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
       `;
     }
     // Store completion flag for post-commit broadcast (hoisting out of tx scope)
-    draftCompletedMap.set(draftId, (remaining?.cnt ?? 1) === 0);
+    draftCompletedMap.set(draftId, (unfilled?.cnt ?? 1) === 0);
   });
 
   broadcast(draftId, {
