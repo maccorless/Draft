@@ -1,0 +1,196 @@
+.dataset-import {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.dataset-import__heading {
+  font-size: var(--text-lg);
+}
+
+/* ── Source selector ─────────────────────────────────────────────────────── */
+
+.dataset-import__source-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.dataset-import__source-legend {
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  padding: 0 0 var(--space-3);
+}
+
+.dataset-import__source-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.dataset-import__source-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  transition: border-color var(--transition-fast), color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.dataset-import__source-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.dataset-import__source-option input {
+  /* Visually hidden but still focusable/keyboard-operable */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+.dataset-import__source-option--selected {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: var(--color-accent-bg);
+}
+
+/* ── Dropzone ────────────────────────────────────────────────────────────── */
+
+.dataset-import__dropzone {
+  border: 2px dashed var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-10) var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  background: var(--color-surface-alt);
+  transition: border-color var(--transition-base), background var(--transition-base);
+}
+
+.dataset-import__dropzone:hover,
+.dataset-import__dropzone:focus-visible {
+  border-color: var(--color-accent);
+  background: var(--color-accent-bg);
+}
+
+.dataset-import__dropzone--active {
+  border-color: var(--color-accent);
+  background: var(--color-accent-bg);
+}
+
+.dataset-import__progress {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-medium);
+}
+
+.dataset-import__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* ── FantasyPros options ─────────────────────────────────────────────────── */
+
+.dataset-import__fantasypros-options {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-md);
+}
+
+.dataset-import__scoring-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-1);
+}
+
+.dataset-import__scoring-select {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.dataset-import__fantasypros-btn {
+  padding: var(--space-2) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-text-on-primary);
+  font-weight: var(--font-weight-semibold);
+  transition: background var(--transition-fast);
+}
+
+.dataset-import__fantasypros-btn:hover:not(:disabled) {
+  background: var(--color-accent-hover);
+}
+
+.dataset-import__fantasypros-btn:disabled {
+  background: var(--color-neutral-bg);
+  color: var(--color-text-subtle);
+}
+
+/* ── Errors / results ────────────────────────────────────────────────────── */
+
+.dataset-import__upload-error {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+.dataset-import__result {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+}
+
+.dataset-import__result-count {
+  color: var(--color-success);
+  font-weight: var(--font-weight-semibold);
+}
+
+.dataset-import__errors-heading {
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.dataset-import__error-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.dataset-import__error-item {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.dataset-import__error-row {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-danger);
+}

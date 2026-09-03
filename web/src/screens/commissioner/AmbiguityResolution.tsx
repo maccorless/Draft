@@ -4,6 +4,7 @@
  * Commissioner confirms or overrides each match before import is committed.
  */
 import React, { useState } from 'react';
+import './ambiguity-resolution.css';
 
 export interface PlayerCandidate {
   id: string;

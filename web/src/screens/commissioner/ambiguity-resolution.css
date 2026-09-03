@@ -1,0 +1,96 @@
+.ambiguity-resolution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.ambiguity-resolution__heading {
+  font-size: var(--text-lg);
+}
+
+.ambiguity-resolution__description {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.ambiguity-resolution__row {
+  border: 1px solid var(--color-warning-border);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+
+.ambiguity-resolution__row-header {
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  margin-bottom: var(--space-3);
+}
+
+.ambiguity-resolution__row-number {
+  color: var(--color-warning);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ambiguity-resolution__candidates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ambiguity-resolution__candidate {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.ambiguity-resolution__candidate:has(input:focus-visible) {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.ambiguity-resolution__candidate--selected {
+  border-color: var(--color-accent);
+  background: var(--color-accent-bg);
+}
+
+.ambiguity-resolution__candidate--skip {
+  color: var(--color-text-muted);
+}
+
+.ambiguity-resolution__candidate-name {
+  font-weight: var(--font-weight-semibold);
+}
+
+.ambiguity-resolution__candidate-pos,
+.ambiguity-resolution__candidate-team {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+.ambiguity-resolution__confirm {
+  align-self: flex-start;
+  padding: var(--space-3) var(--space-6);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
+  color: var(--color-text-on-primary);
+  font-weight: var(--font-weight-semibold);
+  transition: background var(--transition-fast);
+}
+
+.ambiguity-resolution__confirm:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.ambiguity-resolution__confirm:disabled {
+  background: var(--color-neutral-bg);
+  color: var(--color-text-subtle);
+}

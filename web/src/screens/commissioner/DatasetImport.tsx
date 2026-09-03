@@ -6,6 +6,7 @@
  * keyboard-accessible (RX-A11Y-001).
  */
 import React, { useRef, useState } from 'react';
+import './dataset-import.css';
 
 interface ImportError {
   row: number;
