@@ -7,8 +7,9 @@
         "F-MOD-002-rework-01"
       ],
       "attempts": 1,
-      "status": "in_progress",
-      "triggered_at": "2026-09-04T20:36:25.525835+00:00"
+      "status": "completed",
+      "triggered_at": "2026-09-04T20:36:25.525835+00:00",
+      "completed_at": "2026-09-04T23:22:57.658860+00:00"
     }
   ]
 }
