@@ -175,6 +175,10 @@ api_contracts:
 
 ## Test Config
 
+- command: DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test npx vitest run --project node server/src/__tests__/F-MOD-011_draft_control.test.ts
+- test_paths:
+  - server/src/__tests__/F-MOD-011_draft_control.test.ts
+
 ## Lint Config
 
 ## Constraints

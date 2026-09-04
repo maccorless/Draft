@@ -211,6 +211,7 @@ function LeagueLogin({
 function CommissionerRoute({ auth }: { auth: AuthState }) {
   const [datasetId, setDatasetId] = useState<string | null>(null);
   const [datasetStatus, setDatasetStatus] = useState<'DRAFT' | 'VALIDATED' | 'FROZEN' | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
   React.useEffect(() => {
@@ -228,6 +229,21 @@ function CommissionerRoute({ auth }: { auth: AuthState }) {
       .catch(() => setError('Cannot reach server'));
   }, [auth.leagueId, auth.token]);
 
+  // Draft Control (F-MOD-011) operates whichever draft is currently active —
+  // same "pick the most relevant draft" logic DraftGateway uses for owners.
+  React.useEffect(() => {
+    fetch(`${API}/leagues/${auth.leagueId}/drafts`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+      .then(async res => {
+        if (!res.ok) return;
+        const data = await res.json();
+        const active = pickActiveDraft(data.drafts ?? []);
+        setDraftId(active?.id ?? null);
+      })
+      .catch(() => {});
+  }, [auth.leagueId, auth.token]);
+
   if (error) return <div style={styles.center}><p style={styles.error}>{error}</p></div>;
   if (!datasetId) return <div style={styles.center}><p>Setting up dataset…</p></div>;
 
@@ -237,6 +253,7 @@ function CommissionerRoute({ auth }: { auth: AuthState }) {
       leagueId={auth.leagueId}
       datasetId={datasetId}
       datasetStatus={datasetStatus}
+      draftId={draftId}
     />
   );
 }

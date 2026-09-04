@@ -46,6 +46,19 @@ export function getOrCreateRuntime(draftId: string): DraftRuntime {
   return rt;
 }
 
+/** Live connection counts for the Draft Health panel (F-MOD-011) — read-only. */
+export function getConnectionCounts(draftId: string): {
+  connectedTeamCount: number;
+  reconnectingTeamCount: number;
+} {
+  const rt = draftRuntimes.get(draftId);
+  if (!rt) return { connectedTeamCount: 0, reconnectingTeamCount: 0 };
+  return {
+    connectedTeamCount: rt.teamSessions.size,
+    reconnectingTeamCount: rt.graceTimers.size,
+  };
+}
+
 export function removeRuntime(draftId: string): void {
   const rt = draftRuntimes.get(draftId);
   if (rt?.awardTimer) clearInterval(rt.awardTimer);

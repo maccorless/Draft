@@ -14,6 +14,7 @@ import { DatasetImport } from './DatasetImport.js';
 import { AmbiguityResolution } from './AmbiguityResolution.js';
 import type { AmbiguousRow } from './AmbiguityResolution.js';
 import { DevTools } from './DevTools.js';
+import { DraftControl } from './DraftControl.js';
 import './commissioner-console.css';
 
 export type DatasetStatus = 'DRAFT' | 'VALIDATED' | 'FROZEN';
@@ -96,6 +97,8 @@ interface CommissionerConsoleProps {
   onCreateDraft?: () => void;
   ambiguousRows?: AmbiguousRow[];
   onResolveAmbiguity?: (resolutions: Record<number, string | 'skip'>) => void;
+  /** Active draft to operate, if one exists (F-MOD-011 Draft Control section). */
+  draftId?: string | null;
 }
 
 export function CommissionerConsole({
@@ -106,6 +109,7 @@ export function CommissionerConsole({
   onCreateDraft,
   ambiguousRows,
   onResolveAmbiguity,
+  draftId,
 }: CommissionerConsoleProps = {}): React.ReactElement {
   const [activeSection, setActiveSection] =
     useState<ConsoleSection>('league-setup');
@@ -168,7 +172,13 @@ export function CommissionerConsole({
             </>
           )}
 
-          {activeSection === 'draft-control' && <ComingSoon label="Draft Control" />}
+          {activeSection === 'draft-control' && (
+            leagueId && token && draftId ? (
+              <DraftControl draftId={draftId} leagueId={leagueId} token={token} />
+            ) : (
+              <ComingSoon label="Draft Control" />
+            )
+          )}
           {activeSection === 'corrections' && <ComingSoon label="Corrections & Rollback" />}
           {activeSection === 'teams' && <ComingSoon label="Teams" />}
         </div>

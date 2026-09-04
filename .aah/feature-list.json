@@ -1159,6 +1159,12 @@
         "F-MOD-004"
       ],
       "api_contracts": "```yaml\napi_contracts:\n  produces:\n    - operation_id: extendTimer\n      schema_file: schema/MOD-011-api-schema.yaml\n      request_schema: ExtendTimerRequest\n      response_schema: ExtendTimerResponse\n    - operation_id: adjustBudget\n      schema_file: schema/MOD-011-api-schema.yaml\n      request_schema: BudgetAdjustmentRequest\n      response_schema: BudgetAdjustmentResponse\n    - operation_id: reassignCurrentAuction\n      schema_file: schema/MOD-011-api-schema.yaml\n      request_schema: ReassignAuctionRequest\n      response_schema: \"200 OK (no response body)\"\n    - operation_id: getDraftHealth\n      schema_file: schema/MOD-011-api-schema.yaml\n      request_schema: \"(none)\"\n      response_schema: DraftHealthResponse\n    - operation_id: getAuditLog\n      schema_file: schema/MOD-011-api-schema.yaml\n      request_schema: \"(none)\"\n      response_schema: AuditLogResponse\n```",
+      "test_config": {
+        "command": "DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test npx vitest run --project node server/src/__tests__/F-MOD-011_draft_control.test.ts",
+        "test_paths": [
+          "server/src/__tests__/F-MOD-011_draft_control.test.ts"
+        ]
+      },
       "passes": false
     },
     {

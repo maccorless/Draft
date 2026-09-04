@@ -29,6 +29,13 @@
       "when": 1788700000000,
       "tag": "0003_team_media",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788800000000,
+      "tag": "0004_commissioner_adjustment",
+      "breakpoints": true
     }
   ]
 }

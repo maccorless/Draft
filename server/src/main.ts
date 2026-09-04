@@ -21,6 +21,7 @@ import { registerAuctionWsHandler } from './ws/auction-handler.js';
 import { registerSessionRoutes } from './session/routes.js';
 import { registerAutoAgentRoutes } from './auction/auto-agent-routes.js';
 import { registerCorrectionRoutes } from './draft/corrections.js';
+import { registerDraftControlRoutes } from './draft/draft-control.js';
 import { registerReportRoutes } from './draft/reports.js';
 import { registerStrategyRoutes } from './draft/strategy.js';
 import { registerWhammyRoutes } from './draft/whammy.js';
@@ -129,6 +130,7 @@ export async function buildServer() {
   await registerSessionRoutes(server, sql);
   await registerAutoAgentRoutes(server, sql);
   await registerCorrectionRoutes(server, sql);
+  await registerDraftControlRoutes(server, sql);
   await registerReportRoutes(server, sql);
   await registerStrategyRoutes(server, sql);
   await registerWhammyRoutes(server, sql);

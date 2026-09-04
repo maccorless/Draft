@@ -46,6 +46,7 @@ export const budgetEntryTypeEnum = pgEnum('budget_entry_type', [
   'CORRECTION',
   'WHAMMY',
   'ROLLBACK',
+  'COMMISSIONER_ADJUSTMENT',
 ]);
 
 export const datasetStatusEnum = pgEnum('dataset_status', [

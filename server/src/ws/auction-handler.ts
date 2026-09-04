@@ -46,6 +46,33 @@ const AUTH_TIMEOUT_MS = 5000;
 /** Grace period before AUTO_AGENT takeover after all WS connections drop. */
 const GRACE_PERIOD_MS = 30_000;
 
+/**
+ * Resolve the team a command should act on behalf of (F-MOD-011 commissioner
+ * override): a COMMISSIONER may set on_behalf_of_team_id to nominate/bid as
+ * a disconnected/unresponsive team. A non-commissioner setting this field is
+ * rejected outright — never silently falls back to acting as themselves.
+ * Returns 'forbidden', 'not_found', or the resolved team id.
+ */
+async function resolveOnBehalfOfTeamId(
+  sql: postgres.Sql,
+  claims: TokenClaims,
+  commandPayload: Record<string, unknown>,
+  fallbackTeamId: string | undefined,
+): Promise<{ teamId: string | undefined } | { error: 'forbidden' | 'not_found' }> {
+  const onBehalfOf = commandPayload['on_behalf_of_team_id'];
+  if (typeof onBehalfOf !== 'string' || onBehalfOf.length === 0) {
+    return { teamId: fallbackTeamId };
+  }
+  if (claims.role !== 'COMMISSIONER') {
+    return { error: 'forbidden' };
+  }
+  const rows = await sql<[{ id: string }]>`
+    SELECT id FROM teams WHERE id = ${onBehalfOf} AND league_id = ${claims.league_id} LIMIT 1
+  `;
+  if (!rows[0]) return { error: 'not_found' };
+  return { teamId: rows[0].id };
+}
+
 export async function registerAuctionWsHandler(
   server: FastifyInstance,
   sql: postgres.Sql,
@@ -252,7 +279,21 @@ export async function registerAuctionWsHandler(
           const commandPayload = msgObj.payload as Record<string, unknown> ?? {};
 
           if (type === 'BID_COMMAND') {
-            const teamId = claims.team_id;
+            const resolved = await resolveOnBehalfOfTeamId(sql, claims, commandPayload, claims.team_id);
+            if ('error' in resolved) {
+              socket.send(JSON.stringify({
+                type: 'BID_REJECTED',
+                payload: {
+                  player_auction_id: commandPayload['player_auction_id'] ?? '',
+                  code: resolved.error === 'forbidden' ? 'FORBIDDEN' : 'TEAM_NOT_FOUND',
+                  reason: resolved.error === 'forbidden'
+                    ? 'Only the commissioner can act on behalf of another team'
+                    : 'on_behalf_of_team_id not found in this league',
+                },
+              }));
+              return;
+            }
+            const teamId = resolved.teamId;
             if (!teamId) {
               socket.send(JSON.stringify({
                 type: 'BID_REJECTED',
@@ -295,7 +336,22 @@ export async function registerAuctionWsHandler(
               );
             }
           } else if (type === 'NOMINATE_COMMAND') {
-            const teamId = claims.team_id ?? claims.league_id;
+            const resolved = await resolveOnBehalfOfTeamId(
+              sql, claims, commandPayload, claims.team_id ?? claims.league_id,
+            );
+            if ('error' in resolved) {
+              socket.send(JSON.stringify({
+                type: 'ERROR',
+                payload: {
+                  code: resolved.error === 'forbidden' ? 'FORBIDDEN' : 'TEAM_NOT_FOUND',
+                  reason: resolved.error === 'forbidden'
+                    ? 'Only the commissioner can act on behalf of another team'
+                    : 'on_behalf_of_team_id not found in this league',
+                },
+              }));
+              return;
+            }
+            const teamId = resolved.teamId!;
             const nominateResult = await processNominateCommand({
               draftId,
               teamId,
