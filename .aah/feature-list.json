@@ -1252,6 +1252,12 @@
         "F-MOD-007"
       ],
       "api_contracts": "```yaml\nproduces:\n  - operation_id: listPlayers\n    schema_file: schema/MOD-001-api-schema.yaml\n    request_schema: \"(none)\"\n    response_schema: PlayerListResponse\n  - operation_id: setAavSources\n    schema_file: schema/MOD-016-api-schema.yaml\n    request_schema: SetAavSourcesRequest\n    response_schema: AavSourceSelectionResponse\n```",
+      "test_config": {
+        "command": "npx vitest run --project node server/src/__tests__/F-MOD-016_multi_source_aav.test.ts",
+        "test_paths": [
+          "server/src/__tests__/F-MOD-016_multi_source_aav.test.ts"
+        ]
+      },
       "passes": false
     },
     {

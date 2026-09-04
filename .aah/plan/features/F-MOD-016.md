@@ -182,6 +182,10 @@ produces:
 
 ## Test Config
 
+- command: npx vitest run --project node server/src/__tests__/F-MOD-016_multi_source_aav.test.ts
+- test_paths:
+  - server/src/__tests__/F-MOD-016_multi_source_aav.test.ts
+
 ## Lint Config
 
 ## Constraints
