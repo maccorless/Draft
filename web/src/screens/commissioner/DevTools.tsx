@@ -52,7 +52,7 @@ export function DevTools(): React.ReactElement | null {
       setResult(data);
       setState('done');
       // The signed-in session's league_id no longer exists — clear it and
-      // reload so the app re-enters DevAutoLogin against the new league.
+      // reload so the app re-enters the dev identity picker against the new league.
       try {
         sessionStorage.removeItem(AUTH_STORAGE_KEY);
       } catch {

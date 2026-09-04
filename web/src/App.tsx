@@ -439,15 +439,22 @@ function DraftCompleteRoute({ auth }: { auth: AuthState }) {
   );
 }
 
-// ponytail: localhost-only dev shortcut, skips the two login screens using the seed.ts credentials
+// TEMP dev-only identity picker: on localhost, click Commissioner or any of
+// the 12 seeded teams to sign in instantly as that identity — no passwords,
+// no per-role screens. This is a placeholder: a future version replaces it
+// with emailed magic-link authentication per team/commissioner (PRD §4.4,
+// "A future version adds email-based magic-link authentication"). Remove
+// this component (and IS_LOCALHOST's branch below) once that ships.
 const IS_LOCALHOST = ['localhost', '127.0.0.1'].includes(window.location.hostname);
-// Must match server/db/seed.ts's SITE_PASSWORD / COMMISSIONER_PASSWORD exactly.
+// Must match server/db/seed-data.ts's SITE_PASSWORD / COMMISSIONER_PASSWORD / TEAM_PASSWORD exactly.
 const DEV_SITE_PASSWORD = 'draft2026!';
 const DEV_COMMISSIONER_PASSWORD = 'commissioner2026!';
+const DEV_TEAM_PASSWORD = 'team123!';
 
-// Commissioner-only: OWNER auto-login would need a team_id, which requires an
-// authed call to fetch — chicken-and-egg for a pre-login shortcut.
-function DevAutoLogin({ onAuth }: { onAuth: (auth: AuthState) => void }) {
+export function DevIdentityPicker({ onAuth }: { onAuth: (auth: AuthState) => void }) {
+  const [league, setLeague] = useState<League | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [signingInAs, setSigningInAs] = useState<string | null>(null); // 'COMMISSIONER' or a team id
   const [error, setError] = useState('');
 
   React.useEffect(() => {
@@ -458,26 +465,109 @@ function DevAutoLogin({ onAuth }: { onAuth: (auth: AuthState) => void }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ site_password: DEV_SITE_PASSWORD }),
         });
-        if (!siteRes.ok) { setError(`Dev auto-login failed at site step (${siteRes.status}) — re-run npm run db:seed?`); return; }
+        if (!siteRes.ok) { setError(`Could not load leagues (${siteRes.status}) — re-run npm run db:seed?`); return; }
         const { leagues }: { leagues: League[] } = await siteRes.json();
-        const league = leagues[0];
-        if (!league) { setError('No leagues found — run npm run db:seed (from server/), or use Reload Test Data in the Commissioner Console'); return; }
+        const first = leagues[0];
+        if (!first) { setError('No leagues found — run npm run db:seed, or use Reload Test Data in the Commissioner Console'); return; }
+        setLeague(first);
 
-        const leagueRes = await fetch(`${API}/auth/league/${league.id}`, {
+        const teamsRes = await fetch(`${API}/auth/league/${first.id}/teams`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: 'COMMISSIONER', password: DEV_COMMISSIONER_PASSWORD }),
+          body: JSON.stringify({ site_password: DEV_SITE_PASSWORD }),
         });
-        if (!leagueRes.ok) { setError(`Dev auto-login failed at league step (${leagueRes.status})`); return; }
-        const { token } = await leagueRes.json();
-        onAuth({ token, role: 'COMMISSIONER', leagueId: league.id, leagueName: league.name });
+        if (teamsRes.ok) {
+          const data = await teamsRes.json();
+          const list: Team[] = data.teams ?? [];
+          setTeams([...list].sort((a, b) => a.draft_order - b.draft_order));
+        }
       } catch {
         setError('Cannot reach server');
       }
     })();
-  }, [onAuth]);
+  }, []);
 
-  return <div style={styles.center}><p>{error || 'Signing in…'}</p></div>;
+  async function signInAsCommissioner(): Promise<void> {
+    if (!league) return;
+    setSigningInAs('COMMISSIONER');
+    setError('');
+    try {
+      const res = await fetch(`${API}/auth/league/${league.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'COMMISSIONER', password: DEV_COMMISSIONER_PASSWORD }),
+      });
+      if (!res.ok) { setError(`Sign-in failed (${res.status})`); return; }
+      const { token } = await res.json();
+      onAuth({ token, role: 'COMMISSIONER', leagueId: league.id, leagueName: league.name });
+    } catch {
+      setError('Cannot reach server');
+    } finally {
+      setSigningInAs(null);
+    }
+  }
+
+  async function signInAsTeam(team: Team): Promise<void> {
+    if (!league) return;
+    setSigningInAs(team.id);
+    setError('');
+    try {
+      const res = await fetch(`${API}/auth/league/${league.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'OWNER', team_id: team.id, password: DEV_TEAM_PASSWORD }),
+      });
+      if (!res.ok) { setError(`Sign-in failed (${res.status})`); return; }
+      const { token } = await res.json();
+      onAuth({
+        token,
+        role: 'OWNER',
+        leagueId: league.id,
+        leagueName: league.name,
+        teamId: team.id,
+        teamName: team.name,
+      });
+    } catch {
+      setError('Cannot reach server');
+    } finally {
+      setSigningInAs(null);
+    }
+  }
+
+  return (
+    <div className="auth-screen">
+      <h1 className="auth-screen__title">Draft Platform</h1>
+      <div className="auth-screen__form auth-screen__picker">
+        <p className="auth-screen__label">{league ? league.name : 'Loading…'}</p>
+        {error && <p className="auth-screen__error">{error}</p>}
+        <button
+          type="button"
+          className="auth-screen__button"
+          onClick={() => void signInAsCommissioner()}
+          disabled={!league || signingInAs !== null}
+        >
+          {signingInAs === 'COMMISSIONER' ? 'Signing in…' : 'Commissioner'}
+        </button>
+        <div className="auth-screen__picker-grid">
+          {teams.map(team => (
+            <button
+              key={team.id}
+              type="button"
+              className="auth-screen__picker-button"
+              onClick={() => void signInAsTeam(team)}
+              disabled={signingInAs !== null}
+            >
+              {signingInAs === team.id ? 'Signing in…' : team.name}
+            </button>
+          ))}
+        </div>
+        <p className="auth-screen__picker-note">
+          Dev sign-in — click an identity to enter instantly. A future version emails each
+          identity a magic link instead of this picker.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export function App() {
@@ -492,7 +582,7 @@ export function App() {
   }
 
   if (!auth && IS_LOCALHOST) {
-    return <DevAutoLogin onAuth={setAuth} />;
+    return <DevIdentityPicker onAuth={setAuth} />;
   }
 
   if (!auth && step === 'site') {
