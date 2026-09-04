@@ -2,8 +2,24 @@
 > @draft/web@0.1.0 dev
 > vite
 
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - `__dirname` (vite.config.ts:11:33). Use `import.meta.dirname` instead
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
-  VITE v5.4.21  ready in 488 ms
+  VITE v8.2.2  ready in 85 ms
 
   ➜  Local:   http://localhost:5173/
-  ➜  Network: use --host to expose
+  ➜  Network: http://192.168.2.101:5173/  en1
+11:14:08 AM [vite] (client) [console.warn] No routes matched location "/owner" 
+11:14:08 AM [vite] (client) [console.warn] No routes matched location "/owner" 
+11:14:14 AM [vite] (client) [console.warn] No routes matched location "/owner" 
+11:14:14 AM [vite] (client) [console.warn] No routes matched location "/owner" 
+11:17:05 AM [vite] (client) hmr update /src/App.tsx
+11:17:12 AM [vite] (client) hmr update /src/App.tsx
+11:17:21 AM [vite] (client) hmr update /src/App.tsx
+11:17:50 AM [vite] (client) hmr update /src/App.tsx
+11:18:49 AM [vite] (client) hmr update /src/App.tsx
+11:18:49 AM [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh (new export)
+11:18:49 AM [vite] (client) page reload src/App.tsx
+11:36:42 AM [vite] (client) [console.warn] No routes matched location "/owner" 
+11:36:42 AM [vite] (client) [console.warn] No routes matched location "/owner" 
