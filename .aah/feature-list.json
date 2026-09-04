@@ -1236,6 +1236,14 @@
         "F-MOD-015"
       ],
       "api_contracts": "```yaml\napi_contracts:\n  produces:\n    - operation_id: listDoNotDraft\n      schema_file: schema/MOD-014-api-schema.yaml\n      request_schema: \"(none)\"\n      response_schema: DoNotDraftListResponse\n    - operation_id: addDoNotDraft\n      schema_file: schema/MOD-014-api-schema.yaml\n      request_schema: AddDoNotDraftRequest\n      response_schema: DoNotDraftEntry\n    - operation_id: removeDoNotDraft\n      schema_file: schema/MOD-014-api-schema.yaml\n      request_schema: \"(none)\"\n      response_schema: \"204 No Content\"\n```",
+      "test_config": {
+        "command": "DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! npx vitest run --project node --project web server/src/__tests__/F-MOD-014_do_not_draft.test.ts web/src/__tests__/F-MOD-014_lobby.test.tsx web/src/__tests__/F-MOD-014_auth_restyle.test.tsx",
+        "test_paths": [
+          "server/src/__tests__/F-MOD-014_do_not_draft.test.ts",
+          "web/src/__tests__/F-MOD-014_lobby.test.tsx",
+          "web/src/__tests__/F-MOD-014_auth_restyle.test.tsx"
+        ]
+      },
       "passes": false
     },
     {

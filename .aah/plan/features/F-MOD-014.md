@@ -80,6 +80,12 @@ api_contracts:
 
 ## Test Config
 
+- command: DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! npx vitest run --project node --project web server/src/__tests__/F-MOD-014_do_not_draft.test.ts web/src/__tests__/F-MOD-014_lobby.test.tsx web/src/__tests__/F-MOD-014_auth_restyle.test.tsx
+- test_paths:
+  - server/src/__tests__/F-MOD-014_do_not_draft.test.ts
+  - web/src/__tests__/F-MOD-014_lobby.test.tsx
+  - web/src/__tests__/F-MOD-014_auth_restyle.test.tsx
+
 ## Constraints
 
 ## Status
