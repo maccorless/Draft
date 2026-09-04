@@ -1,9 +1,10 @@
 # Codebase Learning Document
 
 **Project**: Draft (Fantasy Football Auction Draft Platform)
-**Profiled**: 2026-08-31
-**Primary Language**: TypeScript (planned)
-**Codebase Size**: 0 source files (pre-implementation — this document synthesized from design documents)
+**Profiled**: 2026-08-31 (plan-mode synthesis)
+**Refreshed**: 2026-09-04 (build phase, F-MOD-000 through F-MOD-017 landed, 10/18 features passing per progress log)
+**Primary Language**: TypeScript
+**Codebase Size**: 114 TypeScript/TSX/JS files tracked in codemap (server/src, web/src, shared-types/src)
 
 ---
 
@@ -19,16 +20,19 @@ The operator profile: 12 sophisticated fantasy owners who care deeply about auct
 
 | Category | Technology | Version (if known) | Notes |
 |----------|------------|-------------------|-------|
-| Language | TypeScript | 5.x | All packages |
-| Server runtime | Node.js | 20+ LTS | |
-| HTTP framework | Fastify | 4.x | Server |
-| Realtime | native ws | 8.x | Per-draft WS, sequence-numbered envelope |
-| Database | PostgreSQL | 15+ | Authoritative state |
-| Validation | Zod | 3.x | Shared schemas in shared-types |
-| Frontend | React + Vite | 18.x / 5.x | Web clients |
-| Monorepo | npm workspaces | — | server/, web/, shared-types/ |
-| DB migrations | TBD (Drizzle / Prisma / node-pg-migrate) | — | Decided in Phase 0 |
-| Auth | Custom HMAC JWT | — | auth_epoch revocation |
+| Language | TypeScript | 5.5.x | All packages, strict mode |
+| Server runtime | Node.js | 20+ LTS | tsx watch for dev |
+| HTTP framework | Fastify | 5.12.x | `@fastify/jwt`, `@fastify/websocket`, `@fastify/rate-limit`, `@fastify/multipart`, `@fastify/cors` |
+| Realtime | native `ws` | 8.18.x | Per-draft WS at `/ws/drafts/:draftId`, sequence-numbered envelope |
+| Database | PostgreSQL | via `postgres` (postgres.js) 3.4.x | Authoritative state; raw `sql` tagged-template queries alongside Drizzle |
+| ORM / migrations | Drizzle ORM + drizzle-kit | 0.45.x / 0.31.x | `server/db/schema/index.ts` is the single schema file; `npm run db:migrate` |
+| Validation | Zod | 3.23.x | Shared schemas in `shared-types/src/schemas/` |
+| Frontend | React + Vite | 18.3.x / 8.2.x (vite) | `react-router-dom` 7.x for routing |
+| Monorepo | npm workspaces | — | `server/`, `web/`, `shared-types/` |
+| Auth | Custom HMAC JWT (`@fastify/jwt`) + `@node-rs/bcrypt` | — | `auth_epoch` revocation, re-checked every command |
+| Test runner | Vitest | 5.x | Root + per-package configs; 24+ `__tests__` files in `server/src/__tests__` alone |
+| Deployment | Railway | — | `railway.toml`, two services (Node app + managed Postgres) |
+| PDF/Excel ingestion | `pdfjs-dist`, `xlsx` | — | ESPN dataset import adapters |
 
 ---
 
@@ -36,25 +40,31 @@ The operator profile: 12 sophisticated fantasy owners who care deeply about auct
 
 **Style:** Monolith (single Node.js process), state-stored (not event-sourced), multi-tenant by `draft_id`.
 
-**Core invariant: state is stored in Postgres rows, updated only after a successful commit.** In-memory state per `draft_id` is a hot cache that mirrors Postgres — it is populated from the DB at startup and updated only after commit. This is not event-sourcing; the `DraftEvent` log is an audit trail and WS reconnect replay source, not the state reconstruction mechanism.
+**Core invariant: state is stored in Postgres rows, updated only after a successful commit.** In-memory state per `draft_id` (the `DraftRuntime`, created via `getOrCreateRuntime` in `server/src/auction/engine.ts`) is a hot cache that mirrors Postgres — it is populated from the DB and updated only after commit. The `DraftEvent` log (`draft_events` table) is an audit trail and WS reconnect-replay source, not the state reconstruction mechanism.
 
-**Isolation model:** All draft state (in-memory maps, timers, command queues, WS broadcast groups) is keyed by `draft_id`. The routing layer and the auth layer each independently enforce per-league/draft isolation — routing alone is not sufficient.
+**Isolation model:** All draft state (in-memory runtime map, timers, the per-draft `AsyncQueue`, WS broadcast groups) is keyed by `draft_id`. Every mutating route/WS handler independently re-verifies `draft.league_id === token.league_id` — routing alone is not the isolation mechanism.
 
-**Architectural layers:**
-1. `shared-types` — WS protocol contract and Zod schemas, the only cross-package interface
-2. `server/auth` — token issuance and per-command auth_epoch validation
-3. `server/ws` — connection lifecycle, AUTH handshake, per-draft routing
-4. `server/draft/command-queue` — per-draft serialized queue, the isolation and ordering guarantee
-5. `server/draft/{nomination, bid, resolution, auto-agent, rollback}` — the auction business logic
-6. `server/league`, `server/player` — setup and data import, mostly CRUD
-7. `web/*` — thin UI consuming the WS event stream
+**Actual module layout** (see §4 for detail):
+1. `shared-types` — WS protocol/schemas, the only cross-package interface
+2. `server/src/auth` — token issuance (`routes.ts`)
+3. `server/src/league` — league/team/roster/auction config CRUD + `auth-hook.ts` (`requireCommissioner` / `requireLeagueMember`)
+4. `server/src/ws` — `handler.ts` (generic) + `auction-handler.ts` (the live auction WS endpoint, AUTH handshake, per-command dispatch)
+5. `server/src/auction` — the auction engine: `engine.ts` (bid/nominate/award pipeline, per-draft queue wiring, timers), `queue.ts` (the `AsyncQueue` serialization primitive), `auto-agent.ts` (control-mode FSM + reactive bidding cadence), `auto-agent-routes.ts`, `routes.ts` (start/pause/resume)
+6. `server/src/draft` — surrounding draft features: `strategy.ts` (Watch List + Nomination Queue), `do-not-draft.ts`, `corrections.ts` (price correction / rollback), `reports.ts`, `war-room.ts`, `whammy.ts`
+7. `server/src/player` — DraftDataset import: CSV/Excel/ESPN-PDF adapters, AAV resolution
+8. `server/src/session` — reconnect/session snapshot (`buildDraftStateSnapshot`), whose-turn-to-nominate derivation
+9. `server/src/team-media` — icon/nomination-audio upload
+10. `server/src/dev` — `/dev/reseed` (non-production only)
+11. `web/src/screens/*` — `lobby`, `auth`, `draft-room`, `war-room`, `commissioner` (League Setup, Dataset Import, Draft Control, Corrections, Ambiguity Resolution, Dev Tools), `draft-complete`
 
-**Key design decisions recorded in design docs:**
-- State-stored over event-sourced: bounded rollback (last N picks, not arbitrary point) means event sourcing's reconstruction power is not needed. Simpler recovery story.
-- Per-draft serialized command queue (not Postgres row locks): prevents two interleaved commands from validating against the same stale state. The lock is logical, not physical.
-- `server_receipt_time` is stamped in the WS message handler *before any await* — ensures event-loop stall can't flip an in-time bid to expired.
-- Price-only in-place correction; winner/player change always requires rollback — removes the need to validate a second team's feasibility inline.
-- Anti-sniping classification uses server receipt time; AUTO_AGENT bids are exempt from penalty accrual.
+**Key design decisions confirmed in code:**
+- State-stored over event-sourced, as designed.
+- Per-draft serialized command queue (`server/src/auction/queue.ts` `AsyncQueue`) — every bid/nominate/award command for a draft enqueues here; the queue drains one item at a time.
+- `server_receipt_time = new Date()` is the first line of the WS message handler (`server/src/ws/auction-handler.ts`), before any `await` — confirmed in code, matches the design doc invariant.
+- Price-only in-place correction; winner/player change goes through rollback (`server/src/draft/corrections.ts`).
+- Commissioner "on-behalf-of" override (`on_behalf_of_team_id` in WS commands, resolved in `auction-handler.ts`'s `resolveOnBehalfOfTeamId`) lets a commissioner nominate/bid as a disconnected/unresponsive team — a COMMISSIONER-only escape hatch, rejected outright for any other role.
+
+**Known behavioral gap (being closed by feedback session UF-01-02):** Auto-Agent (`auto-agent.ts`) only *reacts* — `triggerAutoAgentBidsOnNomination` and `triggerAutoAgentBidsOnLeaderChange` place bids once a `PlayerAuction` already exists. Nothing in the current code proactively nominates: `advanceNominationTurn` (`engine.ts`) broadcasts `NOMINATION_TURN_CHANGED` but enforces no deadline and never triggers Auto-Agent to pick a player. This means a draft where every team is `AUTO_AGENT` currently stalls forever right after `DRAFT_STARTED` — nobody ever nominates the first player. See `state-machine-flows.md` §2 for the intended flow (AUTO_AGENT team's turn → immediate Auto-Agent nomination; MANUAL team's turn, timer expires → Nomination Queue fallback, then default policy fallback).
 
 ---
 
@@ -62,50 +72,64 @@ The operator profile: 12 sophisticated fantasy owners who care deeply about auct
 
 | Directory | Purpose | Key Files |
 |-----------|---------|-----------|
-| `server/src/auth/` | Token issuance + per-command epoch validation | token.ts, middleware.ts [PLANNED] |
-| `server/src/ws/` | WS handler, AUTH handshake, 5s auth timeout, broadcast | handler.ts [PLANNED] |
-| `server/src/draft/` | All auction business logic | command-queue.ts [PLANNED] |
-| `server/src/draft/bid/` | Full bid validation pipeline | validate.ts, pipeline.ts [PLANNED] |
-| `server/src/draft/resolution/` | Acquisition + ledger + starter-first roster | resolution.ts [PLANNED] |
-| `server/src/draft/auto-agent/` | Willingness calc, cadence trigger | auto-agent.ts [PLANNED] |
-| `server/src/draft/rollback/` | Reverse-order rollback, price-correction replay | rollback.ts [PLANNED] |
-| `server/src/league/` | League/Team/Roster/Scoring config | routes.ts, service.ts [PLANNED] |
-| `server/src/player/` | DraftDataset lifecycle, CSV ingestion | dataset.ts, adapters/ [PLANNED] |
-| `web/src/screens/draft-room/` | Primary bidding UI | DraftRoom.tsx [PLANNED] |
-| `web/src/screens/war-room/` | Second screen / analytics | WarRoom.tsx [PLANNED] |
-| `web/src/ws/` | WS client, reconnect, snapshot replay | client.ts [PLANNED] |
-| `shared-types/src/protocol.ts` | WS envelope + AUTH + command/ack shapes | protocol.ts [PLANNED] |
+| `server/src/auth/` | Site/league/team password auth, JWT issuance | `routes.ts` |
+| `server/src/league/` | League/Team/Roster/AuctionConfiguration CRUD, auth hooks | `routes.ts`, `auth-hook.ts` |
+| `server/src/ws/` | WS connection lifecycle, AUTH handshake, per-draft command dispatch | `handler.ts`, `auction-handler.ts` |
+| `server/src/auction/` | Auction engine: bid/nominate/award pipeline, per-draft queue, Auto-Agent | `engine.ts` (1290 lines — the core FSM), `queue.ts`, `auto-agent.ts`, `auto-agent-routes.ts`, `routes.ts` |
+| `server/src/draft/` | Watch List, Nomination Queue, Do Not Draft, corrections/rollback, reports, War Room, Whammy | `strategy.ts`, `do-not-draft.ts`, `corrections.ts`, `reports.ts`, `war-room.ts`, `whammy.ts`, `draft-control.ts` |
+| `server/src/player/` | DraftDataset lifecycle, CSV/Excel/ESPN-PDF ingestion, AAV resolution | `routes.ts`, `csv-worker.ts`, `excel-worker.ts`, `espn-pdf-worker.ts`, `aav-resolution.ts`, `adapters/` |
+| `server/src/session/` | Reconnect/session snapshot, nomination-turn derivation for clients | `routes.ts` (`buildDraftStateSnapshot`) |
+| `server/src/team-media/` | Team icon + nomination-audio upload | `routes.ts`, `storage.ts` |
+| `server/src/dev/` | Dev-only `/dev/reseed` (non-production) | `routes.ts` |
+| `server/db/schema/` | Single Drizzle schema file, all entities | `index.ts` |
+| `server/db/` | Seed CLI + reusable seed data + wipe | `seed.ts`, `seed-data.ts`, `wipe.ts`, `migrate.ts` |
+| `web/src/screens/lobby/` | Pre-draft owner landing screen | `index.tsx` |
+| `web/src/screens/draft-room/` | Primary live bidding UI | `index.tsx` |
+| `web/src/screens/war-room/` | Second-screen analytics view | `index.tsx` |
+| `web/src/screens/commissioner/` | Commissioner Console: League Setup, Dataset Import, Draft Control, Corrections, Ambiguity Resolution, Dev Tools | `LeagueSetup.tsx`, `DatasetImport.tsx`, `DraftControl.tsx`, `Corrections.tsx`, `AmbiguityResolution.tsx`, `DevTools.tsx` |
+| `web/src/screens/draft-complete/` | Post-draft summary screen | `index.tsx` |
+| `shared-types/src/protocol.ts` | WS envelope + AUTH + command/event shapes | `protocol.ts` |
+| `shared-types/src/schemas/` | Zod schemas shared client/server | `auth.ts`, `league.ts`, others |
+
+## Entry Points
+
+| File | Role |
+|------|------|
+| `server/src/main.ts` | Server boot: env check → crash recovery (RUNNING→PAUSED) → Fastify start |
+| `web/src/main.tsx` (or equivalent) | React app bootstrap |
+
+## Notable API Routes (non-exhaustive — see per-module `routes.ts`)
+
+| Route | Method | Handler |
+|-------|--------|---------|
+| `/health` | GET | liveness |
+| `/auth/site`, `/auth/league/:id` | POST | `server/src/auth/routes.ts` |
+| `/drafts/:draftId/start`, `/pause`, `/resume` | POST | `server/src/auction/routes.ts` |
+| `/drafts/:draftId/teams/:teamId/auto-agent` | PUT | `server/src/auction/auto-agent-routes.ts` |
+| `/drafts/:draftId/teams/:teamId/control-mode` | PATCH | `server/src/auction/auto-agent-routes.ts` |
+| `/ws/drafts/:draftId` | WS | `server/src/ws/auction-handler.ts` — AUTH, BID_COMMAND, NOMINATE_COMMAND, PASS_NOMINATION, NOMINATOR_MATCH_COMMAND |
+| `/dev/reseed` | POST | `server/src/dev/routes.ts` (non-production) |
+| Nomination Queue / Watch List CRUD | GET/POST/DELETE | `server/src/draft/strategy.ts` |
 
 ---
 
 ## 5. Data Architecture
 
-**Primary store:** PostgreSQL. Every accepted mutation persists `{row change + DraftEvent}` in a single transaction. The event sequence number is allocated inside that transaction — events and rows can never diverge.
+**Primary store:** PostgreSQL, accessed via `postgres.js` raw `sql` tagged templates for the auction-critical paths (transactional multi-statement work) and Drizzle for schema definition/migration. Every accepted mutation persists `{row change + DraftEvent}` in a single `sql.begin(...)` transaction; the event `sequence` number is allocated inside that same transaction.
 
-**In-memory:** A `Map<draft_id, DraftState>` per Node.js process. Updated only on successful commit. On restart, all RUNNING drafts are forced to PAUSED and state is reloaded from Postgres.
+**In-memory:** `getOrCreateRuntime(draftId)` in `server/src/auction/engine.ts` returns a per-draft runtime object (queue, team sessions, grace timers) held in a module-level `Map<draft_id, DraftRuntime>` — confirmed keyed by `draft_id`, not a singleton.
 
-**Append-only history:** Corrections and rollbacks append new rows and mark old ones `active: false`. No deletes, no timeline branching.
+**Append-only history:** Corrections and rollbacks append new rows; superseded rows are marked inactive, never deleted (`server/src/draft/corrections.ts`).
 
-**Money:** All financial fields are integer minor units. `max_legal_bid = remaining_budget - (1 * other_required_roster_spots)`. All calculations are server-side.
+**Money:** All financial fields are `*_minor` integer columns (e.g. `remaining_budget_minor`, `current_bid_minor`). `computeMaxLegalBid` in `engine.ts` implements `remaining_budget_minor - ($1 * other_required_remaining_roster_spots)`.
 
-**Migration strategy:** One chosen tool (Phase 0 decision) manages all schema evolution. Rollback does not require schema rollback — only data row operations.
+**Migrations:** Drizzle Kit (`drizzle-kit`), driven by `npm run db:migrate` (`server/db/migrate.ts`) against the single schema file `server/db/schema/index.ts`.
 
 ---
 
 ## 6. API Surface
 
-| Endpoint/Interface | Method | Purpose |
-|-------------------|--------|---------|
-| `POST /auth/login` | REST | League/team password → HMAC token [PLANNED] |
-| `POST /leagues` | REST | Commissioner creates league + config [PLANNED] |
-| `POST /leagues/:id/draft-dataset` | REST | Import + freeze player dataset [PLANNED] |
-| `POST /leagues/:id/draft` | REST | Create Draft [PLANNED] |
-| `POST /drafts/:id/pause` | REST | Commissioner pause/resume [PLANNED] |
-| `POST /drafts/:id/corrections` | REST | Price correction or rollback trigger [PLANNED] |
-| `GET /health` | REST | Health check [PLANNED] |
-| `WS /ws?draft_id=X` | WebSocket | All real-time events — AUTH as first message [PLANNED] |
-
-WS message types (from `shared-types/protocol.ts`): AUTH, BID_COMMAND, NOMINATE_COMMAND, PAUSE_COMMAND, BID_ACCEPTED, BID_REJECTED, PLAYER_AWARDED, NOMINATION_STARTED, DRAFT_EVENT, RECONNECT_SNAPSHOT, etc.
+See §4's route table. WS message types confirmed in code (`server/src/ws/auction-handler.ts`, `shared-types/src/protocol.ts`): `AUTHENTICATE`, `BID_COMMAND`, `NOMINATE_COMMAND`, `PASS_NOMINATION`, `NOMINATOR_MATCH_COMMAND`, and broadcast events `NOMINATION_STARTED`, `NOMINATION_TURN_CHANGED`, `BID_ACCEPTED`/`BID_REJECTED`, `PLAYER_AWARDED`, `DRAFT_STATUS_CHANGED`, `TEAM_AUTO_AGENT_ENABLED`/`DISABLED`, `TEAM_NOMINATION_AUDIO`.
 
 ---
 
@@ -113,62 +137,56 @@ WS message types (from `shared-types/protocol.ts`): AUTH, BID_COMMAND, NOMINATE_
 
 | Concept | Implementation | Files |
 |---------|---------------|-------|
-| Per-draft command queue | In-memory async queue, one in-flight command per draft_id | server/draft/command-queue.ts [PLANNED] |
-| PlayerAuction FSM | States: SECOND_BID_OPEN → REBID_OPEN → RESOLVING → AWARDED | server/draft/auction/ [PLANNED] |
-| Draft FSM | States: UPCOMING → RUNNING ↔ PAUSED → COMPLETE | server/draft/ [PLANNED] |
-| Auth epoch revocation | auth_epoch field on League/Team; re-checked on every command | server/auth/ [PLANNED] |
-| Starter-first roster assignment | Lowest priority unfilled starter slot, then bench; never reshuffles | server/draft/resolution/ [PLANNED] |
-| Nominator Match | One-per-auction right to match high bid at same price | server/draft/bid/ [PLANNED] |
-| Anti-sniping | Server-side deadline extension; AUTO_AGENT exempt from penalty | server/draft/bid/ [PLANNED] |
-| Append-only history | `active: false` on superseded rows; no deletes | data-model §17.2 |
-| Bounded rollback | Reverse-order undo of last N picks as one transaction | server/draft/rollback/ [PLANNED] |
+| Per-draft command queue | `AsyncQueue` — one in-flight command per `draft_id` | `server/src/auction/queue.ts`, wired via `getOrCreateRuntime` in `engine.ts` |
+| PlayerAuction FSM | States: `SECOND_BID_OPEN → REBID_OPEN → RESOLVING → AWARDED` (+ `PAUSED`) | `server/src/auction/engine.ts` (`processBidCommand`, `processNominateCommand`, `startAwardTimer`) |
+| Draft FSM | States: `CREATED → RUNNING ↔ PAUSED → COMPLETE` | `server/src/auction/routes.ts` |
+| Auth epoch revocation | `auth_epoch` re-read from `leagues`/`teams` table on every command (never from token payload) | `server/src/league/auth-hook.ts`, `server/src/auction/routes.ts`, `auto-agent-routes.ts` |
+| Starter-first roster assignment | Lowest priority-number unfilled starter slot, then bench | `server/src/auction/engine.ts` (award path) |
+| Nominator Match | One-per-auction right to match high bid at same price, consumed permanently | `server/src/auction/engine.ts` (`processNominatorMatchCommand`) |
+| Nomination turn advance | Shared by explicit `PASS_NOMINATION` and post-award | `server/src/auction/engine.ts` `advanceNominationTurn` — **currently does not enforce a deadline or trigger auto-nomination; this is the gap fix UF-01-02 addresses** |
+| Auto-Agent control mode | `MANUAL` / `AUTO_AGENT`, separate from WS connection state; grace-timer takeover on full disconnect | `server/src/auction/auto-agent.ts` (`setControlMode`, `handleGraceExpiry`) |
+| Auto-Agent reactive bidding | Fires on nomination and on every leadership change, gated by `willingness_pct` ceiling | `server/src/auction/auto-agent.ts` (`triggerAutoAgentBidsOnNomination`, `triggerAutoAgentBidsOnLeaderChange`) |
+| Commissioner on-behalf-of override | COMMISSIONER-only; nominate/bid as another team | `server/src/ws/auction-handler.ts` (`resolveOnBehalfOfTeamId`) |
+| Watch List / Nomination Queue / Do Not Draft | Private per-team lists; Nomination Queue may auto-nominate, Watch List never does | `server/src/draft/strategy.ts` (`getTopNominationQueueEntry`), `server/src/draft/do-not-draft.ts` |
+| Append-only history | Superseded rows marked inactive, never deleted | `server/src/draft/corrections.ts` |
+| Crash recovery | All `RUNNING` drafts forced to `PAUSED` at boot, before accepting connections | `server/src/main.ts` |
 
 ---
 
 ## 8. Dependency Analysis
 
 **High-impact modules (change carefully):**
-- `server/draft/resolution/` — every pick flows through here; touches Acquisition, Ledger, RosterEntry in one transaction. Bugs here corrupt draft state.
-- `server/draft/command-queue.ts` — the serialization boundary. Breaking this allows concurrent mutations to race.
-- `shared-types/protocol.ts` — both client and server depend on this. A breaking change here requires coordinated update everywhere.
-- `server/auth/` — called on every command. Performance or correctness bugs here affect all users simultaneously.
+- `server/src/auction/engine.ts` — the largest file (1290 lines); every bid/nominate/award/rollback path runs through it. Bugs here corrupt draft state.
+- `server/src/auction/queue.ts` — the serialization boundary; breaking this allows concurrent mutations to race.
+- `server/src/ws/auction-handler.ts` — the single entry point for all live-draft mutations; owns `server_receipt_time` stamping and the commissioner on-behalf-of override.
+- `shared-types/src/protocol.ts` — both client and server depend on it; a breaking change requires coordinated update everywhere.
+- `server/src/league/auth-hook.ts` — called by nearly every authenticated route; correctness bugs here are league-wide.
 
 **Well-isolated modules (safer to modify):**
-- `server/player/` — ingestion pipeline is pre-draft; errors here don't affect a live auction.
-- `server/reports/` — post-draft only; failures are non-blocking to the draft itself.
-- `server/whammy/` — flows through the existing ledger API; no separate state machine.
-- `web/screens/war-room/` — read-only second screen; no mutations.
+- `server/src/player/` — ingestion pipeline is pre-draft; errors here don't affect a live auction.
+- `server/src/team-media/` — icon/audio upload, cosmetic only.
+- `server/src/dev/` — dev-only, not present in production.
+- `web/src/screens/war-room/` — read-only second screen; no mutations.
 
 ---
 
 ## 9. Testing Landscape
 
-No tests exist yet (pre-implementation). Planned test targets per design docs:
-
-- Every bid/starter-first/nomination-audio scenario in PRD §44 as automated tests
-- Ledger reconciliation after a sequence of acquisitions
-- Max-legal-bid formula enforcement
-- No accepted event broadcast before DB commit (DB kill test)
-- Server restart mid-auction comes back PAUSED
-- Multi-draft isolation: League A token rejected on League B draft
-- Auto-Agent first competing bid (not just "reacts to being outbid")
-
-No mocks by design (AAH rule + BUILD_PLAN philosophy) — tests run against real Postgres.
+- Framework: Vitest, root `vitest.config.ts` + per-package configs.
+- 24+ test files under `server/src/__tests__/` alone (e.g. `F-MOD-004_auto_agent.test.ts`, `F-MOD-003_session.test.ts`, `F-MOD-014_do_not_draft.test.ts`), named after the feature ID that introduced them.
+- No mocks by design (AAH rule) — tests run against a real Postgres instance (`vitest.globalSetup.ts` provisions it).
+- `test-results/junit.xml` output per feature's `test_config` in `feature-list.json`.
 
 ---
 
 ## 10. Build and Deployment
 
-No build system exists yet. Phase 0 will establish:
-
-- `npm run dev` — starts server + web concurrently
-- `npm test` — test runner (framework TBD)
-- `npm run typecheck` — tsc --noEmit across all packages
-- `npm run lint` — ESLint
-
-CI: typecheck + lint + test on push (GitHub Actions).
-
-Deployment target not specified in design docs — containerized Node.js + managed Postgres is the natural fit given multi-draft multi-tenancy.
+- `npm run dev` (per-package: `tsx watch` for server, `vite` for web).
+- `npm test` → `vitest run` at the repo root; per-feature commands also defined in `feature-list.json`.
+- `npm run typecheck` → `tsc --noEmit` across workspaces.
+- `npm run build` → per-workspace build (`tsc` for server, `tsc && vite build` for web).
+- CI: `.github/workflows/ci.yml`.
+- Deployment: Railway (`railway.toml`) — Node.js app service + managed Postgres.
 
 ---
 
@@ -176,29 +194,27 @@ Deployment target not specified in design docs — containerized Node.js + manag
 
 | Area | Observation | Impact | Confidence |
 |------|-------------|--------|------------|
-| Migration tool undecided | Phase 0 requires choosing Drizzle vs. Prisma vs. node-pg-migrate | Low — affects DX, not correctness | High |
-| ORM decision pending | No ORM vs. Drizzle vs. Prisma affects query authoring for the bid pipeline | Medium — Drizzle/raw SQL safer for the complex atomic resolution transaction | High |
-| Email delivery stubbed | Phase 9 uses a SendGrid stub — wiring real delivery is future work | Low — reports available in-app regardless | High |
-| ESPN PDF import | PDF parsing is inherently fragile against ESPN format changes | Medium — Phase 2b, fallback is CSV | Medium |
-| In-process isolation | Multi-draft concurrency is in one Node.js process; a crashed async operation in one draft must not affect others — requires careful error boundary design | High for production | High |
-| Anti-sniping audit | `server_receipt_time` stamped before any await is correct-by-design but must be enforced in code review — easy to accidentally move inside the async path | High — wrong stamp = deadline bypass | High |
+| Auto-nomination gap | Auto-Agent never proactively nominates; no nomination-turn deadline timer exists | High — a fully-AUTO_AGENT draft cannot progress past the first turn | High (confirmed by code read; being fixed in UF-01-02) |
+| `engine.ts` size | 1290 lines, many concerns (bid, nominate, award, match, timers) in one file | Medium — readability/maintainability, not correctness | Medium |
+| Codebase intel staleness | This document and the diagram files were last fully synthesized at plan-mode (pre-implementation); 10-18 features have since landed | Medium — future refreshes should prioritize a fuller re-read once the module set stabilizes | High |
 
 ---
 
 ## 12. Recommendations for Modification
 
-**Where to start:** Read `data-model.md` §21 (critical invariants checklist) before touching any draft or bid code. Every invariant there is a potential production incident.
+**Where to start:** Read `knowledge/data-model.md` §21 (critical invariants checklist) and `knowledge/state-machine-flows.md` §2-4 before touching any draft/bid/nomination code.
 
 **What to be careful about:**
-- The per-draft command queue is the serialization guarantee — never bypass it, even for "read-only" state checks that might have side effects.
-- `active: false` on superseded rows is how rollback works — never hard-delete Acquisition, RosterEntry, or BudgetLedgerEntry rows.
-- `auth_epoch` must be re-read from the DB on every command, not cached from token payload — the whole revocation mechanism depends on this.
+- The per-draft `AsyncQueue` (`server/src/auction/queue.ts`) is the serialization guarantee — never bypass it, even for a proactive auto-nomination trigger from a timer callback.
+- Rows in `draft_events`, `budget_ledger_entries`, `roster_entries` etc. are append-only — never hard-delete or mutate in place except the one documented price-only correction path.
+- `auth_epoch` must be re-read from the DB on every command, not cached from token payload.
 - All money arithmetic is integer — never introduce floating-point.
+- Any new proactive-nomination timer must be keyed by `draft_id` like everything else in `DraftRuntime` — never a module-level singleton.
 
-**What to test after changes to bid pipeline:** Run the full §44 acceptance scenario suite. A change that makes the unit test green but breaks "kill DB mid-bid" or "restart mid-auction" scenarios is not done.
+**What to test after changes to the nomination/bid pipeline:** Run the relevant `F-MOD-002`/`F-MOD-004` test files plus a full regression pass; a change that makes a new unit test green but breaks "kill DB mid-bid" or "restart mid-auction" scenarios is not done.
 
 **Potential pitfalls:**
 - Forgetting to stamp `server_receipt_time` before the first `await` in the WS handler.
-- Updating in-memory state before the DB commit (the invariant is "in-memory updates only after commit").
+- Updating in-memory state before the DB commit.
 - Using a module-level singleton for any draft-scoped state (timers, queues, in-memory maps) — must be keyed by `draft_id`.
-- Auto-Agent bidding trigger: must fire on auction open AND on every leadership change, not just "react to being outbid" — an agent that never led would never bid otherwise.
+- A new nomination-turn timer racing with an owner's in-flight manual `NOMINATE_COMMAND` for the same turn — must resolve through the same `AsyncQueue`, not a separate code path.

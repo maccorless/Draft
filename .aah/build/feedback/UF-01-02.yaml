@@ -1,0 +1,50 @@
+feedback_id: "UF-01-02"
+wave: 1
+source: "user"
+started_at: "2026-09-04T20:26:17Z"
+feedback_details: >
+  Implement the missing auto-nomination behavior specified in
+  knowledge/state-machine-flows.md §2 (Nomination Turn Flow), tracked as a
+  known issue against F-MOD-002: "auto-nomination on expired turn not yet
+  implemented (requires nomination cursor timer)". Two related gaps, both in
+  the nomination-turn path (server/src/auction/engine.ts advanceNominationTurn
+  and server/src/auction/auto-agent.ts):
+
+  1. AUTO_AGENT team's turn: per the flowchart, when the next eligible
+     nominating team's control_mode is AUTO_AGENT, Auto-Agent must
+     immediately choose a legal nomination — no timer wait. Currently
+     auto-agent.ts only reacts to bids/nominations already in flight; nothing
+     nominates proactively on that team's behalf.
+  2. MANUAL team's turn, timer expires: currently advanceNominationTurn only
+     broadcasts NOMINATION_TURN_CHANGED with no enforced deadline. Per spec,
+     if the owner does not submit a legal nomination before the nomination
+     timer deadline, the system must: (a) use the first legal entry in that
+     team's Nomination Queue (nomination_queue_items /
+     getTopNominationQueueEntry in server/src/draft/strategy.ts) at its
+     configured opening amount if one exists, else (b) fall back to a default
+     nomination policy.
+
+  Default nomination policy (resolved with user via AskUserQuestion): the
+  highest remaining-AAV undrafted player at a position where the nominating
+  team still has an open roster slot (starter or bench), excluding any player
+  on that team's Do Not Draft list. This same fallback also applies to case 1
+  (AUTO_AGENT team, no Nomination Queue entry). Opening bid for both auto-
+  nomination paths (queue fallback and default-policy fallback) uses the
+  auction configuration's min_bid_minor unless the Nomination Queue entry
+  specifies its own opening amount.
+
+  Both auto-nominations must create the PlayerAuction through the same path
+  as a manual NOMINATE_COMMAND (processNominateCommand with
+  systemNominated: true — this flag already exists and is threaded into the
+  NOMINATION_STARTED payload as system_nominated), so second-bid timer start,
+  DraftEvent append, and triggerAutoAgentBidsOnNomination for other AUTO_AGENT
+  teams all fire identically to a manual nomination. Existing behavior that
+  must be preserved: teams with a completed roster are skipped in nomination
+  order (state-machine-flows.md §2 "A team with a complete roster is skipped
+  in future nomination order").
+
+  Context: surfaced while trying to run a full 12-team mock draft with every
+  team set to AUTO_AGENT control mode — the draft currently stalls forever
+  after DRAFT_STARTED because nothing ever nominates the first player.
+steps: []
+status: in_progress
