@@ -148,4 +148,35 @@ steps:
     feature-list.json reconciliation. No spec or interface changes; no
     blast radius beyond the fixed files themselves.
   completed_at: '2026-09-04T20:50:00Z'
-status: in_progress
+- phase: build
+  input: >
+    Build F-MOD-002-rework-01 per its updated spec in F-MOD-002.md.
+  output: >
+    Implemented by aah-feature-implementer: dispatchNominationTurn (branches
+    AUTO_AGENT-immediate vs MANUAL-timer), selectAutoNominationPlayer
+    (Nomination Queue first, then highest-AAV at an open roster-need position
+    excluding Do Not Draft), processAutoNomination, triggerCurrentNominationTurn
+    (wired after DRAFT_STARTED to close the very-first-turn gap),
+    getFirstLegalNominationQueueEntry in strategy.ts, and a postNominationHook
+    extension point wired at boot to avoid a circular import with
+    auto-agent.ts. 6 new tests added to F-MOD-002_auction.test.ts. Independently
+    re-verified (the implementer's own per-feature evidence file was found
+    corrupted by an unrelated tooling bug — cross-contaminated with a prior
+    run's test_cases — reported separately via SendFeedback): direct
+    `npx vitest run` on F-MOD-002_auction.test.ts shows 25/25 passing, and the
+    whole-codebase regression suite shows 410/410 passing. Manually reviewed
+    the new code against constraint #4 (bid atomicity) — every new path
+    reachable from a client command runs inside the existing per-draft
+    AsyncQueue; the one path that doesn't (the award-timer's post-award turn
+    advance) is pre-existing architecture unrelated to this fix, flagged by
+    the implementer and confirmed by reading the surrounding code. Live
+    end-to-end verification: seeded a 12-team draft, pre-set every team's
+    control_mode to AUTO_AGENT, started the draft — it drafted itself with
+    zero human input (multiple picks nominated, bid to willingness ceiling,
+    and awarded automatically), resolving the original blocking scenario.
+    Standards gate and whole-codebase regression both passed; promoted
+    main -> develop (had to create the develop branch, which never existed
+    in this repo despite manifest.branching_config naming it); tagged
+    Draft/iter-2/aah-build.
+  completed_at: '2026-09-04T22:52:00Z'
+status: completed
