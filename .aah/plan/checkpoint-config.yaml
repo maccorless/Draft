@@ -6,8 +6,8 @@ checkpoint_configuration:
   system_checkpoint_level: wave_plus_feature
   upgrade_reasons:
   - complexity_score=218 > 60
-  - total_features=19 > 12
-  generated_at: '2026-09-04T20:34:38.027144+00:00'
+  - total_features=20 > 12
+  generated_at: '2026-09-04T23:29:05.103657+00:00'
   verification_profiles:
     F-MOD-000:
       level: deep
@@ -37,6 +37,15 @@ checkpoint_configuration:
       - keyword_payment_scope
       override: null
     F-MOD-002-rework-01:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_concurrency
+      - keyword_credential_scope
+      - keyword_payment_scope
+      override: null
+    F-MOD-002-rework-02:
       level: deep
       rule_version: '1'
       reasons:
@@ -177,6 +186,8 @@ checkpoint_configuration:
         - quality_gate
         F-MOD-002-rework-01:
         - quality_gate
+        F-MOD-002-rework-02:
+        - quality_gate
         F-MOD-003:
         - quality_gate
         F-MOD-004:
@@ -213,6 +224,7 @@ checkpoint_configuration:
     covered_features:
     - F-MOD-000
     - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
     - F-MOD-001
     demo_checklist:
     - System starts successfully
@@ -231,6 +243,7 @@ checkpoint_configuration:
     covered_features:
     - F-MOD-000
     - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
     - F-MOD-001
     - F-MOD-002
     - F-MOD-007
@@ -251,6 +264,7 @@ checkpoint_configuration:
     covered_features:
     - F-MOD-000
     - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
     - F-MOD-001
     - F-MOD-002
     - F-MOD-007
@@ -273,6 +287,7 @@ checkpoint_configuration:
     covered_features:
     - F-MOD-000
     - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
     - F-MOD-001
     - F-MOD-002
     - F-MOD-007
@@ -297,6 +312,7 @@ checkpoint_configuration:
     covered_features:
     - F-MOD-000
     - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
     - F-MOD-001
     - F-MOD-002
     - F-MOD-007
@@ -323,6 +339,7 @@ checkpoint_configuration:
     covered_features:
     - F-MOD-000
     - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
     - F-MOD-001
     - F-MOD-002
     - F-MOD-007
@@ -351,6 +368,7 @@ checkpoint_configuration:
     covered_features:
     - F-MOD-000
     - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
     - F-MOD-001
     - F-MOD-002
     - F-MOD-007
@@ -381,6 +399,7 @@ checkpoint_configuration:
     covered_features:
     - F-MOD-000
     - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
     - F-MOD-001
     - F-MOD-002
     - F-MOD-007
@@ -413,6 +432,7 @@ checkpoint_configuration:
     covered_features:
     - F-MOD-000
     - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
     - F-MOD-001
     - F-MOD-002
     - F-MOD-007
