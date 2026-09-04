@@ -25,7 +25,7 @@ import {
   rosterSlotDefinitions,
   draftDatasets,
   players,
-  playerDatasetEntries,
+  playerAavSources,
   drafts,
 } from './schema/index.js';
 
@@ -172,13 +172,14 @@ export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
       status: 'FROZEN',
       frozen_at: new Date(),
       version: 1,
+      primary_aav_source: 'CSV',
     })
     .returning();
 
   // insertedPlayers is returned in the same order as the VALUES list we inserted
   // (PostgreSQL preserves row order for a single multi-row INSERT ... RETURNING),
   // so it lines up positionally with csvPlayers for aav_minor/tier lookup.
-  await db.insert(playerDatasetEntries).values(
+  await db.insert(playerAavSources).values(
     insertedPlayers.map((p, i) => ({
       dataset_id: dataset!.id,
       player_id: p.id,

@@ -159,16 +159,18 @@ describe.skipIf(SKIP_DB)('F-MOD-008 owner strategy', () => {
     `;
     playerIds = [p1!.id, p2!.id];
 
-    const [en1] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, source)
-      VALUES (${datasetId}, ${p1!.id}, 5000, 'CSV') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source)
+      VALUES (${datasetId}, ${p1!.id}, 5000, 'CSV')
     `;
-    const [en2] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, source)
-      VALUES (${datasetId}, ${p2!.id}, 4500, 'CSV') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source)
+      VALUES (${datasetId}, ${p2!.id}, 4500, 'CSV')
     `;
-    player1EntryId = en1!.id;
-    player2EntryId = en2!.id;
+    // player*EntryId is now just the player's own id (F-MOD-016): dataset_player_id
+    // columns FK to players.id, not to a per-source player_aav_sources row.
+    player1EntryId = p1!.id;
+    player2EntryId = p2!.id;
 
     // Freeze dataset
     await sql`UPDATE draft_datasets SET status = 'FROZEN', frozen_at = NOW() WHERE id = ${datasetId}`;
@@ -189,7 +191,7 @@ describe.skipIf(SKIP_DB)('F-MOD-008 owner strategy', () => {
     if (draftId) {
       await sql`UPDATE drafts SET status = 'PAUSED' WHERE id = ${draftId} AND status = 'RUNNING'`;
     }
-    // Clean strategy tables first (FK refs to player_dataset_entries)
+    // Clean strategy tables first (FK refs to players.id)
     await sql`DELETE FROM nomination_queue_items WHERE draft_id = ${draftId}`;
     await sql`DELETE FROM watch_list_items WHERE draft_id = ${draftId}`;
     await sql`DELETE FROM owner_target_values WHERE draft_id = ${draftId}`;
@@ -203,7 +205,7 @@ describe.skipIf(SKIP_DB)('F-MOD-008 owner strategy', () => {
     await sql`DELETE FROM player_auctions WHERE draft_id = ${draftId}`;
     await sql`DELETE FROM drafts WHERE id = ${draftId}`;
     if (playerIds.length > 0) {
-      await sql`DELETE FROM player_dataset_entries WHERE player_id = ANY(${playerIds})`;
+      await sql`DELETE FROM player_aav_sources WHERE player_id = ANY(${playerIds})`;
     }
     await sql`DELETE FROM draft_datasets WHERE id = ${datasetId}`;
     if (playerIds.length > 0) {

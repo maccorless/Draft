@@ -203,16 +203,16 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     `;
     playerIds = [p1!.id, p2!.id];
 
-    const [en1] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, source)
-      VALUES (${datasetId}, ${p1!.id}, 5000, 'CSV') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source)
+      VALUES (${datasetId}, ${p1!.id}, 5000, 'CSV')
     `;
-    const [en2] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, source)
-      VALUES (${datasetId}, ${p2!.id}, 4500, 'CSV') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source)
+      VALUES (${datasetId}, ${p2!.id}, 4500, 'CSV')
     `;
-    player1EntryId = en1!.id;
-    void en2; // en2 id not tracked — no test nominates player2 yet
+    // Now equal to the player's own id (F-MOD-016): dataset_player_id FKs to players.id.
+    player1EntryId = p1!.id;
 
     // Freeze dataset
     await sql`UPDATE draft_datasets SET status = 'FROZEN', frozen_at = NOW() WHERE id = ${datasetId}`;
@@ -246,7 +246,7 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     await sql`DELETE FROM drafts WHERE id = ${draftId}`;
     // Delete entries by player_id (covers all datasets — clean by UUID, not name)
     if (playerIds.length > 0) {
-      await sql`DELETE FROM player_dataset_entries WHERE player_id = ANY(${playerIds})`;
+      await sql`DELETE FROM player_aav_sources WHERE player_id = ANY(${playerIds})`;
     }
     await sql`DELETE FROM draft_datasets WHERE id = ${datasetId}`;
     if (playerIds.length > 0) {

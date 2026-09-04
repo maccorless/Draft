@@ -18,6 +18,9 @@ interface ParsedRow {
   projected_points: number | null;
   tier: number | null;
   espn_player_id: string | null;
+  bye_week?: number | null;
+  injury_status?: string | null;
+  injury_detail?: string | null;
 }
 
 interface ParseError {
@@ -90,6 +93,9 @@ function run(): void {
     projected_points: headers.indexOf('projected_points'),
     tier: headers.indexOf('tier'),
     espn_player_id: headers.indexOf('espn_player_id'),
+    bye_week: headers.indexOf('bye_week'),
+    injury_status: headers.indexOf('injury_status'),
+    injury_detail: headers.indexOf('injury_detail'),
   };
 
   if (idx.name === -1 || idx.position === -1 || idx.aav_minor === -1) {
@@ -144,7 +150,33 @@ function run(): void {
         ? fields[idx.espn_player_id]!.trim()
         : null;
 
-    rows.push({ name, position, nfl_team: nflTeam, aav_minor: aav, projected_points: projectedPoints, tier, espn_player_id: espnPlayerId });
+    let byeWeek: number | null | undefined;
+    if (idx.bye_week >= 0 && fields[idx.bye_week]?.trim()) {
+      const b = parseInt(fields[idx.bye_week]!.trim(), 10);
+      byeWeek = isNaN(b) ? null : b;
+    }
+
+    const injuryStatus =
+      idx.injury_status >= 0 && fields[idx.injury_status]?.trim()
+        ? fields[idx.injury_status]!.trim()
+        : undefined;
+    const injuryDetail =
+      idx.injury_detail >= 0 && fields[idx.injury_detail]?.trim()
+        ? fields[idx.injury_detail]!.trim()
+        : undefined;
+
+    rows.push({
+      name,
+      position,
+      nfl_team: nflTeam,
+      aav_minor: aav,
+      projected_points: projectedPoints,
+      tier,
+      espn_player_id: espnPlayerId,
+      bye_week: byeWeek,
+      injury_status: injuryStatus,
+      injury_detail: injuryDetail,
+    });
   }
 
   parentPort?.postMessage({ rows, errors } satisfies WorkerResult);

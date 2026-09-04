@@ -244,8 +244,7 @@ export async function registerWarRoomRoutes(
           COUNT(ba.id)::int AS bid_count
         FROM acquisitions a
         JOIN player_auctions pa ON pa.id = a.player_auction_id
-        JOIN player_dataset_entries pde ON pde.id = pa.dataset_player_id
-        JOIN players p ON p.id = pde.player_id
+        JOIN players p ON p.id = pa.dataset_player_id
         JOIN teams t ON t.id = a.team_id
         LEFT JOIN bid_attempts ba ON ba.player_auction_id = a.player_auction_id AND ba.accepted = true
         WHERE a.draft_id = ${draft.id} AND a.active = true

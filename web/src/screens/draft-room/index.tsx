@@ -55,6 +55,7 @@ interface DatasetPlayer {
   nfl_team: string;
   aav_minor: number;
   tier: number | null;
+  injury_status?: string | null;
 }
 
 function formatMoney(minor: number): string {
@@ -158,6 +159,11 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
     ).length;
     return remaining;
   }, [auction, players, drafted]);
+
+  const activePlayerDetail = useMemo(
+    () => (auction ? players.find((p) => p.name === auction.player_name) ?? null : null),
+    [auction, players],
+  );
 
   const isLeading = !!(auction && teamId && auction.leading_team_id === teamId);
   const isNominatorOfOpen = !!(auction && teamId && auction.nominator_team_id === teamId);
@@ -313,6 +319,11 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
               <div className="draft-room__player">
                 <h1 className="draft-room__player-name" data-testid="active-player-name">
                   {auction.player_name}
+                  {activePlayerDetail?.injury_status && (
+                    <span className="draft-room__injury-indicator" data-testid="injury-indicator" title={activePlayerDetail.injury_status}>
+                      {activePlayerDetail.injury_status}
+                    </span>
+                  )}
                 </h1>
                 <p className="draft-room__player-meta">
                   {auction.position} · {auction.nfl_team}

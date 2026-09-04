@@ -8,6 +8,7 @@ import {
   pgEnum,
   jsonb,
   decimal,
+  unique,
 } from 'drizzle-orm/pg-core';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -160,6 +161,11 @@ export const players = pgTable('players', {
   position: text('position').notNull(),
   nfl_team: text('nfl_team').notNull(),
   espn_player_id: text('espn_player_id'),
+  bye_week: integer('bye_week'),
+  injury_status: text('injury_status'),
+  injury_detail: text('injury_detail'),
+  injury_updated_at: timestamp('injury_updated_at', { withTimezone: true }),
+  prior_season_stats: jsonb('prior_season_stats'),
 });
 
 export const draftDatasets = pgTable('draft_datasets', {
@@ -171,9 +177,14 @@ export const draftDatasets = pgTable('draft_datasets', {
   status: datasetStatusEnum('status').notNull().default('DRAFT'),
   frozen_at: timestamp('frozen_at', { withTimezone: true }),
   version: integer('version').notNull().default(1),
+  primary_aav_source: text('primary_aav_source'),
+  secondary_aav_source: text('secondary_aav_source'),
 });
 
-export const playerDatasetEntries = pgTable('player_dataset_entries', {
+// One row per (dataset, player, source) — a player can carry multiple named
+// AAV values at once (PRD §10 "Multi-Source AAV"); commissioner picks a
+// Primary/Secondary among the sources actually loaded (draft_datasets above).
+export const playerAavSources = pgTable('player_aav_sources', {
   id: uuid('id').primaryKey().defaultRandom(),
   dataset_id: uuid('dataset_id')
     .notNull()
@@ -185,7 +196,13 @@ export const playerDatasetEntries = pgTable('player_dataset_entries', {
   projected_points: decimal('projected_points', { precision: 6, scale: 2 }),
   tier: integer('tier'),
   source: text('source').notNull(),
-});
+}, (table) => [
+  unique('player_aav_sources_dataset_player_source_unique').on(
+    table.dataset_id,
+    table.player_id,
+    table.source,
+  ),
+]);
 
 // ─── Draft & Auction ─────────────────────────────────────────────────────────
 
@@ -230,7 +247,7 @@ export const playerAuctions = pgTable('player_auctions', {
     .references(() => drafts.id),
   dataset_player_id: uuid('dataset_player_id')
     .notNull()
-    .references(() => playerDatasetEntries.id),
+    .references(() => players.id),
   status: playerAuctionStatusEnum('status').notNull().default('PENDING'),
   current_bid_minor: integer('current_bid_minor').notNull().default(0),
   current_leader_id: uuid('current_leader_id').references(() => teams.id),
@@ -404,7 +421,7 @@ export const watchListItems = pgTable('watch_list_items', {
     .references(() => teams.id),
   dataset_player_id: uuid('dataset_player_id')
     .notNull()
-    .references(() => playerDatasetEntries.id),
+    .references(() => players.id),
   created_at: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -420,7 +437,7 @@ export const nominationQueueItems = pgTable('nomination_queue_items', {
     .references(() => teams.id),
   dataset_player_id: uuid('dataset_player_id')
     .notNull()
-    .references(() => playerDatasetEntries.id),
+    .references(() => players.id),
   queue_position: integer('queue_position').notNull(),
 });
 
@@ -434,6 +451,6 @@ export const ownerTargetValues = pgTable('owner_target_values', {
     .references(() => teams.id),
   dataset_player_id: uuid('dataset_player_id')
     .notNull()
-    .references(() => playerDatasetEntries.id),
+    .references(() => players.id),
   target_value_minor: integer('target_value_minor').notNull(),
 });

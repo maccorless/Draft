@@ -351,8 +351,7 @@ export async function registerCorrectionRoutes(
           p.name AS player_name
         FROM acquisitions a
         JOIN player_auctions pa ON pa.id = a.player_auction_id
-        JOIN player_dataset_entries pde ON pde.id = pa.dataset_player_id
-        JOIN players p ON p.id = pde.player_id
+        JOIN players p ON p.id = pa.dataset_player_id
         WHERE a.draft_id = ${draft.id} AND a.active = true
         ORDER BY a.resolution_sequence DESC
         LIMIT ${count}

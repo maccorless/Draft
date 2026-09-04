@@ -9,6 +9,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
 
+import { resolveEffectivePrimarySource } from '../player/aav-resolution.js';
+
 interface TokenClaims {
   league_id: string;
   role: string;
@@ -174,6 +176,15 @@ export async function buildDraftStateSnapshot(
   // Room can render on initial load/reconnect without a second round trip —
   // live clients also get player_name etc. via the NOMINATION_STARTED broadcast,
   // but a client attaching mid-auction only has this snapshot to go on.
+  // AAV/tier are resolved from the dataset's effective primary AAV source
+  // (F-MOD-016) since a player may carry rows from more than one source.
+  const [draftDatasetRow] = await sql<Array<{ dataset_id: string }>>`
+    SELECT dataset_id FROM drafts WHERE id = ${draftId} LIMIT 1
+  `;
+  const effectiveSource = draftDatasetRow
+    ? await resolveEffectivePrimarySource(sql, draftDatasetRow.dataset_id)
+    : null;
+
   const auctionRows = await sql<Array<{
     id: string;
     current_bid_minor: number;
@@ -186,17 +197,18 @@ export async function buildDraftStateSnapshot(
     position: string;
     nfl_team: string;
     tier: number | null;
-    aav_minor: number;
+    aav_minor: number | null;
     projected_points: string | null;
   }>>`
     SELECT
       pa.id, pa.current_bid_minor, pa.current_leader_id, pa.auction_version,
       pa.nomination_deadline, pa.rebid_deadline, pa.nominator_team_id,
       p.name AS player_name, p.position, p.nfl_team,
-      pde.tier, pde.aav_minor, pde.projected_points
+      pas.tier, pas.aav_minor, pas.projected_points
     FROM player_auctions pa
-    JOIN player_dataset_entries pde ON pde.id = pa.dataset_player_id
-    JOIN players p ON p.id = pde.player_id
+    JOIN players p ON p.id = pa.dataset_player_id
+    LEFT JOIN player_aav_sources pas
+      ON pas.player_id = p.id AND pas.dataset_id = ${draftDatasetRow?.dataset_id ?? null} AND pas.source = ${effectiveSource}
     WHERE pa.draft_id = ${draftId} AND pa.status = 'OPEN'
     LIMIT 1
   `;
@@ -235,7 +247,7 @@ export async function buildDraftStateSnapshot(
           position: auction.position,
           nfl_team: auction.nfl_team,
           tier: auction.tier,
-          aav_minor: auction.aav_minor,
+          aav_minor: auction.aav_minor ?? 0,
           projected_points: auction.projected_points !== null ? Number(auction.projected_points) : null,
         }
       : null,

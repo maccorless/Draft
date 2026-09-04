@@ -114,6 +114,13 @@ export type CreateDraftResponse = z.infer<typeof CreateDraftResponseSchema>;
 
 // ─── Players ──────────────────────────────────────────────────────────────────
 
+export const PlayerAavSourceEntrySchema = z.object({
+  source: z.enum(['CSV', 'EXCEL', 'ESPN_PDF', 'FANTASYPROS']),
+  aav_minor: z.number().int(),
+  tier: z.number().int().nullable().optional(),
+  projected_points: z.number().nullable().optional(),
+});
+
 export const PlayerEntrySchema = z.object({
   player_id: z.string().uuid(),
   dataset_entry_id: z.string().uuid(),
@@ -123,6 +130,15 @@ export const PlayerEntrySchema = z.object({
   aav_minor: z.number().int(),
   projected_points: z.number().nullable().optional(),
   tier: z.number().int().nullable().optional(),
+  // Added by F-MOD-016 (Multi-Source AAV + player intelligence).
+  primary_aav_minor: z.number().int().nullable().optional(),
+  secondary_aav_minor: z.number().int().nullable().optional(),
+  aav_sources: z.array(PlayerAavSourceEntrySchema).optional(),
+  bye_week: z.number().int().nullable().optional(),
+  injury_status: z.string().nullable().optional(),
+  injury_detail: z.string().nullable().optional(),
+  injury_updated_at: z.string().datetime().nullable().optional(),
+  prior_season_stats: z.unknown().nullable().optional(),
 });
 
 export const PlayerListResponseSchema = z.object({
@@ -130,3 +146,19 @@ export const PlayerListResponseSchema = z.object({
 });
 
 export type PlayerListResponse = z.infer<typeof PlayerListResponseSchema>;
+
+// ─── Multi-Source AAV selection (F-MOD-016) ────────────────────────────────────
+
+export const SetAavSourcesRequestSchema = z.object({
+  primary_aav_source: z.enum(['CSV', 'EXCEL', 'ESPN_PDF', 'FANTASYPROS']),
+  secondary_aav_source: z.enum(['CSV', 'EXCEL', 'ESPN_PDF', 'FANTASYPROS']).nullable().optional(),
+});
+
+export type SetAavSourcesRequest = z.infer<typeof SetAavSourcesRequestSchema>;
+
+export const AavSourceSelectionResponseSchema = z.object({
+  primary_aav_source: z.string(),
+  secondary_aav_source: z.string().nullable(),
+});
+
+export type AavSourceSelectionResponse = z.infer<typeof AavSourceSelectionResponseSchema>;

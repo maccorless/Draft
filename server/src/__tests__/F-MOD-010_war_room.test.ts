@@ -155,11 +155,12 @@ describe.skipIf(SKIP_DB)('F-MOD-010 War Room read endpoints', () => {
     `;
     playerIds = [p1!.id];
 
-    const [en1] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, tier, source)
-      VALUES (${datasetId}, ${p1!.id}, 5000, 1, 'CSV') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, tier, source)
+      VALUES (${datasetId}, ${p1!.id}, 5000, 1, 'CSV')
     `;
-    player1EntryId = en1!.id;
+    // Now equal to the player's own id (F-MOD-016): dataset_player_id FKs to players.id.
+    player1EntryId = p1!.id;
 
     await sql`UPDATE draft_datasets SET status = 'FROZEN', frozen_at = NOW() WHERE id = ${datasetId}`;
 
@@ -183,7 +184,7 @@ describe.skipIf(SKIP_DB)('F-MOD-010 War Room read endpoints', () => {
     await sql`DELETE FROM player_auctions WHERE draft_id = ${draftId}`;
     await sql`DELETE FROM drafts WHERE id = ${draftId}`;
     if (playerIds.length > 0) {
-      await sql`DELETE FROM player_dataset_entries WHERE player_id = ANY(${playerIds})`;
+      await sql`DELETE FROM player_aav_sources WHERE player_id = ANY(${playerIds})`;
     }
     await sql`DELETE FROM draft_datasets WHERE id = ${datasetId}`;
     if (playerIds.length > 0) {

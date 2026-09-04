@@ -18,6 +18,9 @@ interface ParsedRow {
   projected_points: number | null;
   tier: number | null;
   espn_player_id: string | null;
+  bye_week?: number | null;
+  injury_status?: string | null;
+  injury_detail?: string | null;
 }
 
 interface ParseError {
@@ -107,6 +110,18 @@ function run(): void {
     const espnIdRaw = raw2[colMap.espn_player_id ?? ''];
     const espnPlayerId = espnIdRaw !== null && espnIdRaw !== undefined ? String(espnIdRaw) : null;
 
+    let byeWeek: number | null | undefined;
+    const byeRaw = raw2[colMap.bye_week ?? ''];
+    if (byeRaw !== null && byeRaw !== undefined) {
+      const b = parseInt(String(byeRaw), 10);
+      byeWeek = isNaN(b) ? null : b;
+    }
+
+    const injuryStatusRaw = raw2[colMap.injury_status ?? ''];
+    const injuryStatus = injuryStatusRaw !== null && injuryStatusRaw !== undefined ? String(injuryStatusRaw) : undefined;
+    const injuryDetailRaw = raw2[colMap.injury_detail ?? ''];
+    const injuryDetail = injuryDetailRaw !== null && injuryDetailRaw !== undefined ? String(injuryDetailRaw) : undefined;
+
     rows.push({
       name,
       position,
@@ -115,6 +130,9 @@ function run(): void {
       projected_points: projectedPoints,
       tier,
       espn_player_id: espnPlayerId,
+      bye_week: byeWeek,
+      injury_status: injuryStatus,
+      injury_detail: injuryDetail,
     });
   }
 
@@ -124,7 +142,7 @@ function run(): void {
 /** Build column name → header string mapping. Case-insensitive. */
 function buildColMap(headers: string[]): Record<string, string | undefined> {
   const map: Record<string, string | undefined> = {};
-  const FIELDS = ['name', 'position', 'nfl_team', 'aav_minor', 'projected_points', 'tier', 'espn_player_id'];
+  const FIELDS = ['name', 'position', 'nfl_team', 'aav_minor', 'projected_points', 'tier', 'espn_player_id', 'bye_week', 'injury_status', 'injury_detail'];
   for (const field of FIELDS) {
     const match = headers.find((h) => h.toLowerCase().trim() === field);
     map[field] = match;

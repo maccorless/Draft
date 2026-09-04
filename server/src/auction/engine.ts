@@ -15,6 +15,7 @@ import type WebSocket from 'ws';
 import postgres from 'postgres';
 
 import { AsyncQueue } from './queue.js';
+import { resolveEffectivePrimarySource } from '../player/aav-resolution.js';
 
 export interface DraftRuntime {
   queue: AsyncQueue;
@@ -569,21 +570,28 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
   // NOMINATION_STARTED broadcast below can carry it — clients otherwise have
   // no way to know a newly-nominated player's team/tier/AAV until a second
   // round trip, and carrying forward the *previous* auction's values would
-  // be actively wrong.
+  // be actively wrong. AAV/tier are resolved from the dataset's effective
+  // primary AAV source (F-MOD-016) — a player may have rows from more than
+  // one source, so this is not a plain join anymore.
+  const effectiveSource = await resolveEffectivePrimarySource(sql, draft.dataset_id);
   const playerRows = await sql<[{
     id: string;
     name: string;
     position: string;
     nfl_team: string;
     tier: number | null;
-    aav_minor: number;
+    aav_minor: number | null;
     projected_points: string | null;
   }]>`
-    SELECT pde.id, p.name, p.position, p.nfl_team, pde.tier, pde.aav_minor, pde.projected_points
-    FROM player_dataset_entries pde
-    JOIN players p ON p.id = pde.player_id
-    WHERE pde.id = ${command.player_dataset_entry_id}
-      AND pde.dataset_id = ${draft.dataset_id}
+    SELECT p.id, p.name, p.position, p.nfl_team, pas.tier, pas.aav_minor, pas.projected_points
+    FROM players p
+    LEFT JOIN player_aav_sources pas
+      ON pas.player_id = p.id AND pas.dataset_id = ${draft.dataset_id} AND pas.source = ${effectiveSource}
+    WHERE p.id = ${command.player_dataset_entry_id}
+      AND EXISTS (
+        SELECT 1 FROM player_aav_sources x
+        WHERE x.player_id = p.id AND x.dataset_id = ${draft.dataset_id}
+      )
     LIMIT 1
   `;
   const player = playerRows[0];
@@ -665,7 +673,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
         position: player.position,
         nfl_team: player.nfl_team,
         tier: player.tier,
-        aav_minor: player.aav_minor,
+        aav_minor: player.aav_minor ?? 0,
         projected_points: player.projected_points !== null ? Number(player.projected_points) : null,
         nominator_team_id: teamId,
         opening_bid_minor: command.opening_bid_minor,
@@ -798,8 +806,7 @@ async function findAwardableAuctions(sql: postgres.Sql): Promise<AwardableAuctio
       pa.dataset_player_id, p.name AS player_name, p.position AS player_position
     FROM player_auctions pa
     JOIN drafts d ON d.id = pa.draft_id
-    JOIN player_dataset_entries pde ON pde.id = pa.dataset_player_id
-    JOIN players p ON p.id = pde.player_id
+    JOIN players p ON p.id = pa.dataset_player_id
     WHERE pa.status = 'OPEN'
       AND pa.rebid_deadline < NOW()
       AND pa.current_bid_minor > 0

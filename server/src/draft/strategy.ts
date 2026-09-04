@@ -19,6 +19,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
 import { z } from 'zod';
 
+import { resolveEffectivePrimarySource } from '../player/aav-resolution.js';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface TokenClaims {
@@ -100,6 +102,19 @@ async function requireTeamOwner(
   return { draftId, teamId, leagueId: claims.league_id };
 }
 
+/** Resolves a draft's dataset_id and effective primary AAV source in one call. */
+async function getDatasetAndPrimarySource(
+  sql: postgres.Sql,
+  draftId: string,
+): Promise<{ datasetId: string | null; source: string | null }> {
+  const [row] = await sql<[{ dataset_id: string }]>`
+    SELECT dataset_id FROM drafts WHERE id = ${draftId} LIMIT 1
+  `;
+  if (!row) return { datasetId: null, source: null };
+  const source = await resolveEffectivePrimarySource(sql, row.dataset_id);
+  return { datasetId: row.dataset_id, source };
+}
+
 // ─── Zod schemas ──────────────────────────────────────────────────────────────
 
 const SetTargetValuesBody = z.object({
@@ -142,28 +157,33 @@ export async function registerStrategyRoutes(
       const ctx = await requireTeamOwner(server, sql, req, reply);
       if (!ctx) return;
 
+      const { datasetId, source } = await getDatasetAndPrimarySource(sql, ctx.draftId);
+
       const rows = await sql<Array<{
         dataset_player_id: string;
         target_value_minor: number;
         player_name: string;
         position: string;
-        aav_minor: number;
+        aav_minor: number | null;
       }>>`
         SELECT
           otv.dataset_player_id,
           otv.target_value_minor,
           p.name AS player_name,
           p.position,
-          pde.aav_minor
+          pas.aav_minor
         FROM owner_target_values otv
-        JOIN player_dataset_entries pde ON pde.id = otv.dataset_player_id
-        JOIN players p ON p.id = pde.player_id
+        JOIN players p ON p.id = otv.dataset_player_id
+        LEFT JOIN player_aav_sources pas
+          ON pas.player_id = p.id AND pas.dataset_id = ${datasetId} AND pas.source = ${source}
         WHERE otv.draft_id = ${ctx.draftId}
           AND otv.team_id = ${ctx.teamId}
         ORDER BY p.name ASC
       `;
 
-      return reply.status(200).send({ targets: rows });
+      return reply.status(200).send({
+        targets: rows.map((r) => ({ ...r, aav_minor: r.aav_minor ?? 0 })),
+      });
     },
   );
 
@@ -218,28 +238,33 @@ export async function registerStrategyRoutes(
       const ctx = await requireTeamOwner(server, sql, req, reply);
       if (!ctx) return;
 
+      const { datasetId, source } = await getDatasetAndPrimarySource(sql, ctx.draftId);
+
       const rows = await sql<Array<{
         dataset_player_id: string;
         player_name: string;
         position: string;
-        aav_minor: number;
+        aav_minor: number | null;
         created_at: Date;
       }>>`
         SELECT
           wli.dataset_player_id,
           p.name AS player_name,
           p.position,
-          pde.aav_minor,
+          pas.aav_minor,
           wli.created_at
         FROM watch_list_items wli
-        JOIN player_dataset_entries pde ON pde.id = wli.dataset_player_id
-        JOIN players p ON p.id = pde.player_id
+        JOIN players p ON p.id = wli.dataset_player_id
+        LEFT JOIN player_aav_sources pas
+          ON pas.player_id = p.id AND pas.dataset_id = ${datasetId} AND pas.source = ${source}
         WHERE wli.draft_id = ${ctx.draftId}
           AND wli.team_id = ${ctx.teamId}
         ORDER BY wli.created_at ASC
       `;
 
-      return reply.status(200).send({ watchlist: rows });
+      return reply.status(200).send({
+        watchlist: rows.map((r) => ({ ...r, aav_minor: r.aav_minor ?? 0 })),
+      });
     },
   );
 
@@ -266,8 +291,8 @@ export async function registerStrategyRoutes(
         SELECT dataset_id FROM drafts WHERE id = ${ctx.draftId} LIMIT 1
       `;
       const playerRows = await sql<Array<{ id: string }>>`
-        SELECT id FROM player_dataset_entries
-        WHERE id = ${dataset_player_id} AND dataset_id = ${draftRows[0]!.dataset_id}
+        SELECT id FROM player_aav_sources
+        WHERE player_id = ${dataset_player_id} AND dataset_id = ${draftRows[0]!.dataset_id}
         LIMIT 1
       `;
       if (playerRows.length === 0) {
@@ -341,28 +366,33 @@ export async function registerStrategyRoutes(
       const ctx = await requireTeamOwner(server, sql, req, reply);
       if (!ctx) return;
 
+      const { datasetId, source } = await getDatasetAndPrimarySource(sql, ctx.draftId);
+
       const rows = await sql<Array<{
         dataset_player_id: string;
         queue_position: number;
         player_name: string;
         position: string;
-        aav_minor: number;
+        aav_minor: number | null;
       }>>`
         SELECT
           nqi.dataset_player_id,
           nqi.queue_position,
           p.name AS player_name,
           p.position,
-          pde.aav_minor
+          pas.aav_minor
         FROM nomination_queue_items nqi
-        JOIN player_dataset_entries pde ON pde.id = nqi.dataset_player_id
-        JOIN players p ON p.id = pde.player_id
+        JOIN players p ON p.id = nqi.dataset_player_id
+        LEFT JOIN player_aav_sources pas
+          ON pas.player_id = p.id AND pas.dataset_id = ${datasetId} AND pas.source = ${source}
         WHERE nqi.draft_id = ${ctx.draftId}
           AND nqi.team_id = ${ctx.teamId}
         ORDER BY nqi.queue_position ASC
       `;
 
-      return reply.status(200).send({ queue: rows });
+      return reply.status(200).send({
+        queue: rows.map((r) => ({ ...r, aav_minor: r.aav_minor ?? 0 })),
+      });
     },
   );
 
@@ -388,8 +418,8 @@ export async function registerStrategyRoutes(
         SELECT dataset_id FROM drafts WHERE id = ${ctx.draftId} LIMIT 1
       `;
       const playerRows = await sql<Array<{ id: string }>>`
-        SELECT id FROM player_dataset_entries
-        WHERE id = ${dataset_player_id} AND dataset_id = ${draftRows[0]!.dataset_id}
+        SELECT id FROM player_aav_sources
+        WHERE player_id = ${dataset_player_id} AND dataset_id = ${draftRows[0]!.dataset_id}
         LIMIT 1
       `;
       if (playerRows.length === 0) {
@@ -505,14 +535,18 @@ export async function getTopNominationQueueEntry(
   draftId: string,
   teamId: string,
 ): Promise<{ dataset_player_id: string; aav_minor: number } | null> {
-  const rows = await sql<[{ dataset_player_id: string; aav_minor: number }]>`
-    SELECT nqi.dataset_player_id, pde.aav_minor
+  const { datasetId, source } = await getDatasetAndPrimarySource(sql, draftId);
+  const rows = await sql<[{ dataset_player_id: string; aav_minor: number | null }]>`
+    SELECT nqi.dataset_player_id, pas.aav_minor
     FROM nomination_queue_items nqi
-    JOIN player_dataset_entries pde ON pde.id = nqi.dataset_player_id
+    JOIN players p ON p.id = nqi.dataset_player_id
+    LEFT JOIN player_aav_sources pas
+      ON pas.player_id = p.id AND pas.dataset_id = ${datasetId} AND pas.source = ${source}
     WHERE nqi.draft_id = ${draftId}
       AND nqi.team_id = ${teamId}
     ORDER BY nqi.queue_position ASC
     LIMIT 1
   `;
-  return rows[0] ?? null;
+  const top = rows[0];
+  return top ? { dataset_player_id: top.dataset_player_id, aav_minor: top.aav_minor ?? 0 } : null;
 }

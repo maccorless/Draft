@@ -18,11 +18,12 @@ import { dirname, join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
 
 import {
   draftDatasets,
   players,
-  playerDatasetEntries,
+  playerAavSources,
   drafts,
 } from '../../db/schema/index.js';
 import { CreateDraftRequestSchema } from '@draft/shared-types';
@@ -46,6 +47,9 @@ interface ParsedRow {
   projected_points: number | null;
   tier: number | null;
   espn_player_id: string | null;
+  bye_week?: number | null;
+  injury_status?: string | null;
+  injury_detail?: string | null;
 }
 
 interface WorkerResult {
@@ -103,7 +107,31 @@ async function findDataset(
 }
 
 /**
- * UPSERT a set of parsed rows into players + player_dataset_entries.
+ * Applies whichever player-intelligence fields a row actually supplies onto
+ * the shared players row (not per-source). Absent (undefined) fields are
+ * left untouched — a later import from a different source must never clear
+ * a previously-set value just because it doesn't carry that field.
+ */
+async function applyPlayerIntelligence(
+  db: PostgresJsDatabase,
+  playerId: string,
+  row: ParsedRow,
+): Promise<void> {
+  const patch: Partial<typeof players.$inferInsert> = {};
+  if (row.bye_week !== undefined) patch.bye_week = row.bye_week;
+  if (row.injury_status !== undefined) patch.injury_status = row.injury_status;
+  if (row.injury_detail !== undefined) patch.injury_detail = row.injury_detail;
+  if (Object.keys(patch).length === 0) return;
+
+  patch.injury_updated_at = new Date();
+  await db.update(players).set(patch).where(eq(players.id, playerId));
+}
+
+/**
+ * UPSERT a set of parsed rows into players + player_aav_sources.
+ * Upsert key is (dataset_id, player_id, source) — one row per player per
+ * source per dataset, so importing the same player from a second source
+ * adds a new row rather than overwriting the first (F-MOD-016).
  * Returns { rowsImported, importErrors } after processing all rows.
  */
 async function upsertRows(
@@ -156,14 +184,20 @@ async function upsertRows(
         }
       }
 
+      await applyPlayerIntelligence(db, playerId, row);
+
       const existingEntry = await db
-        .select({ id: playerDatasetEntries.id })
-        .from(playerDatasetEntries)
-        .where(and(eq(playerDatasetEntries.dataset_id, datasetId), eq(playerDatasetEntries.player_id, playerId)))
+        .select({ id: playerAavSources.id })
+        .from(playerAavSources)
+        .where(and(
+          eq(playerAavSources.dataset_id, datasetId),
+          eq(playerAavSources.player_id, playerId),
+          eq(playerAavSources.source, source),
+        ))
         .limit(1);
 
       if (existingEntry.length === 0) {
-        await db.insert(playerDatasetEntries).values({
+        await db.insert(playerAavSources).values({
           dataset_id: datasetId,
           player_id: playerId,
           aav_minor: row.aav_minor,
@@ -172,9 +206,9 @@ async function upsertRows(
           source,
         });
       } else {
-        await db.update(playerDatasetEntries)
+        await db.update(playerAavSources)
           .set({ aav_minor: row.aav_minor, projected_points: row.projected_points !== null ? String(row.projected_points) : null, tier: row.tier })
-          .where(eq(playerDatasetEntries.id, existingEntry[0]!.id));
+          .where(eq(playerAavSources.id, existingEntry[0]!.id));
       }
 
       rowsImported++;
@@ -276,97 +310,7 @@ export async function registerPlayerRoutes(
         return reply.send({ rows_imported: 0, source: 'CSV', errors: result.errors });
       }
 
-      // UPSERT players into master table, then insert PlayerDatasetEntry rows
-      let rowsImported = 0;
-      const importErrors = [...result.errors];
-
-      for (const row of result.rows) {
-        try {
-          // Match existing player by espn_player_id if provided, else name+position
-          let playerId: string;
-
-          if (row.espn_player_id) {
-            const [existing] = await db
-              .select({ id: players.id })
-              .from(players)
-              .where(eq(players.espn_player_id, row.espn_player_id))
-              .limit(1);
-
-            if (existing) {
-              // Update name/position/nfl_team in case they changed
-              await db
-                .update(players)
-                .set({ name: row.name, position: row.position, nfl_team: row.nfl_team })
-                .where(eq(players.id, existing.id));
-              playerId = existing.id;
-            } else {
-              const [p] = await db
-                .insert(players)
-                .values({ name: row.name, position: row.position, nfl_team: row.nfl_team, espn_player_id: row.espn_player_id })
-                .returning({ id: players.id });
-              playerId = p!.id;
-            }
-          } else {
-            // Match by name + position
-            const existing = await db
-              .select({ id: players.id })
-              .from(players)
-              .where(and(eq(players.name, row.name), eq(players.position, row.position)));
-
-            if (existing.length === 1) {
-              playerId = existing[0]!.id;
-            } else if (existing.length > 1) {
-              // Ambiguous — report as error
-              importErrors.push({ row: 0, message: `Ambiguous player match for '${row.name}' (${row.position}): ${existing.length} candidates` });
-              continue;
-            } else {
-              const [p] = await db
-                .insert(players)
-                .values({ name: row.name, position: row.position, nfl_team: row.nfl_team })
-                .returning({ id: players.id });
-              playerId = p!.id;
-            }
-          }
-
-          // Insert PlayerDatasetEntry (skip if already exists for this dataset+player)
-          const existingEntry = await db
-            .select({ id: playerDatasetEntries.id })
-            .from(playerDatasetEntries)
-            .where(
-              and(
-                eq(playerDatasetEntries.dataset_id, datasetId),
-                eq(playerDatasetEntries.player_id, playerId),
-              ),
-            )
-            .limit(1);
-
-          if (existingEntry.length === 0) {
-            await db.insert(playerDatasetEntries).values({
-              dataset_id: datasetId,
-              player_id: playerId,
-              aav_minor: row.aav_minor,
-              projected_points: row.projected_points !== null ? String(row.projected_points) : null,
-              tier: row.tier,
-              source: 'CSV',
-            });
-          } else {
-            // Update existing entry
-            await db
-              .update(playerDatasetEntries)
-              .set({
-                aav_minor: row.aav_minor,
-                projected_points: row.projected_points !== null ? String(row.projected_points) : null,
-                tier: row.tier,
-              })
-              .where(eq(playerDatasetEntries.id, existingEntry[0]!.id));
-          }
-
-          rowsImported++;
-        } catch (rowErr) {
-          importErrors.push({ row: 0, message: `Error processing row for '${row.name}': ${String(rowErr)}` });
-        }
-      }
-
+      const { rowsImported, importErrors } = await upsertRows(db, datasetId, result, 'CSV');
       return reply.send({ rows_imported: rowsImported, source: 'CSV', errors: importErrors });
     },
   );
@@ -506,9 +450,9 @@ export async function registerPlayerRoutes(
 
       // Check there's at least one entry
       const entries = await db
-        .select({ id: playerDatasetEntries.id })
-        .from(playerDatasetEntries)
-        .where(eq(playerDatasetEntries.dataset_id, datasetId))
+        .select({ id: playerAavSources.id })
+        .from(playerAavSources)
+        .where(eq(playerAavSources.dataset_id, datasetId))
         .limit(1);
 
       if (entries.length === 0) {
@@ -580,8 +524,15 @@ export async function registerPlayerRoutes(
 
   /**
    * GET /leagues/:leagueId/players
-   * Returns PlayerDatasetEntry rows for the league's active (FROZEN) dataset.
-   * aav_minor is always an integer.
+   * Returns players in the league's active (FROZEN) dataset, with AAV
+   * resolved across every loaded source (F-MOD-016). aav_minor/primary_aav_minor
+   * are always integers (or null when the player has no row for that source).
+   *
+   * dataset_entry_id is set equal to player_id: player_aav_sources now holds
+   * one row per (player, source) rather than one row per player, so its id is
+   * no longer a stable per-player identifier. Every downstream call the
+   * frontend makes with this value (nominate, watchlist, queue, target-value)
+   * only needs it to uniquely identify a player, which player_id already does.
    */
   server.get<{ Params: LeagueParams }>(
     '/leagues/:leagueId/players',
@@ -601,34 +552,179 @@ export async function registerPlayerRoutes(
       }
 
       const datasetId = activeDatasets[activeDatasets.length - 1]!.id;
+      const [datasetRow] = await db
+        .select({
+          primary_aav_source: draftDatasets.primary_aav_source,
+          secondary_aav_source: draftDatasets.secondary_aav_source,
+        })
+        .from(draftDatasets)
+        .where(eq(draftDatasets.id, datasetId))
+        .limit(1);
 
-      const entries = await db
+      const secondarySource = datasetRow?.secondary_aav_source ?? null;
+
+      const rows = await db
         .select({
           player_id: players.id,
-          dataset_entry_id: playerDatasetEntries.id,
           name: players.name,
           position: players.position,
           nfl_team: players.nfl_team,
-          aav_minor: playerDatasetEntries.aav_minor,
-          projected_points: playerDatasetEntries.projected_points,
-          tier: playerDatasetEntries.tier,
+          bye_week: players.bye_week,
+          injury_status: players.injury_status,
+          injury_detail: players.injury_detail,
+          injury_updated_at: players.injury_updated_at,
+          prior_season_stats: players.prior_season_stats,
+          source: playerAavSources.source,
+          aav_minor: playerAavSources.aav_minor,
+          tier: playerAavSources.tier,
+          projected_points: playerAavSources.projected_points,
         })
-        .from(playerDatasetEntries)
-        .innerJoin(players, eq(playerDatasetEntries.player_id, players.id))
-        .where(eq(playerDatasetEntries.dataset_id, datasetId));
+        .from(playerAavSources)
+        .innerJoin(players, eq(playerAavSources.player_id, players.id))
+        .where(eq(playerAavSources.dataset_id, datasetId))
+        .orderBy(players.name);
 
-      const playerList = entries.map((e) => ({
-        player_id: e.player_id,
-        dataset_entry_id: e.dataset_entry_id,
-        name: e.name,
-        position: e.position,
-        nfl_team: e.nfl_team,
-        aav_minor: Math.trunc(Number(e.aav_minor)), // ensure integer
-        projected_points: e.projected_points !== null ? parseFloat(String(e.projected_points)) : null,
-        tier: e.tier,
-      }));
+      // Effective primary: the commissioner's selection, or — until one is
+      // made — the sole source loaded so far (matches resolveEffectivePrimarySource
+      // in aav-resolution.ts, duplicated here since this route only has a
+      // drizzle handle, not the raw postgres.Sql that helper takes).
+      const distinctSources = new Set(rows.map((r) => r.source));
+      const effectivePrimarySource =
+        datasetRow?.primary_aav_source ?? (distinctSources.size === 1 ? [...distinctSources][0]! : null);
+
+      interface PlayerAggregate {
+        player_id: string;
+        name: string;
+        position: string;
+        nfl_team: string;
+        bye_week: number | null;
+        injury_status: string | null;
+        injury_detail: string | null;
+        injury_updated_at: Date | null;
+        prior_season_stats: unknown;
+        aav_sources: Array<{ source: string; aav_minor: number; tier: number | null; projected_points: number | null }>;
+      }
+
+      const byPlayer = new Map<string, PlayerAggregate>();
+      for (const row of rows) {
+        let agg = byPlayer.get(row.player_id);
+        if (!agg) {
+          agg = {
+            player_id: row.player_id,
+            name: row.name,
+            position: row.position,
+            nfl_team: row.nfl_team,
+            bye_week: row.bye_week,
+            injury_status: row.injury_status,
+            injury_detail: row.injury_detail,
+            injury_updated_at: row.injury_updated_at,
+            prior_season_stats: row.prior_season_stats,
+            aav_sources: [],
+          };
+          byPlayer.set(row.player_id, agg);
+        }
+        agg.aav_sources.push({
+          source: row.source,
+          aav_minor: Math.trunc(Number(row.aav_minor)),
+          tier: row.tier,
+          projected_points: row.projected_points !== null ? parseFloat(String(row.projected_points)) : null,
+        });
+      }
+
+      const playerList = Array.from(byPlayer.values()).map((p) => {
+        const primaryEntry = effectivePrimarySource
+          ? p.aav_sources.find((s) => s.source === effectivePrimarySource) ?? null
+          : null;
+        const secondaryEntry = secondarySource
+          ? p.aav_sources.find((s) => s.source === secondarySource) ?? null
+          : null;
+
+        return {
+          player_id: p.player_id,
+          dataset_entry_id: p.player_id,
+          name: p.name,
+          position: p.position,
+          nfl_team: p.nfl_team,
+          aav_minor: primaryEntry?.aav_minor ?? 0,
+          projected_points: primaryEntry?.projected_points ?? null,
+          tier: primaryEntry?.tier ?? null,
+          primary_aav_minor: primaryEntry?.aav_minor ?? null,
+          secondary_aav_minor: secondaryEntry?.aav_minor ?? null,
+          aav_sources: p.aav_sources,
+          bye_week: p.bye_week,
+          injury_status: p.injury_status,
+          injury_detail: p.injury_detail,
+          injury_updated_at: p.injury_updated_at ? p.injury_updated_at.toISOString() : null,
+          prior_season_stats: p.prior_season_stats,
+        };
+      });
 
       return reply.send({ players: playerList });
+    },
+  );
+
+  /**
+   * PUT /leagues/:leagueId/datasets/:datasetId/aav-sources
+   * Commissioner-only. Sets the dataset's Primary/Secondary AAV source,
+   * validated against the source values actually loaded for that dataset.
+   */
+  const SetAavSourcesBody = z.object({
+    primary_aav_source: z.string().min(1),
+    secondary_aav_source: z.string().min(1).nullable().optional(),
+  });
+
+  server.put<{ Params: DatasetParams }>(
+    '/leagues/:leagueId/datasets/:datasetId/aav-sources',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const { leagueId, datasetId } = req.params;
+
+      const [dataset] = await db
+        .select({ id: draftDatasets.id, league_id: draftDatasets.league_id })
+        .from(draftDatasets)
+        .where(eq(draftDatasets.id, datasetId))
+        .limit(1);
+      if (!dataset || dataset.league_id !== leagueId) {
+        return reply.status(404).send({ code: 'NOT_FOUND', message: 'Dataset not found' });
+      }
+
+      const parsed = SetAavSourcesBody.safeParse(req.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ code: 'VALIDATION_ERROR', message: parsed.error.message });
+      }
+      const { primary_aav_source, secondary_aav_source } = parsed.data;
+
+      const loadedSources = await db
+        .selectDistinct({ source: playerAavSources.source })
+        .from(playerAavSources)
+        .where(eq(playerAavSources.dataset_id, datasetId));
+      const loaded = new Set(loadedSources.map((s) => s.source));
+
+      if (!loaded.has(primary_aav_source)) {
+        return reply.status(400).send({
+          code: 'SOURCE_NOT_LOADED',
+          message: `Source '${primary_aav_source}' has no player_aav_sources rows in this dataset`,
+        });
+      }
+      if (secondary_aav_source && !loaded.has(secondary_aav_source)) {
+        return reply.status(400).send({
+          code: 'SOURCE_NOT_LOADED',
+          message: `Source '${secondary_aav_source}' has no player_aav_sources rows in this dataset`,
+        });
+      }
+
+      await db
+        .update(draftDatasets)
+        .set({
+          primary_aav_source,
+          secondary_aav_source: secondary_aav_source ?? null,
+        })
+        .where(eq(draftDatasets.id, datasetId));
+
+      return reply.send({
+        primary_aav_source,
+        secondary_aav_source: secondary_aav_source ?? null,
+      });
     },
   );
 }

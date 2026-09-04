@@ -41,6 +41,13 @@ interface GridTeam {
   slots: GridSlot[];
 }
 
+interface AavSourceEntry {
+  source: string;
+  aav_minor: number;
+  tier: number | null;
+  projected_points: number | null;
+}
+
 interface DatasetPlayer {
   player_id: string;
   dataset_entry_id: string;
@@ -49,6 +56,11 @@ interface DatasetPlayer {
   nfl_team: string;
   aav_minor: number;
   tier: number | null;
+  bye_week?: number | null;
+  injury_status?: string | null;
+  injury_detail?: string | null;
+  injury_updated_at?: string | null;
+  aav_sources?: AavSourceEntry[];
 }
 
 interface ActivityEntry {
@@ -86,6 +98,18 @@ interface TargetItem {
 
 function formatMoney(minor: number): string {
   return `$${Math.round(minor / 100)}`;
+}
+
+/** "updated 22m ago" style freshness string for an injury_updated_at timestamp. */
+function formatFreshness(isoTimestamp: string): string {
+  const elapsedMs = Date.now() - new Date(isoTimestamp).getTime();
+  const minutes = Math.max(0, Math.round(elapsedMs / 60000));
+  if (minutes < 1) return 'updated just now';
+  if (minutes < 60) return `updated ${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `updated ${hours}h ago`;
+  const days = Math.round(hours / 24);
+  return `updated ${days}d ago`;
 }
 
 async function authedJson<T>(url: string, token: string, init?: RequestInit): Promise<T> {
@@ -195,6 +219,10 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
   const drafted = useMemo(() => new Set(ws.recentAwards.map((a) => a.player_name)), [ws.recentAwards]);
   const auction = ws.currentAuction;
   const myTarget = auction ? targets.find((t) => t.player_name === auction.player_name) ?? null : null;
+  const activePlayerDetail = useMemo(
+    () => (auction ? players.find((p) => p.name === auction.player_name) ?? null : null),
+    [auction, players],
+  );
 
   const tierBoard = useMemo(() => {
     if (!auction || auction.tier === null) return [];
@@ -335,7 +363,37 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
                     <dd className="war-room__my-target">{formatMoney(myTarget.target_value_minor)}</dd>
                   </div>
                 )}
+                {activePlayerDetail?.bye_week != null && (
+                  <div>
+                    <dt>Bye Week</dt>
+                    <dd>{activePlayerDetail.bye_week}</dd>
+                  </div>
+                )}
+                {activePlayerDetail?.injury_status && (
+                  <div>
+                    <dt>Injury</dt>
+                    <dd data-testid="injury-detail">
+                      {activePlayerDetail.injury_status}
+                      {activePlayerDetail.injury_detail ? ` — ${activePlayerDetail.injury_detail}` : ''}
+                      {activePlayerDetail.injury_updated_at && (
+                        <span className="war-room__injury-freshness">
+                          {' '}({formatFreshness(activePlayerDetail.injury_updated_at)})
+                        </span>
+                      )}
+                    </dd>
+                  </div>
+                )}
               </dl>
+              {activePlayerDetail?.aav_sources && activePlayerDetail.aav_sources.length > 0 && (
+                <dl className="war-room__aav-sources" aria-label="AAV by source">
+                  {activePlayerDetail.aav_sources.map((s) => (
+                    <div key={s.source}>
+                      <dt>{s.source}</dt>
+                      <dd>{formatMoney(s.aav_minor)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
               {teamId && (
                 <form className="war-room__target-form" onSubmit={handleSetTarget}>
                   <label htmlFor="target-input">Set my target</label>

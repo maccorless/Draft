@@ -72,7 +72,7 @@ describe.skipIf(SKIP_DB)('F-MOD-001 dataset and draft', () => {
     if (testLeagueId) {
       // Clean up in dependency order
       await sql`DELETE FROM drafts WHERE league_id = ${testLeagueId}`;
-      await sql`DELETE FROM player_dataset_entries WHERE dataset_id IN (
+      await sql`DELETE FROM player_aav_sources WHERE dataset_id IN (
         SELECT id FROM draft_datasets WHERE league_id = ${testLeagueId}
       )`;
       await sql`DELETE FROM draft_datasets WHERE league_id = ${testLeagueId}`;
@@ -83,7 +83,7 @@ describe.skipIf(SKIP_DB)('F-MOD-001 dataset and draft', () => {
     // Clean up any orphaned players inserted during CSV import
     // (players not referenced by any dataset entry)
     await sql`DELETE FROM players WHERE id NOT IN (
-      SELECT DISTINCT player_id FROM player_dataset_entries
+      SELECT DISTINCT player_id FROM player_aav_sources
     )`;
   });
 

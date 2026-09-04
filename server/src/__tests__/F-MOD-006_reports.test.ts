@@ -201,17 +201,18 @@ describe.skipIf(SKIP_DB)('F-MOD-006 draft completion and reports', () => {
       INSERT INTO players (name, position, nfl_team) VALUES ('F006-QB2', 'QB', 'KC') RETURNING id
     `;
 
-    const [e1entry] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, source)
-      VALUES (${datasetId}, ${p1.id}, 3500, 'test') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source)
+      VALUES (${datasetId}, ${p1.id}, 3500, 'test')
     `;
-    player1EntryId = e1entry.id;
+    // Now equal to the player's own id (F-MOD-016): dataset_player_id FKs to players.id.
+    player1EntryId = p1.id;
 
-    const [e2entry] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, source)
-      VALUES (${datasetId}, ${p2.id}, 2500, 'test') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source)
+      VALUES (${datasetId}, ${p2.id}, 2500, 'test')
     `;
-    player2EntryId = e2entry.id;
+    player2EntryId = p2.id;
 
     // Freeze dataset
     await sql`UPDATE draft_datasets SET status = 'FROZEN' WHERE id = ${datasetId}`;

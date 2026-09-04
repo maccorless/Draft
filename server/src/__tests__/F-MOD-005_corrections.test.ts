@@ -176,13 +176,13 @@ describe.skipIf(SKIP_DB)('F-MOD-005 corrections and rollback', () => {
     `;
     player1Id = p1!.id;
 
-    const [en1] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, source)
-      VALUES (${datasetId}, ${p1!.id}, 5000, 'CSV') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source)
+      VALUES (${datasetId}, ${p1!.id}, 5000, 'CSV')
     `;
-    const [en2] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, source)
-      VALUES (${datasetId}, ${p2!.id}, 4500, 'CSV') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source)
+      VALUES (${datasetId}, ${p2!.id}, 4500, 'CSV')
     `;
 
     // Freeze dataset
@@ -215,7 +215,8 @@ describe.skipIf(SKIP_DB)('F-MOD-005 corrections and rollback', () => {
       // already RUNNING from start
     }
 
-    return { playerEntryIds: [en1!.id, en2!.id] };
+    // Now equal to the players' own ids (F-MOD-016): dataset_player_id FKs to players.id.
+    return { playerEntryIds: [p1!.id, p2!.id] };
   }
 
   /**
@@ -303,7 +304,7 @@ describe.skipIf(SKIP_DB)('F-MOD-005 corrections and rollback', () => {
       await sql`DELETE FROM drafts WHERE id = ${draftId}`;
     }
     if (datasetId) {
-      await sql`DELETE FROM player_dataset_entries WHERE dataset_id = ${datasetId}`;
+      await sql`DELETE FROM player_aav_sources WHERE dataset_id = ${datasetId}`;
       await sql`DELETE FROM draft_datasets WHERE id = ${datasetId}`;
     }
     if (player1Id) {

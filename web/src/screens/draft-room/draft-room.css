@@ -268,6 +268,20 @@
   margin: var(--space-1) 0 0;
 }
 
+.draft-room__injury-indicator {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0.1em 0.5em;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--color-danger);
+  vertical-align: middle;
+}
+
 .draft-room__player-aav {
   font-family: var(--font-mono);
   color: var(--color-text-subtle);

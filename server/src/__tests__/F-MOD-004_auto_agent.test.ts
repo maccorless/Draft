@@ -243,11 +243,12 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
       INSERT INTO players (name, position, nfl_team)
       VALUES (${playerName}, 'QB', 'TB') RETURNING id
     `;
-    const [pde] = await sql<[{ id: string }]>`
-      INSERT INTO player_dataset_entries (dataset_id, player_id, aav_minor, source)
-      VALUES (${datasetId}, ${p.id}, 1000, 'test') RETURNING id
+    await sql`
+      INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source)
+      VALUES (${datasetId}, ${p.id}, 1000, 'test')
     `;
-    const playerEntryId = pde.id;
+    // Now equal to the player's own id (F-MOD-016): dataset_player_id FKs to players.id.
+    const playerEntryId = p.id;
     await sql`UPDATE draft_datasets SET status = 'FROZEN' WHERE id = ${datasetId}`;
 
     const draftRes = await server.inject({

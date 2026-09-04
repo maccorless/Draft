@@ -189,7 +189,7 @@ describe.skipIf(SKIP_DB)('F-MOD-007 data adapter routes', () => {
   afterEach(async () => {
     if (testLeagueId) {
       await sql`DELETE FROM drafts WHERE league_id = ${testLeagueId}`;
-      await sql`DELETE FROM player_dataset_entries WHERE dataset_id IN (
+      await sql`DELETE FROM player_aav_sources WHERE dataset_id IN (
         SELECT id FROM draft_datasets WHERE league_id = ${testLeagueId}
       )`;
       await sql`DELETE FROM draft_datasets WHERE league_id = ${testLeagueId}`;
@@ -198,7 +198,7 @@ describe.skipIf(SKIP_DB)('F-MOD-007 data adapter routes', () => {
       testLeagueId = '';
     }
     await sql`DELETE FROM players WHERE id NOT IN (
-      SELECT DISTINCT player_id FROM player_dataset_entries
+      SELECT DISTINCT player_id FROM player_aav_sources
     )`;
   });
 
@@ -403,7 +403,7 @@ describe.skipIf(SKIP_DB)('F-MOD-007 data adapter routes', () => {
 
       // Dataset should be unchanged — no rows inserted
       const playerCount = await sql`
-        SELECT COUNT(*) as count FROM player_dataset_entries WHERE dataset_id = ${datasetId}
+        SELECT COUNT(*) as count FROM player_aav_sources WHERE dataset_id = ${datasetId}
       `;
       expect(Number(playerCount[0]!.count)).toBe(0);
     } finally {

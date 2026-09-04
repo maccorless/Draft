@@ -160,8 +160,7 @@ async function generateReport(sql: postgres.Sql, draftId: string): Promise<Draft
       a.resolution_sequence
     FROM acquisitions a
     JOIN player_auctions pa ON pa.id = a.player_auction_id
-    JOIN player_dataset_entries pde ON pde.id = pa.dataset_player_id
-    JOIN players p ON p.id = pde.player_id
+    JOIN players p ON p.id = pa.dataset_player_id
     LEFT JOIN roster_entries re ON re.acquisition_id = a.id AND re.active = true
     LEFT JOIN roster_slot_definitions rsd ON rsd.id = re.roster_slot_id
     WHERE a.draft_id = ${draftId} AND a.active = true
@@ -219,8 +218,7 @@ async function generateEspnCsv(sql: postgres.Sql, draftId: string): Promise<stri
       a.resolution_sequence
     FROM acquisitions a
     JOIN player_auctions pa ON pa.id = a.player_auction_id
-    JOIN player_dataset_entries pde ON pde.id = pa.dataset_player_id
-    JOIN players p ON p.id = pde.player_id
+    JOIN players p ON p.id = pa.dataset_player_id
     JOIN teams t ON t.id = a.team_id
     LEFT JOIN roster_entries re ON re.acquisition_id = a.id AND re.active = true
     LEFT JOIN roster_slot_definitions rsd ON rsd.id = re.roster_slot_id
