@@ -1181,6 +1181,12 @@
         "F-MOD-009"
       ],
       "api_contracts": "```yaml\napi_contracts:\n  consumes:\n    - operation_id: correctPrice\n      schema_file: schema/MOD-005-api-schema.yaml\n      request_schema: PriceCorrectionRequest\n      response_schema: PriceCorrectionResponse\n    - operation_id: rollbackPicks\n      schema_file: schema/MOD-005-api-schema.yaml\n      request_schema: RollbackRequest\n      response_schema: RollbackResponse\n    - operation_id: triggerWhammy\n      schema_file: schema/MOD-009-api-schema.yaml\n      request_schema: WhammyRequest\n      response_schema: \"WhammyResponse | WhammyPendingApprovalResponse (oneOf; UI branches on status field)\"\n    - operation_id: approveWhammy\n      schema_file: schema/MOD-009-api-schema.yaml\n      request_schema: null\n      response_schema: WhammyResponse\n    - operation_id: rejectWhammy\n      schema_file: schema/MOD-009-api-schema.yaml\n      request_schema: null\n      response_schema: WhammyRejectResponse\n```",
+      "test_config": {
+        "command": "DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test npx vitest run --project web web/src/__tests__/F-MOD-012_corrections.test.tsx",
+        "test_paths": [
+          "web/src/__tests__/F-MOD-012_corrections.test.tsx"
+        ]
+      },
       "passes": false
     },
     {
