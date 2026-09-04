@@ -691,6 +691,45 @@ export async function registerPlayerRoutes(
   );
 
   /**
+   * GET /leagues/:leagueId/datasets/:datasetId/aav-sources
+   * Commissioner-only. Read counterpart to the PUT below — returns the
+   * currently-selected primary/secondary source plus every source actually
+   * loaded for this dataset (what the PUT validates candidates against).
+   */
+  server.get<{ Params: DatasetParams }>(
+    '/leagues/:leagueId/datasets/:datasetId/aav-sources',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const { leagueId, datasetId } = req.params;
+
+      const [dataset] = await db
+        .select({
+          id: draftDatasets.id,
+          league_id: draftDatasets.league_id,
+          primary_aav_source: draftDatasets.primary_aav_source,
+          secondary_aav_source: draftDatasets.secondary_aav_source,
+        })
+        .from(draftDatasets)
+        .where(eq(draftDatasets.id, datasetId))
+        .limit(1);
+      if (!dataset || dataset.league_id !== leagueId) {
+        return reply.status(404).send({ code: 'NOT_FOUND', message: 'Dataset not found' });
+      }
+
+      const loadedSources = await db
+        .selectDistinct({ source: playerAavSources.source })
+        .from(playerAavSources)
+        .where(eq(playerAavSources.dataset_id, datasetId));
+
+      return reply.send({
+        primary_aav_source: dataset.primary_aav_source,
+        secondary_aav_source: dataset.secondary_aav_source,
+        available_sources: loadedSources.map((s) => s.source),
+      });
+    },
+  );
+
+  /**
    * PUT /leagues/:leagueId/datasets/:datasetId/aav-sources
    * Commissioner-only. Sets the dataset's Primary/Secondary AAV source,
    * validated against the source values actually loaded for that dataset.

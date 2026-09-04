@@ -140,12 +140,12 @@ export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
     .insert(rosterConfigurations)
     .values({
       league_id: league!.id,
-      total_roster_size: 15,
-      bench_slots: 6,
+      total_roster_size: 16,
+      bench_slots: 7,
     })
     .returning();
 
-  // Standard fantasy football roster: QB(1) + RB(2) + WR(2) + TE(1) + FLEX(1) + K(1) + DEF(1) + BN(6) = 15
+  // Standard fantasy football roster: QB(1) + RB(2) + WR(2) + TE(1) + FLEX(1) + K(1) + DEF(1) + BN(7) = 16
   await db.insert(rosterSlotDefinitions).values([
     { config_id: rosterConfig!.id, position: 'QB', priority: 1, is_starter: true, slot_count: 1 },
     { config_id: rosterConfig!.id, position: 'RB', priority: 2, is_starter: true, slot_count: 2 },
@@ -154,7 +154,7 @@ export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
     { config_id: rosterConfig!.id, position: 'FLEX', priority: 5, is_starter: true, slot_count: 1 },
     { config_id: rosterConfig!.id, position: 'K', priority: 6, is_starter: true, slot_count: 1 },
     { config_id: rosterConfig!.id, position: 'DEF', priority: 7, is_starter: true, slot_count: 1 },
-    { config_id: rosterConfig!.id, position: 'BN', priority: 99, is_starter: false, slot_count: 6 },
+    { config_id: rosterConfig!.id, position: 'BN', priority: 99, is_starter: false, slot_count: 7 },
   ]);
 
   // ─── Auction Configuration ───────────────────────────────────────────────

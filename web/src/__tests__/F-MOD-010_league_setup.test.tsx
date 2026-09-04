@@ -117,14 +117,122 @@ describe('F-MOD-010 League Identity', () => {
   });
 
   it('test_F_MOD_010_status_message_cleared_sends_null', async () => {
+    // Load with a league that already has a status message set — clearing an
+    // already-empty field is correctly a no-op now that Save is dirty-gated.
     const { calls } = await renderAndLoad({
+      'GET /leagues/league-1': { status: 200, body: { ...defaultLeague, status_message: 'Draft starts Sunday' } },
       'PUT /leagues/league-1': { status: 200, body: defaultLeague },
     });
+    await waitFor(() => expect((screen.getByLabelText(/Status message/) as HTMLTextAreaElement).value).toBe('Draft starts Sunday'));
     fireEvent.change(screen.getByLabelText(/Status message/), { target: { value: '' } });
     fireEvent.click(screen.getByText('Save League Identity'));
     await waitFor(() => expect(screen.getByText('League updated')).toBeTruthy());
     const call = calls.find((c) => c.url === `/leagues/${LEAGUE_ID}` && c.method === 'PUT');
     expect((call!.body as { status_message: string | null }).status_message).toBeNull();
+  });
+
+  it('test_F_MOD_010_identity_save_button_disabled_until_dirty_and_after_save', async () => {
+    await renderAndLoad({
+      'PUT /leagues/league-1': { status: 200, body: { ...defaultLeague, name: 'Renamed League' } },
+    });
+    const saveButton = screen.getByText('Save League Identity') as HTMLButtonElement;
+    expect(saveButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('League name'), { target: { value: 'Renamed League' } });
+    expect(saveButton.disabled).toBe(false);
+
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(screen.getByText('League updated')).toBeTruthy());
+    expect(saveButton.disabled).toBe(true);
+  });
+});
+
+describe('F-MOD-010 Roster Configuration', () => {
+  it('test_F_MOD_010_roster_config_loads_saved_slots_as_dropdowns_no_starter_checkbox', async () => {
+    await renderAndLoad({
+      'GET /leagues/league-1/config/roster': {
+        status: 200,
+        body: {
+          bench_slots: 7,
+          slots: [
+            { position: 'QB', priority: 1, is_starter: true, slot_count: 1 },
+            { position: 'SUPERFLEX', priority: 2, is_starter: true, slot_count: 1 },
+          ],
+        },
+      },
+    });
+    await waitFor(() => expect((screen.getByLabelText('Bench slots') as HTMLInputElement).value).toBe('7'));
+    const positionSelects = screen.getAllByLabelText('Position') as HTMLSelectElement[];
+    expect(positionSelects.map((s) => s.value)).toEqual(['QB', 'SUPERFLEX']);
+    // No per-row Starter checkbox anymore — every row is a starter by definition.
+    expect(screen.queryByText('Starter')).toBeNull();
+    // Save is clean immediately after loading already-saved data.
+    expect((screen.getByText('Save Roster Configuration') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('test_F_MOD_010_roster_config_save_button_dirty_tracking', async () => {
+    const { calls } = await renderAndLoad({
+      'GET /leagues/league-1/config/roster': {
+        status: 200,
+        body: { bench_slots: 7, slots: [{ position: 'QB', priority: 1, is_starter: true, slot_count: 1 }] },
+      },
+      'PUT /leagues/league-1/config/roster': { status: 200, body: {} },
+    });
+    const saveButton = screen.getByText('Save Roster Configuration') as HTMLButtonElement;
+    await waitFor(() => expect(saveButton.disabled).toBe(true));
+
+    fireEvent.change(screen.getByLabelText('Bench slots'), { target: { value: '8' } });
+    expect(saveButton.disabled).toBe(false);
+
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(screen.getByText('Roster configuration saved')).toBeTruthy());
+    expect(saveButton.disabled).toBe(true);
+
+    const call = calls.find((c) => c.url === `/leagues/${LEAGUE_ID}/config/roster` && c.method === 'PUT');
+    expect((call!.body as { bench_slots: number }).bench_slots).toBe(8);
+  });
+});
+
+describe('F-MOD-010 Auction Configuration', () => {
+  it('test_F_MOD_010_auction_config_loads_saved_values_instead_of_defaults', async () => {
+    await renderAndLoad({
+      'GET /leagues/league-1/config/auction': {
+        status: 200,
+        body: {
+          initial_budget_minor: 25000,
+          nomination_timer_ms: 60000,
+          second_bid_timer_ms: 20000,
+          rebid_timer_ms: 12000,
+          anti_snipe_threshold_ms: 5000,
+          anti_snipe_extension_ms: 10000,
+        },
+      },
+    });
+    await waitFor(() => expect((screen.getByLabelText('Starting budget ($)') as HTMLInputElement).value).toBe('250'));
+    expect((screen.getByLabelText('Nomination timer (s)') as HTMLInputElement).value).toBe('60');
+    // Reflects the saved value, not the component's hardcoded '200'/'30' defaults —
+    // this is the persistence bug: without a GET, a save would look like it never took.
+    expect((screen.getByText('Save Auction Configuration') as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('test_F_MOD_010_auction_config_save_button_dirty_tracking', async () => {
+    const { calls } = await renderAndLoad({
+      'PUT /leagues/league-1/config/auction': { status: 200, body: {} },
+    });
+    const saveButton = screen.getByText('Save Auction Configuration') as HTMLButtonElement;
+    // No saved config yet (mocked GET falls through to the generic 404) —
+    // stays enabled rather than comparing against nothing.
+    expect(saveButton.disabled).toBe(false);
+
+    fireEvent.click(saveButton);
+    await waitFor(() => expect(screen.getByText('Auction configuration saved')).toBeTruthy());
+    expect(saveButton.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText('Starting budget ($)'), { target: { value: '300' } });
+    expect(saveButton.disabled).toBe(false);
+
+    const call = calls.find((c) => c.url === `/leagues/${LEAGUE_ID}/config/auction` && c.method === 'PUT');
+    expect((call!.body as { initial_budget_minor: number }).initial_budget_minor).toBe(20000);
   });
 });
 

@@ -222,6 +222,45 @@ export async function registerLeagueRoutes(
   );
 
   /**
+   * GET /leagues/:leagueId/config/roster
+   * Commissioner JWT required. Read counterpart to the PUT below — without
+   * this, a config UI has no way to reflect what was actually saved and can
+   * only ever show its own in-memory defaults, making a successful save look
+   * like it silently didn't persist.
+   */
+  server.get<{ Params: { leagueId: string } }>(
+    '/leagues/:leagueId/config/roster',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const leagueId = req.params.leagueId;
+      const [rosterConfig] = await db
+        .select({ id: rosterConfigurations.id, bench_slots: rosterConfigurations.bench_slots })
+        .from(rosterConfigurations)
+        .where(eq(rosterConfigurations.league_id, leagueId))
+        .limit(1);
+
+      if (!rosterConfig) {
+        return reply.send({ bench_slots: null, slots: [] });
+      }
+
+      // Starter slots only — the bench row (position='BN') is server-managed
+      // (see the PUT handler below) and not part of what a commissioner edits.
+      const slots = await db
+        .select({
+          position: rosterSlotDefinitions.position,
+          priority: rosterSlotDefinitions.priority,
+          is_starter: rosterSlotDefinitions.is_starter,
+          slot_count: rosterSlotDefinitions.slot_count,
+        })
+        .from(rosterSlotDefinitions)
+        .where(and(eq(rosterSlotDefinitions.config_id, rosterConfig.id), eq(rosterSlotDefinitions.is_starter, true)))
+        .orderBy(rosterSlotDefinitions.priority);
+
+      return reply.send({ bench_slots: rosterConfig.bench_slots, slots });
+    },
+  );
+
+  /**
    * PUT /leagues/:leagueId/config/roster
    * Commissioner JWT required.
    * Validates: total_roster_size = sum(slot_count) + bench_slots
@@ -301,6 +340,32 @@ export async function registerLeagueRoutes(
       }
 
       return reply.status(200).send();
+    },
+  );
+
+  /**
+   * GET /leagues/:leagueId/config/auction
+   * Commissioner JWT required. Read counterpart to the PUT below.
+   */
+  server.get<{ Params: { leagueId: string } }>(
+    '/leagues/:leagueId/config/auction',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const [auctionConfig] = await db
+        .select({
+          initial_budget_minor: auctionConfigurations.initial_budget_minor,
+          nomination_timer_ms: auctionConfigurations.nomination_timer_ms,
+          second_bid_timer_ms: auctionConfigurations.second_bid_timer_ms,
+          rebid_timer_ms: auctionConfigurations.rebid_timer_ms,
+          anti_snipe_threshold_ms: auctionConfigurations.anti_snipe_threshold_ms,
+          anti_snipe_extension_ms: auctionConfigurations.anti_snipe_extension_ms,
+          min_bid_minor: auctionConfigurations.min_bid_minor,
+        })
+        .from(auctionConfigurations)
+        .where(eq(auctionConfigurations.league_id, req.params.leagueId))
+        .limit(1);
+
+      return reply.send(auctionConfig ?? null);
     },
   );
 
@@ -476,6 +541,30 @@ export async function registerLeagueRoutes(
         .set({ host_password_hash: passwordHash, auth_epoch: league.auth_epoch + 1 })
         .where(eq(leagues.id, leagueId));
       return reply.send({ scope, team_id: null, password: plaintext });
+    },
+  );
+
+  /**
+   * GET /leagues/:leagueId/config/whammy
+   * Commissioner JWT required. Read counterpart to the PUT below.
+   */
+  server.get<{ Params: { leagueId: string } }>(
+    '/leagues/:leagueId/config/whammy',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const [config] = await db
+        .select({
+          enabled: whammyConfigs.enabled,
+          max_amount_minor: whammyConfigs.max_amount_minor,
+          max_per_team: whammyConfigs.max_per_team,
+          max_per_draft: whammyConfigs.max_per_draft,
+          commissioner_approval_required: whammyConfigs.commissioner_approval_required,
+        })
+        .from(whammyConfigs)
+        .where(eq(whammyConfigs.league_id, req.params.leagueId))
+        .limit(1);
+
+      return reply.send(config ?? null);
     },
   );
 

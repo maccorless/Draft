@@ -43,6 +43,47 @@ interface RosterSlotRow {
   slot_count: number;
 }
 
+// Every row in the roster-slot editor is a starter position by definition —
+// bench is configured separately (the "Bench slots" count below), auto-
+// materialized server-side (server/src/league/routes.ts PUT config/roster).
+// You only ever care about *how many starters* you need per position; bench
+// makes up the rest of the total roster/draft limit. FLEX accepts RB/WR/TE;
+// SUPERFLEX accepts any position, including QB.
+const ROSTER_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPERFLEX', 'K', 'DEF'] as const;
+
+interface RosterConfigSnapshot {
+  benchSlots: string;
+  slots: RosterSlotRow[];
+}
+
+interface AuctionConfigSnapshot {
+  initialBudget: string;
+  nominationTimer: string;
+  secondBidTimer: string;
+  rebidTimer: string;
+  antiSnipeThreshold: string;
+  antiSnipeExtension: string;
+}
+
+interface WhammyConfigSnapshot {
+  enabled: boolean;
+  maxAmount: string;
+  maxPerTeam: string;
+  maxPerDraft: string;
+  approvalRequired: boolean;
+}
+
+interface AavSourcesSnapshot {
+  primary: string;
+  secondary: string;
+}
+
+/** Structural equality for the plain-data snapshots above — good enough since
+ * every field is a string/boolean/plain array of strings-or-primitives. */
+function snapshotsEqual<T>(a: T | null, b: T): boolean {
+  return a !== null && JSON.stringify(a) === JSON.stringify(b);
+}
+
 interface ReadinessItem {
   key: string;
   label: string;
@@ -83,12 +124,13 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
   const [scheduledAt, setScheduledAt] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
 
-  const [benchSlots, setBenchSlots] = useState('6');
   // Standard fantasy football default: QB1 / RB2 / WR2 / TE1 / FLEX1 (RB/WR/TE) /
-  // K1 / DEF1 = 9 starters. No Superflex by default (add one via "+ Add slot" —
-  // position "SUPERFLEX" accepts any position, including QB). Bench is
-  // configured via the separate "Bench slots" field below, not a row here —
-  // the server auto-manages the actual bench slot definition from that count.
+  // K1 / DEF1 = 9 starters, + 7 bench = 16-man roster (the draft limit). No
+  // Superflex by default (add one via "+ Add slot" — SUPERFLEX accepts any
+  // position, including QB). These are the pre-fill for a league that hasn't
+  // saved a roster config yet; refreshRosterConfig() overwrites them with
+  // whatever's actually saved, if anything.
+  const [benchSlots, setBenchSlots] = useState('7');
   const [rosterSlots, setRosterSlots] = useState<RosterSlotRow[]>([
     { position: 'QB', priority: 1, is_starter: true, slot_count: 1 },
     { position: 'RB', priority: 2, is_starter: true, slot_count: 2 },
@@ -98,6 +140,9 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
     { position: 'K', priority: 6, is_starter: true, slot_count: 1 },
     { position: 'DEF', priority: 7, is_starter: true, slot_count: 1 },
   ]);
+  // null = "haven't loaded an existing saved config yet" — the Save button
+  // stays enabled in that state rather than comparing against nothing.
+  const [savedRoster, setSavedRoster] = useState<RosterConfigSnapshot | null>(null);
 
   const [initialBudget, setInitialBudget] = useState('200');
   const [nominationTimer, setNominationTimer] = useState('30');
@@ -105,15 +150,18 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
   const [rebidTimer, setRebidTimer] = useState('10');
   const [antiSnipeThreshold, setAntiSnipeThreshold] = useState('5');
   const [antiSnipeExtension, setAntiSnipeExtension] = useState('10');
+  const [savedAuction, setSavedAuction] = useState<AuctionConfigSnapshot | null>(null);
 
   const [primarySource, setPrimarySource] = useState('');
   const [secondarySource, setSecondarySource] = useState('');
+  const [savedAavSources, setSavedAavSources] = useState<AavSourcesSnapshot | null>(null);
 
   const [whammyEnabled, setWhammyEnabled] = useState(false);
   const [whammyMaxAmount, setWhammyMaxAmount] = useState('5');
   const [whammyMaxPerTeam, setWhammyMaxPerTeam] = useState('');
   const [whammyMaxPerDraft, setWhammyMaxPerDraft] = useState('');
   const [whammyApprovalRequired, setWhammyApprovalRequired] = useState(false);
+  const [savedWhammy, setSavedWhammy] = useState<WhammyConfigSnapshot | null>(null);
 
   const [passwordScope, setPasswordScope] = useState<'COMMISSIONER' | 'HOST' | 'TEAM'>('COMMISSIONER');
   const [passwordTeamId, setPasswordTeamId] = useState('');
@@ -154,11 +202,93 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
         setAavSources([...sources]);
       })
       .catch(() => {});
-  }, [leagueId, token]);
+
+    if (!datasetId) return;
+    authedJson<{ primary_aav_source: string | null; secondary_aav_source: string | null } | null>(
+      `/leagues/${leagueId}/datasets/${datasetId}/aav-sources`,
+      token,
+    )
+      .then((d) => {
+        const snap: AavSourcesSnapshot = { primary: d?.primary_aav_source ?? '', secondary: d?.secondary_aav_source ?? '' };
+        setPrimarySource(snap.primary);
+        setSecondarySource(snap.secondary);
+        setSavedAavSources(snap);
+      })
+      .catch(() => {});
+  }, [leagueId, token, datasetId]);
 
   const refreshReadiness = useCallback(() => {
     authedJson<{ items: ReadinessItem[]; all_ready: boolean }>(`/leagues/${leagueId}/readiness`, token)
       .then(setReadiness)
+      .catch(() => {});
+  }, [leagueId, token]);
+
+  const refreshRosterConfig = useCallback(() => {
+    authedJson<{ bench_slots: number | null; slots: RosterSlotRow[] }>(`/leagues/${leagueId}/config/roster`, token)
+      .then((d) => {
+        if (d.bench_slots === null) return; // nothing saved yet — keep the pre-filled default template
+        const snap: RosterConfigSnapshot = { benchSlots: String(d.bench_slots), slots: d.slots };
+        setBenchSlots(snap.benchSlots);
+        setRosterSlots(snap.slots);
+        setSavedRoster(snap);
+      })
+      .catch(() => {});
+  }, [leagueId, token]);
+
+  const refreshAuctionConfig = useCallback(() => {
+    authedJson<{
+      initial_budget_minor: number;
+      nomination_timer_ms: number;
+      second_bid_timer_ms: number;
+      rebid_timer_ms: number;
+      anti_snipe_threshold_ms: number;
+      anti_snipe_extension_ms: number;
+    } | null>(`/leagues/${leagueId}/config/auction`, token)
+      .then((d) => {
+        if (!d) return; // nothing saved yet — keep the pre-filled default values
+        const snap: AuctionConfigSnapshot = {
+          initialBudget: String(d.initial_budget_minor / 100),
+          nominationTimer: String(d.nomination_timer_ms / 1000),
+          secondBidTimer: String(d.second_bid_timer_ms / 1000),
+          rebidTimer: String(d.rebid_timer_ms / 1000),
+          antiSnipeThreshold: String(d.anti_snipe_threshold_ms / 1000),
+          antiSnipeExtension: String(d.anti_snipe_extension_ms / 1000),
+        };
+        setInitialBudget(snap.initialBudget);
+        setNominationTimer(snap.nominationTimer);
+        setSecondBidTimer(snap.secondBidTimer);
+        setRebidTimer(snap.rebidTimer);
+        setAntiSnipeThreshold(snap.antiSnipeThreshold);
+        setAntiSnipeExtension(snap.antiSnipeExtension);
+        setSavedAuction(snap);
+      })
+      .catch(() => {});
+  }, [leagueId, token]);
+
+  const refreshWhammyConfig = useCallback(() => {
+    authedJson<{
+      enabled: boolean;
+      max_amount_minor: number;
+      max_per_team: number | null;
+      max_per_draft: number | null;
+      commissioner_approval_required: boolean;
+    } | null>(`/leagues/${leagueId}/config/whammy`, token)
+      .then((d) => {
+        if (!d) return; // nothing saved yet — keep the pre-filled default values
+        const snap: WhammyConfigSnapshot = {
+          enabled: d.enabled,
+          maxAmount: String(d.max_amount_minor / 100),
+          maxPerTeam: d.max_per_team !== null ? String(d.max_per_team) : '',
+          maxPerDraft: d.max_per_draft !== null ? String(d.max_per_draft) : '',
+          approvalRequired: d.commissioner_approval_required,
+        };
+        setWhammyEnabled(snap.enabled);
+        setWhammyMaxAmount(snap.maxAmount);
+        setWhammyMaxPerTeam(snap.maxPerTeam);
+        setWhammyMaxPerDraft(snap.maxPerDraft);
+        setWhammyApprovalRequired(snap.approvalRequired);
+        setSavedWhammy(snap);
+      })
       .catch(() => {});
   }, [leagueId, token]);
 
@@ -167,7 +297,27 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
     refreshTeams();
     refreshAavSources();
     refreshReadiness();
-  }, [refreshLeague, refreshTeams, refreshAavSources, refreshReadiness]);
+    refreshRosterConfig();
+    refreshAuctionConfig();
+    refreshWhammyConfig();
+  }, [refreshLeague, refreshTeams, refreshAavSources, refreshReadiness, refreshRosterConfig, refreshAuctionConfig, refreshWhammyConfig]);
+
+  const identityDirty =
+    !league ||
+    name !== league.name ||
+    logoUrl !== (league.logo_url ?? '') ||
+    nameLock !== league.name_lock ||
+    statusMessage !== (league.status_message ?? '') ||
+    scheduledAt !== toDatetimeLocal(league.scheduled_draft_start_at);
+
+  const rosterDirty = !snapshotsEqual<RosterConfigSnapshot>(savedRoster, { benchSlots, slots: rosterSlots });
+  const auctionDirty = !snapshotsEqual<AuctionConfigSnapshot>(savedAuction, {
+    initialBudget, nominationTimer, secondBidTimer, rebidTimer, antiSnipeThreshold, antiSnipeExtension,
+  });
+  const whammyDirty = !snapshotsEqual<WhammyConfigSnapshot>(savedWhammy, {
+    enabled: whammyEnabled, maxAmount: whammyMaxAmount, maxPerTeam: whammyMaxPerTeam, maxPerDraft: whammyMaxPerDraft, approvalRequired: whammyApprovalRequired,
+  });
+  const aavSourcesDirty = !snapshotsEqual<AavSourcesSnapshot>(savedAavSources, { primary: primarySource, secondary: secondarySource });
 
   function submitIdentity(e: React.FormEvent): void {
     e.preventDefault();
@@ -194,7 +344,12 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
   }
 
   function addSlot(): void {
-    setRosterSlots((prev) => [...prev, { position: '', priority: prev.length + 1, is_starter: true, slot_count: 1 }]);
+    // Always is_starter:true — every row in this table is a starter position
+    // by definition; bench is the separate "Bench slots" count above.
+    setRosterSlots((prev) => [
+      ...prev,
+      { position: ROSTER_POSITIONS[0], priority: prev.length + 1, is_starter: true, slot_count: 1 },
+    ]);
   }
 
   function removeSlot(index: number): void {
@@ -205,12 +360,16 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
     e.preventDefault();
     const bench = parseInt(benchSlots, 10);
     if (!Number.isFinite(bench) || rosterSlots.length === 0) return;
+    // Every row here is always a starter (no per-row checkbox) — send as such
+    // regardless of whatever the row's own is_starter field currently holds.
+    const slots = rosterSlots.map((s) => ({ ...s, is_starter: true }));
     authedJson(`/leagues/${leagueId}/config/roster`, token, {
       method: 'PUT',
-      body: JSON.stringify({ bench_slots: bench, slots: rosterSlots }),
+      body: JSON.stringify({ bench_slots: bench, slots }),
     })
       .then(() => {
         report('Roster configuration saved');
+        setSavedRoster({ benchSlots, slots });
         refreshReadiness();
       })
       .catch(() => report('Roster configuration is invalid'));
@@ -238,6 +397,9 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
     })
       .then(() => {
         report('Auction configuration saved');
+        setSavedAuction({
+          initialBudget, nominationTimer, secondBidTimer, rebidTimer, antiSnipeThreshold, antiSnipeExtension,
+        });
         refreshReadiness();
       })
       .catch(() => report('Auction configuration is invalid'));
@@ -293,6 +455,7 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
     })
       .then(() => {
         report('AAV sources saved');
+        setSavedAavSources({ primary: primarySource, secondary: secondarySource });
         refreshReadiness();
       })
       .catch((err: Error) => report(err.message));
@@ -312,6 +475,9 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
     })
       .then(() => {
         report('Whammy configuration saved');
+        setSavedWhammy({
+          enabled: whammyEnabled, maxAmount: whammyMaxAmount, maxPerTeam: whammyMaxPerTeam, maxPerDraft: whammyMaxPerDraft, approvalRequired: whammyApprovalRequired,
+        });
         refreshReadiness();
       })
       .catch(() => report('Whammy configuration is invalid'));
@@ -367,7 +533,7 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
             value={statusMessage}
             onChange={(e) => setStatusMessage(e.target.value)}
           />
-          <button type="submit">Save League Identity</button>
+          <button type="submit" disabled={!identityDirty}>Save League Identity</button>
         </form>
       </section>
 
@@ -407,21 +573,28 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
           <input id="bench-slots" type="number" min={0} value={benchSlots} onChange={(e) => setBenchSlots(e.target.value)} />
           <p className="league-setup__hint">
             Every drafted player counts toward roster size regardless of position — there's no
-            limit on how many of one position a team can draft. "Starter" only controls where a
-            pick lands: the lowest-priority open starter slot the player is eligible for, or
-            bench if none is open (never the other way around). Use position "FLEX" for RB/WR/TE,
-            or "SUPERFLEX" for any position including QB.
+            limit on how many of one position a team can draft. Each row here is a starter
+            position; you only configure how many starters you need per position. Bench (above)
+            makes up the rest of the total roster / draft limit. FLEX accepts RB/WR/TE; SUPERFLEX
+            accepts any position, including QB.
           </p>
           <table className="league-setup__slot-table">
             <thead>
-              <tr><th>Position</th><th>Priority</th><th>Starter</th><th>Count</th><th /></tr>
+              <tr><th>Starter Position</th><th>Priority</th><th>Count</th><th /></tr>
             </thead>
             <tbody>
               {rosterSlots.map((slot, i) => (
                 <tr key={i}>
-                  <td><input type="text" value={slot.position} onChange={(e) => updateSlot(i, { position: e.target.value })} /></td>
+                  <td>
+                    <select
+                      aria-label="Position"
+                      value={slot.position}
+                      onChange={(e) => updateSlot(i, { position: e.target.value })}
+                    >
+                      {ROSTER_POSITIONS.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </td>
                   <td><input type="number" min={1} value={slot.priority} onChange={(e) => updateSlot(i, { priority: parseInt(e.target.value, 10) || 1 })} /></td>
-                  <td><input type="checkbox" checked={slot.is_starter} onChange={(e) => updateSlot(i, { is_starter: e.target.checked })} /></td>
                   <td><input type="number" min={1} value={slot.slot_count} onChange={(e) => updateSlot(i, { slot_count: parseInt(e.target.value, 10) || 1 })} /></td>
                   <td><button type="button" onClick={() => removeSlot(i)}>Remove</button></td>
                 </tr>
@@ -429,7 +602,7 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
             </tbody>
           </table>
           <button type="button" onClick={addSlot}>Add Slot</button>
-          <button type="submit">Save Roster Configuration</button>
+          <button type="submit" disabled={!rosterDirty}>Save Roster Configuration</button>
         </form>
       </section>
 
@@ -448,7 +621,7 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
           <input id="anti-snipe-threshold" type="number" min={0} value={antiSnipeThreshold} onChange={(e) => setAntiSnipeThreshold(e.target.value)} />
           <label htmlFor="anti-snipe-extension">Anti-snipe extension (s)</label>
           <input id="anti-snipe-extension" type="number" min={0} value={antiSnipeExtension} onChange={(e) => setAntiSnipeExtension(e.target.value)} />
-          <button type="submit">Save Auction Configuration</button>
+          <button type="submit" disabled={!auctionDirty}>Save Auction Configuration</button>
         </form>
       </section>
 
@@ -465,7 +638,7 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
             <option value="">(none)</option>
             {aavSources.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
-          <button type="submit" disabled={aavSources.length === 0 || !primarySource || !datasetId}>Save AAV Sources</button>
+          <button type="submit" disabled={aavSources.length === 0 || !primarySource || !datasetId || !aavSourcesDirty}>Save AAV Sources</button>
         </form>
       </section>
 
@@ -486,7 +659,7 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
             <input type="checkbox" checked={whammyApprovalRequired} onChange={(e) => setWhammyApprovalRequired(e.target.checked)} />
             Commissioner approval required
           </label>
-          <button type="submit">Save Whammy Configuration</button>
+          <button type="submit" disabled={!whammyDirty}>Save Whammy Configuration</button>
         </form>
       </section>
 
