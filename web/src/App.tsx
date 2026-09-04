@@ -605,6 +605,15 @@ export function App() {
   function setAuth(a: AuthState | null): void {
     storeAuth(a);
     setAuthState(a);
+    if (a) {
+      // A fresh sign-in always starts at "/" so the role-based redirect below
+      // picks the right screen for the NEW identity. Without this, a stale
+      // deep-link left over from a previous identity in this tab (e.g. the
+      // browser still on /commissioner after a commissioner logs out and an
+      // owner logs back in) would route the new auth token into a screen its
+      // role isn't allowed to use, surfacing as a 403 from that screen's guard.
+      window.history.replaceState(null, '', '/');
+    }
   }
 
   function handleLogout(): void {
