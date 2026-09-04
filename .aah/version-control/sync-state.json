@@ -468,6 +468,14 @@
       "remote_updated_at": "2026-09-04T21:10:45Z",
       "lifecycle": "implementing",
       "status_label": "aah:implementing"
+    },
+    "F-MOD-002-rework-02": {
+      "remote_ref": {
+        "number": 3,
+        "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
+        "url": "https://github.com/maccorless/Draft/issues/3"
+      },
+      "base": {}
     }
   }
 }
