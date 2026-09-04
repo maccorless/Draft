@@ -9,6 +9,7 @@ const styles = {
   error: { color: '#c00', margin: 0, fontSize: 14 },
 };
 import './screens/auth/auth.css';
+import './app-chrome.css';
 import { Lobby } from './screens/lobby/index.js';
 import { CommissionerConsole } from './screens/commissioner/index.js';
 import { DraftRoom } from './screens/draft-room/index.js';
@@ -235,6 +236,22 @@ export function LeagueLogin({
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
+    </div>
+  );
+}
+
+// ── Logout control — fixed corner, present on every authenticated screen ──────
+
+export function LogoutButton({ auth, onLogout }: { auth: AuthState; onLogout: () => void }) {
+  const identityLabel =
+    auth.role === 'COMMISSIONER' ? 'Commissioner' : `Owner · ${auth.teamName ?? 'My Team'}`;
+
+  return (
+    <div className="app-logout">
+      <span className="app-logout__identity">{identityLabel}</span>
+      <button type="button" className="app-logout__button" onClick={onLogout}>
+        Log out
+      </button>
     </div>
   );
 }
@@ -581,6 +598,11 @@ export function App() {
     setAuthState(a);
   }
 
+  function handleLogout(): void {
+    setAuth(null);
+    setStep('site');
+  }
+
   if (!auth && IS_LOCALHOST) {
     return <DevIdentityPicker onAuth={setAuth} />;
   }
@@ -594,6 +616,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <LogoutButton auth={auth} onLogout={handleLogout} />
       <Routes>
         <Route path="/" element={
           auth.role === 'COMMISSIONER'
