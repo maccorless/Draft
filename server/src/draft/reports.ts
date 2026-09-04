@@ -14,6 +14,8 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
 
+import { resolveEffectivePrimarySource } from '../player/aav-resolution.js';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface TokenClaims {
@@ -106,17 +108,25 @@ interface AcquisitionEntry {
   roster_slot: string;
 }
 
+// PRD §36.2: roster_depth_score's formula is versioned and transparent, so a
+// future formula change is distinguishable from a past report's figure.
+const ROSTER_DEPTH_SCORE_VERSION = 'v1';
+
 interface TeamEntry {
   team_id: string;
   team_name: string;
   final_budget_minor: number;
   acquisitions: AcquisitionEntry[];
+  projected_starter_points: number;
+  roster_depth_score: { value: number; calculation_version: string };
+  aav_efficiency_pct: number;
 }
 
 interface DraftSummaryReport {
   draft_id: string;
   completed_at: string;
   teams: TeamEntry[];
+  league_totals: { spend_minor: number; aav_minor: number };
 }
 
 /**
@@ -125,8 +135,8 @@ interface DraftSummaryReport {
  */
 async function generateReport(sql: postgres.Sql, draftId: string): Promise<DraftSummaryReport> {
   // Draft header
-  const [draft] = await sql<[{ completed_at: Date }]>`
-    SELECT completed_at FROM drafts WHERE id = ${draftId}
+  const [draft] = await sql<[{ completed_at: Date; dataset_id: string }]>`
+    SELECT completed_at, dataset_id FROM drafts WHERE id = ${draftId}
   `;
 
   // All teams with their remaining budgets
@@ -142,21 +152,26 @@ async function generateReport(sql: postgres.Sql, draftId: string): Promise<Draft
     ORDER BY t.draft_order ASC
   `;
 
-  // All acquisitions with player data and roster slot
+  // All acquisitions with player data, roster slot, and whether that slot is
+  // a starter slot (PRD §36.1 needs this to exclude bench picks).
   const acquisitionRows = await sql<Array<{
     team_id: string;
+    player_id: string;
     player_name: string;
     position: string;
     price_minor: number;
     roster_slot: string;
+    is_starter: boolean;
     resolution_sequence: number;
   }>>`
     SELECT
       a.team_id,
+      p.id    AS player_id,
       p.name  AS player_name,
       p.position,
       a.price_minor,
       COALESCE(rsd.position, 'BN') AS roster_slot,
+      COALESCE(rsd.is_starter, false) AS is_starter,
       a.resolution_sequence
     FROM acquisitions a
     JOIN player_auctions pa ON pa.id = a.player_auction_id
@@ -167,8 +182,35 @@ async function generateReport(sql: postgres.Sql, draftId: string): Promise<Draft
     ORDER BY a.resolution_sequence ASC
   `;
 
-  // Build team map
+  // Resolve each acquired player's AAV/projected_points from the dataset's
+  // effective primary source (F-MOD-016) — one query for every acquisition
+  // rather than one round trip per player.
+  const effectiveSource = await resolveEffectivePrimarySource(sql, draft.dataset_id);
+  const playerIds = [...new Set(acquisitionRows.map((r) => r.player_id))];
+  const aavByPlayer = new Map<string, { aav_minor: number; projected_points: number | null }>();
+  if (effectiveSource && playerIds.length > 0) {
+    const aavRows = await sql<Array<{ player_id: string; aav_minor: number; projected_points: string | null }>>`
+      SELECT player_id, aav_minor, projected_points
+      FROM player_aav_sources
+      WHERE dataset_id = ${draft.dataset_id} AND source = ${effectiveSource} AND player_id = ANY(${playerIds})
+    `;
+    for (const row of aavRows) {
+      aavByPlayer.set(row.player_id, {
+        aav_minor: Math.trunc(Number(row.aav_minor)),
+        projected_points: row.projected_points !== null ? parseFloat(row.projected_points) : null,
+      });
+    }
+  }
+
+  // Build per-team acquisitions + metric accumulators.
   const acqByTeam = new Map<string, AcquisitionEntry[]>();
+  const starterPointsByTeam = new Map<string, number>();
+  const benchPointsByTeam = new Map<string, number>();
+  const spendByTeam = new Map<string, number>();
+  const aavByTeam = new Map<string, number>();
+  let leagueSpendMinor = 0;
+  let leagueAavMinor = 0;
+
   for (const row of acquisitionRows) {
     if (!acqByTeam.has(row.team_id)) acqByTeam.set(row.team_id, []);
     acqByTeam.get(row.team_id)!.push({
@@ -177,14 +219,45 @@ async function generateReport(sql: postgres.Sql, draftId: string): Promise<Draft
       price_minor: row.price_minor,
       roster_slot: row.roster_slot,
     });
+
+    const points = aavByPlayer.get(row.player_id)?.projected_points ?? 0;
+    if (row.is_starter) {
+      starterPointsByTeam.set(row.team_id, (starterPointsByTeam.get(row.team_id) ?? 0) + points);
+    } else {
+      benchPointsByTeam.set(row.team_id, (benchPointsByTeam.get(row.team_id) ?? 0) + points);
+    }
+
+    const resolvedAav = aavByPlayer.get(row.player_id)?.aav_minor;
+    if (resolvedAav !== undefined) {
+      spendByTeam.set(row.team_id, (spendByTeam.get(row.team_id) ?? 0) + row.price_minor);
+      aavByTeam.set(row.team_id, (aavByTeam.get(row.team_id) ?? 0) + resolvedAav);
+      leagueSpendMinor += row.price_minor;
+      leagueAavMinor += resolvedAav;
+    }
   }
 
-  const teams: TeamEntry[] = teamRows.map((t) => ({
-    team_id: t.team_id,
-    team_name: t.team_name,
-    final_budget_minor: t.remaining_budget_minor,
-    acquisitions: acqByTeam.get(t.team_id) ?? [],
-  }));
+  const teams: TeamEntry[] = teamRows.map((t) => {
+    const sumAav = aavByTeam.get(t.team_id) ?? 0;
+    const sumPrice = spendByTeam.get(t.team_id) ?? 0;
+    // AAV efficiency (PRD §36.3): how purchase price compares to the frozen
+    // dataset's AAV. Positive = paid under AAV on average, negative =
+    // paid over. Never a fair-value/skill judgment (CLAUDE.md #6) — just a
+    // labeled comparison of two already-known numbers.
+    const aavEfficiencyPct = sumAav > 0 ? ((sumAav - sumPrice) / sumAav) * 100 : 0;
+
+    return {
+      team_id: t.team_id,
+      team_name: t.team_name,
+      final_budget_minor: t.remaining_budget_minor,
+      acquisitions: acqByTeam.get(t.team_id) ?? [],
+      projected_starter_points: starterPointsByTeam.get(t.team_id) ?? 0,
+      roster_depth_score: {
+        value: benchPointsByTeam.get(t.team_id) ?? 0,
+        calculation_version: ROSTER_DEPTH_SCORE_VERSION,
+      },
+      aav_efficiency_pct: aavEfficiencyPct,
+    };
+  });
 
   return {
     draft_id: draftId,
@@ -192,6 +265,7 @@ async function generateReport(sql: postgres.Sql, draftId: string): Promise<Draft
       ? draft.completed_at.toISOString()
       : String(draft.completed_at),
     teams,
+    league_totals: { spend_minor: leagueSpendMinor, aav_minor: leagueAavMinor },
   };
 }
 

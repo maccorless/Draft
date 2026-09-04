@@ -12,6 +12,7 @@ import { Lobby } from './screens/lobby/index.js';
 import { CommissionerConsole } from './screens/commissioner/index.js';
 import { DraftRoom } from './screens/draft-room/index.js';
 import { WarRoom } from './screens/war-room/index.js';
+import { DraftComplete, type DraftSummaryReport } from './screens/draft-complete/index.js';
 
 // Relative — goes through Vite's dev proxy (web/vite.config.ts) to the backend,
 // so it works regardless of which port the backend actually listens on.
@@ -302,6 +303,13 @@ function DraftGateway({ auth }: { auth: AuthState }) {
     return <Navigate to={`/draft-room?draftId=${active.id}`} replace />;
   }
 
+  // screen-information-architecture.md §18: an owner authenticating after
+  // the draft has ended lands at the Draft Summary Report directly, never
+  // at the Pre-Draft Lobby (which is UPCOMING-only, §0.1).
+  if (active && active.status === 'COMPLETE') {
+    return <Navigate to={`/draft-complete?draftId=${active.id}`} replace />;
+  }
+
   return (
     <div>
       <Lobby
@@ -340,6 +348,40 @@ function WarRoomRoute({ auth }: { auth: AuthState }) {
   const draftId = params.get('draftId');
   if (!draftId) return <div style={styles.center}><p style={styles.error}>Missing draftId</p></div>;
   return <WarRoom draftId={draftId} leagueId={auth.leagueId} token={auth.token} teamId={auth.teamId ?? null} />;
+}
+
+// ── Draft Complete route ───────────────────────────────────────────────────────
+
+function DraftCompleteRoute({ auth }: { auth: AuthState }) {
+  const [params] = useSearchParams();
+  const draftId = params.get('draftId');
+  const [report, setReport] = useState<DraftSummaryReport | null>(null);
+  const [error, setError] = useState('');
+
+  React.useEffect(() => {
+    if (!draftId) return;
+    fetch(`${API}/drafts/${draftId}/report`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+      .then(async (res) => {
+        if (!res.ok) { setError(`Failed to load report (${res.status})`); return; }
+        setReport(await res.json());
+      })
+      .catch(() => setError('Cannot reach server'));
+  }, [draftId, auth.token]);
+
+  if (!draftId) return <div style={styles.center}><p style={styles.error}>Missing draftId</p></div>;
+  if (error) return <div style={styles.center}><p style={styles.error}>{error}</p></div>;
+  if (!report) return <div style={styles.center}><p>Loading report…</p></div>;
+
+  return (
+    <DraftComplete
+      draftId={draftId}
+      report={report}
+      isCommissioner={auth.role === 'COMMISSIONER'}
+      currentTeamId={auth.teamId ?? null}
+    />
+  );
 }
 
 // ponytail: localhost-only dev shortcut, skips the two login screens using the seed.ts credentials
@@ -417,6 +459,7 @@ export function App() {
         <Route path="/lobby" element={<DraftGateway auth={auth} />} />
         <Route path="/draft-room" element={<DraftRoomRoute auth={auth} />} />
         <Route path="/war-room" element={<WarRoomRoute auth={auth} />} />
+        <Route path="/draft-complete" element={<DraftCompleteRoute auth={auth} />} />
       </Routes>
     </BrowserRouter>
   );

@@ -5,6 +5,7 @@
  * price/deadline/winner here — this component only renders what it broadcasts.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { WifiHigh, WifiMedium, WifiSlash, Robot } from '@phosphor-icons/react';
 
 import { useAuctionSocket } from '../../lib/useAuctionSocket.js';
@@ -97,6 +98,7 @@ function useCountdown(deadlineTs: number | null): number {
 
 export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps): React.ReactElement {
   const ws = useAuctionSocket(draftId, token);
+  const navigate = useNavigate();
   const [config, setConfig] = useState<DraftConfig | null>(null);
   const [rosterGrid, setRosterGrid] = useState<GridTeam[]>([]);
   const [players, setPlayers] = useState<DatasetPlayer[]>([]);
@@ -135,6 +137,15 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
       refreshGrid();
     }
   }, [ws.recentAwards.length, refreshGrid]);
+
+  // Covers both the live DRAFT_COMPLETE broadcast for an already-connected
+  // client and the reconnect-snapshot case (STATE_SNAPSHOT also carries
+  // draftStatus: 'COMPLETE') — replaces the old dead-end inline message.
+  useEffect(() => {
+    if (ws.draftStatus === 'COMPLETE') {
+      navigate(`/draft-complete?draftId=${draftId}`, { replace: true });
+    }
+  }, [ws.draftStatus, draftId, navigate]);
 
   const drafted = useMemo(() => new Set(ws.recentAwards.map((a) => a.player_name)), [ws.recentAwards]);
   const myGridTeam = teamId ? rosterGrid.find((t) => t.team_id === teamId) ?? null : null;
@@ -282,7 +293,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
           {!auction ? (
             <div className="draft-room__no-auction">
               {ws.draftStatus === 'COMPLETE' ? (
-                <p>Draft complete.</p>
+                <p>Draft complete — opening the summary report…</p>
               ) : isMyNominationTurn ? (
                 <div className="draft-room__nominate-panel">
                   <p className="draft-room__your-turn">Your turn to nominate</p>

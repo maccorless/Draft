@@ -1168,7 +1168,7 @@
       "passes": false
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-012",
       "title": "Commissioner Corrections, Rollback, and Whammy UI",
       "module_ref": "MOD-012",
@@ -1190,7 +1190,7 @@
       "passes": false
     },
     {
-      "status": "pending",
+      "status": "implementing",
       "id": "F-MOD-013",
       "title": "Draft Summary Report Routing and Metrics",
       "module_ref": "MOD-013",
@@ -1203,6 +1203,14 @@
         "F-MOD-006"
       ],
       "api_contracts": "```yaml\napi_contracts:\n  produces:\n    - operation_id: getDraftReport\n      schema_file: schema/MOD-006-api-schema.yaml\n      request_schema: {}\n      response_schema: DraftSummaryReport\n```",
+      "test_config": {
+        "command": "DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test npx vitest run --project node server/src/__tests__/F-MOD-013_report_metrics.test.ts --project web web/src/__tests__/F-MOD-013_draft_complete_routing.test.tsx web/src/__tests__/F-MOD-013_draft_complete_component.test.tsx",
+        "test_paths": [
+          "server/src/__tests__/F-MOD-013_report_metrics.test.ts",
+          "web/src/__tests__/F-MOD-013_draft_complete_routing.test.tsx",
+          "web/src/__tests__/F-MOD-013_draft_complete_component.test.tsx"
+        ]
+      },
       "constraints": [
         "No strategic valuation: `projected_starter_points`, `roster_depth_score`, and `aav_efficiency_pct` are informational evaluation figures only \u2014 never a computed fair value, recommended bid, or owner-skill grade (CLAUDE.md constraint #6).",
         "`roster_depth_score`'s formula must be versioned and transparent, distinct from `projected_starter_points` (PRD \u00a736.2).",

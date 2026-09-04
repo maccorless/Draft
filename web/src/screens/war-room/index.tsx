@@ -5,6 +5,7 @@
  * Draft Room's bidding controls — this is understand-and-prepare, not act.
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Binoculars, ListNumbers, Target, X } from '@phosphor-icons/react';
 
 import { useAuctionSocket } from '../../lib/useAuctionSocket.js';
@@ -135,6 +136,7 @@ const CONNECTION_LABEL: Record<string, string> = {
 
 export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): React.ReactElement {
   const ws = useAuctionSocket(draftId, token);
+  const navigate = useNavigate();
   const [rosterSlots, setRosterSlots] = useState<RosterSlotDef[]>([]);
   const [rosterGrid, setRosterGrid] = useState<GridTeam[]>([]);
   const [players, setPlayers] = useState<DatasetPlayer[]>([]);
@@ -183,6 +185,16 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
       refreshActivity();
     }
   }, [ws.recentAwards.length, refreshGrid, refreshActivity]);
+
+  // War Room never had its own "draft complete" branch — it just never
+  // reacted to draftStatus at all, leaving a connected client stranded here.
+  // Covers both the live DRAFT_COMPLETE broadcast and the reconnect-snapshot
+  // case (STATE_SNAPSHOT also carries draftStatus: 'COMPLETE').
+  useEffect(() => {
+    if (ws.draftStatus === 'COMPLETE') {
+      navigate(`/draft-complete?draftId=${draftId}`, { replace: true });
+    }
+  }, [ws.draftStatus, draftId, navigate]);
 
   const refreshWatchlist = useMemo(
     () => () => {

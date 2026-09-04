@@ -130,7 +130,7 @@ components:
 
     DraftSummaryReport:
       type: object
-      required: [draft_id, completed_at, teams]
+      required: [draft_id, completed_at, teams, league_totals]
       properties:
         draft_id:
           type: string
@@ -142,6 +142,17 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ReportTeamEntry"
+        league_totals:
+          type: object
+          required: [spend_minor, aav_minor]
+          description: >-
+            League-wide totals for the League summary view (PRD §36.4, screen-information-architecture.md §18):
+            total purchase price vs. total frozen-dataset AAV across every acquisition in the draft.
+          properties:
+            spend_minor:
+              type: integer
+            aav_minor:
+              type: integer
 
     EmailDispatchResponse:
       type: object

@@ -57,6 +57,12 @@ api_contracts:
 
 ## Test Config
 
+- command: DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test npx vitest run --project node server/src/__tests__/F-MOD-013_report_metrics.test.ts --project web web/src/__tests__/F-MOD-013_draft_complete_routing.test.tsx web/src/__tests__/F-MOD-013_draft_complete_component.test.tsx
+- test_paths:
+  - server/src/__tests__/F-MOD-013_report_metrics.test.ts
+  - web/src/__tests__/F-MOD-013_draft_complete_routing.test.tsx
+  - web/src/__tests__/F-MOD-013_draft_complete_component.test.tsx
+
 ## Lint Config
 
 ## Constraints
@@ -65,3 +71,6 @@ api_contracts:
 - Both the Owner view and League summary view are visible and downloadable by every owner, not commissioner-restricted (PRD §36.4, screen-information-architecture.md §18).
 
 ## Required Env Variables
+
+## Status
+implementing
