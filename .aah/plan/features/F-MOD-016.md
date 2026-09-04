@@ -182,7 +182,7 @@ produces:
 
 ## Test Config
 
-- command: npx vitest run --project node server/src/__tests__/F-MOD-016_multi_source_aav.test.ts
+- command: DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! npx vitest run --project node server/src/__tests__/F-MOD-016_multi_source_aav.test.ts
 - test_paths:
   - server/src/__tests__/F-MOD-016_multi_source_aav.test.ts
 
