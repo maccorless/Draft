@@ -13,8 +13,11 @@
 1:20:29 PM [tsx] change in ./src/league/routes.ts Process hasn't exited. Killing process...
 1:20:46 PM [tsx] change in ./src/player/routes.ts Process hasn't exited. Killing process...
 1:29:18 PM [tsx] change in ./db/seed-data.ts Process hasn't exited. Killing process...
-l":30,"time":1788544814990,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-7","req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61010},"msg":"incoming request"}
-{"level":30,"time":1788544814991,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-8","req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/teams","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61011},"msg":"incoming request"}
+3:45:35 PM [tsx] unlink in ./../node_modules/@fastify/proxy-addr/index.js Process hasn't exited. Killing process...
+3:45:36 PM [tsx] unlink in ./../node_modules/asn1.js/lib/asn1/encoders/index.js Process hasn't exited. Killing process...
+3:45:36 PM [tsx] unlink in ./../node_modules/@fastify/busboy/deps/dicer/lib/Dicer.js Process hasn't exited. Killing process...
+3:45:37 PM [tsx] unlink in ./../node_modules/fast-json-stringify/node_modules/ajv/node_modules/fast-uri/lib/schemes.js Process hasn't exited. Killing process...
+}
 {"level":30,"time":1788544814992,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-9","req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/players","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61012},"msg":"incoming request"}
 {"level":30,"time":1788544814992,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-a","req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/readiness","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61013},"msg":"incoming request"}
 {"level":30,"time":1788544814992,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-6","res":{"statusCode":200},"responseTime":4.063708000001498,"msg":"request completed"}
@@ -54,10 +57,11 @@ l":30,"time":1788544814990,"pid":72907,"hostname":"Mac.localdomain","reqId":"req
 1:20:29 PM [tsx] change in ./src/league/routes.ts Process hasn't exited. Killing process...
 1:20:46 PM [tsx] change in ./src/player/routes.ts Process hasn't exited. Killing process...
 1:29:18 PM [tsx] change in ./db/seed-data.ts Process hasn't exited. Killing process...
-547833999968134,"msg":"request completed"}
-{"level":30,"time":1788544823368,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-p","res":{"statusCode":200},"responseTime":6.859249999979511,"msg":"request completed"}
-{"level":30,"time":1788544823369,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-q","req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/readiness","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61048},"msg":"incoming request"}
-{"level":30,"time":1788544823384,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-q","res":{"statusCode":200},"responseTime":14.967583000077866,"msg":"request completed"}
+3:45:36 PM [tsx] unlink in ./../node_modules/zod/v3/helpers/util.js Process hasn't exited. Killing process...
+3:45:36 PM [tsx] unlink in ./../node_modules/asn1.js/lib/asn1/base/reporter.js Process hasn't exited. Killing process...
+3:45:36 PM [tsx] unlink in ./../node_modules/readable-stream/lib/internal/streams/pipeline.js Process hasn't exited. Killing process...
+3:45:37 PM [tsx] unlink in ./../node_modules/@fastify/ajv-compiler/node_modules/ajv/dist/compile/validate/index.js Process hasn't exited. Killing process...
+,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-q","res":{"statusCode":200},"responseTime":14.967583000077866,"msg":"request completed"}
 {"level":30,"time":1788544834222,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-r","req":{"method":"PUT","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/config/auction","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61052},"msg":"incoming request"}
 {"level":30,"time":1788544834236,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-r","res":{"statusCode":200},"responseTime":13.936165999970399,"msg":"request completed"}
 {"level":30,"time":1788544834242,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-s","req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/readiness","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61054},"msg":"incoming request"}
@@ -363,28 +367,122 @@ l":30,"time":1788544814990,"pid":72907,"hostname":"Mac.localdomain","reqId":"req
 {"level":30,"time":1788549256485,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-37","req":{"method":"POST","url":"/auth/site","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63656},"msg":"incoming request"}
 {"level":30,"time":1788549256487,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-38","req":{"method":"POST","url":"/auth/site","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63657},"msg":"incoming request"}
 {"level":30,"time":1788549256489,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-38","res":{"statusCode":429},"responseTime":1.0695000002160668,"msg":"request completed"}
-{"level":30,"time":1788549256858,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-37","res":{"statusCode":200},"responseTime":372.47145899990574,"msg":"request completed"}
-{"level":30,"time":1788549256860,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-39","req":{"method":"POST","url":"/auth/league/1db43205-ea20-4a4f-b671-0751cae9ffc2/teams","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63659},"msg":"incoming request"}
-{"level":30,"time":1788549257033,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-39","res":{"statusCode":200},"responseTime":172.99770799977705,"msg":"request completed"}
-{"level":30,"time":1788549260365,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3a","req":{"method":"POST","url":"/auth/league/1db43205-ea20-4a4f-b671-0751cae9ffc2","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63661},"msg":"incoming request"}
-{"level":30,"time":1788549260569,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3a","res":{"statusCode":200},"responseTime":203.82500000018626,"msg":"request completed"}
-{"level":30,"time":1788549260597,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3b","req":{"method":"GET","url":"/leagues/1db43205-ea20-4a4f-b671-0751cae9ffc2/drafts","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63663},"msg":"incoming request"}
-{"level":30,"time":1788549260598,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3c","req":{"method":"GET","url":"/leagues/1db43205-ea20-4a4f-b671-0751cae9ffc2","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63665},"msg":"incoming request"}
-{"level":30,"time":1788549260599,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3b","res":{"statusCode":200},"responseTime":1.8699590000323951,"msg":"request completed"}
-{"level":30,"time":1788549260599,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3d","req":{"method":"GET","url":"/leagues/1db43205-ea20-4a4f-b671-0751cae9ffc2/drafts","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63667},"msg":"incoming request"}
-{"level":30,"time":1788549260601,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3c","res":{"statusCode":200},"responseTime":2.7457920000888407,"msg":"request completed"}
-{"level":30,"time":1788549260602,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3d","res":{"statusCode":200},"responseTime":2.642125000245869,"msg":"request completed"}
-{"level":30,"time":1788549260603,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3e","req":{"method":"GET","url":"/leagues/1db43205-ea20-4a4f-b671-0751cae9ffc2","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63669},"msg":"incoming request"}
-{"level":30,"time":1788549260605,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3f","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/teams/f0f3ca1d-ae6c-43c7-8f6d-86dd55903a3b/watchlist","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63675},"msg":"incoming request"}
-{"level":30,"time":1788549260606,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3g","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/teams/f0f3ca1d-ae6c-43c7-8f6d-86dd55903a3b/nomination-queue","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63676},"msg":"incoming request"}
-{"level":30,"time":1788549260606,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3h","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/teams/f0f3ca1d-ae6c-43c7-8f6d-86dd55903a3b/target-values","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63677},"msg":"incoming request"}
-{"level":30,"time":1788549260606,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3e","res":{"statusCode":200},"responseTime":3.5596249997615814,"msg":"request completed"}
-{"level":30,"time":1788549260606,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3i","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/teams/f0f3ca1d-ae6c-43c7-8f6d-86dd55903a3b/do-not-draft","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63678},"msg":"incoming request"}
-{"level":30,"time":1788549260607,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3j","req":{"method":"GET","url":"/leagues/1db43205-ea20-4a4f-b671-0751cae9ffc2/players","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63679},"msg":"incoming request"}
-{"level":30,"time":1788549260608,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3j","res":{"statusCode":403},"responseTime":1.3233330002985895,"msg":"request completed"}
-{"level":30,"time":1788549260608,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3k","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63681},"msg":"incoming request"}
-{"level":30,"time":1788549260609,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3i","res":{"statusCode":200},"responseTime":2.2135000000707805,"msg":"request completed"}
-{"level":30,"time":1788549260609,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3l","req":{"method":"GET","url":"/leagues/1db43205-ea20-4a4f-b671-0751cae9ffc2/players","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63683},"msg":"incoming request"}
+{"level":30,"time":1788549256858,"pid":75230,"hostna3:45:36 PM [tsx] unlink in ./../node_modules/@fastify/rate-limit/store/LocalStore.js Rerunning...
+node:internal/modules/cjs/loader:1423
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/ken/Development/projects/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at node:internal/modules/cjs/loader:2046:12
+    at loadPreloadModules (node:internal/process/pre_execution:686:5)
+    at setupUserModules (node:internal/process/pre_execution:205:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.8.0
+3:45:36 PM [tsx] unlink in ./../node_modules/zod/v3/helpers/util.js Rerunning...
+node:internal/modules/cjs/loader:1423
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/ken/Development/projects/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at node:internal/modules/cjs/loader:2046:12
+    at loadPreloadModules (node:internal/process/pre_execution:686:5)
+    at setupUserModules (node:internal/process/pre_execution:205:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.8.0
+3:45:36 PM [tsx] unlink in ./../node_modules/drizzle-orm/pg-core/columns/postgis_extension/geometry.js Rerunning...
+node:internal/modules/cjs/loader:1423
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/ken/Development/projects/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at node:internal/modules/cjs/loader:2046:12
+    at loadPreloadModules (node:internal/process/pre_execution:686:5)
+    at setupUserModules (node:internal/process/pre_execution:205:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.8.0
+3:45:36 PM [tsx] unlink in ./../node_modules/readable-stream/lib/internal/streams/end-of-stream.js Rerunning...
+node:internal/modules/cjs/loader:1423
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/ken/Development/projects/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at node:internal/modules/cjs/loader:2046:12
+    at loadPreloadModules (node:internal/process/pre_execution:686:5)
+    at setupUserModules (node:internal/process/pre_execution:205:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.8.0
+3:45:37 PM [tsx] unlink in ./../node_modules/@fastify/ajv-compiler/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js Rerunning...
+node:internal/modules/cjs/loader:1423
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/ken/Development/projects/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at node:internal/modules/cjs/loader:2046:12
+    at loadPreloadModules (node:internal/process/pre_execution:686:5)
+    at setupUserModules (node:internal/process/pre_execution:205:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.8.0
+oming request"}
 {"level":30,"time":1788549260610,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3m","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/teams/f0f3ca1d-ae6c-43c7-8f6d-86dd55903a3b/do-not-draft","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63685},"msg":"incoming request"}
 {"level":30,"time":1788549260610,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3l","res":{"statusCode":403},"responseTime":1.1174999997019768,"msg":"request completed"}
 {"level":30,"time":1788549260611,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3f","res":{"statusCode":200},"responseTime":5.744167000055313,"msg":"request completed"}
@@ -608,3 +706,95 @@ l":30,"time":1788544814990,"pid":72907,"hostname":"Mac.localdomain","reqId":"req
 {"level":30,"time":1788553274101,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-6m","res":{"statusCode":200},"responseTime":0.4785420000553131,"msg":"request completed"}
 {"level":30,"time":1788553274110,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-6n","req":{"method":"POST","url":"/dev/reseed","host":"localhost:3000","remoteAddress":"127.0.0.1","remotePort":64278},"msg":"incoming request"}
 {"level":30,"time":1788553274412,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-6n","res":{"statusCode":200},"responseTime":301.9443329991773,"msg":"request completed"}
+3:45:36 PM [tsx] unlink in ./../node_modules/zod/v3/helpers/parseUtil.js Restarting...
+node:internal/modules/cjs/loader:1423
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/ken/Development/projects/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at node:internal/modules/cjs/loader:2046:12
+    at loadPreloadModules (node:internal/process/pre_execution:686:5)
+    at setupUserModules (node:internal/process/pre_execution:205:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.8.0
+3:45:36 PM [tsx] unlink in ./../node_modules/asn1.js/lib/asn1/encoders/der.js Rerunning...
+node:internal/modules/cjs/loader:1423
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/ken/Development/projects/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at node:internal/modules/cjs/loader:2046:12
+    at loadPreloadModules (node:internal/process/pre_execution:686:5)
+    at setupUserModules (node:internal/process/pre_execution:205:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.8.0
+3:45:36 PM [tsx] unlink in ./../node_modules/@fastify/busboy/deps/dicer/lib/Dicer.js Rerunning...
+node:internal/modules/cjs/loader:1423
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/ken/Development/projects/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at node:internal/modules/cjs/loader:2046:12
+    at loadPreloadModules (node:internal/process/pre_execution:686:5)
+    at setupUserModules (node:internal/process/pre_execution:205:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.8.0
+3:45:37 PM [tsx] unlink in ./../node_modules/@fastify/ajv-compiler/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js Rerunning...
+node:internal/modules/cjs/loader:1423
+  throw err;
+  ^
+
+Error: Cannot find module '/Users/ken/Development/projects/Draft/node_modules/tsx/dist/preflight.cjs'
+Require stack:
+- internal/preload
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1420:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1058:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1063:22)
+    at Module._load (node:internal/modules/cjs/loader:1226:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:244:24)
+    at Module.require (node:internal/modules/cjs/loader:1503:12)
+    at node:internal/modules/cjs/loader:2046:12
+    at loadPreloadModules (node:internal/process/pre_execution:686:5)
+    at setupUserModules (node:internal/process/pre_execution:205:5) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [ 'internal/preload' ]
+}
+
+Node.js v24.8.0

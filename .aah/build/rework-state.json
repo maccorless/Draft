@@ -1,0 +1,14 @@
+{
+  "active_reworks": [
+    {
+      "feedback_id": "UF-01-02",
+      "iteration": 2,
+      "affected_features": [
+        "F-MOD-002-rework-01"
+      ],
+      "attempts": 1,
+      "status": "in_progress",
+      "triggered_at": "2026-09-04T20:36:25.525835+00:00"
+    }
+  ]
+}

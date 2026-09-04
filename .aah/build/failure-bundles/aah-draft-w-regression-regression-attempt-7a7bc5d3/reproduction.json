@@ -1,0 +1,58 @@
+{
+  "schema_version": 2,
+  "run_id": "aah-draft-w-regression-regression-attempt-7a7bc5d3",
+  "created_at": "2026-09-04T20:46:03.518435+00:00",
+  "subject": {
+    "commit_sha": "19904ba1cb1602bb232ca62997e697c11920419d10b210216317abe8b7ead2c2",
+    "branch": "main",
+    "rel_path": "."
+  },
+  "execution": {
+    "argv": [
+      "npm",
+      "test"
+    ],
+    "cwd": ".",
+    "adapter": null,
+    "seed": null,
+    "started_at": "2026-09-04T20:46:03.517598+00:00",
+    "finished_at": "2026-09-04T20:46:03.517620+00:00",
+    "exit_code": 1
+  },
+  "tool_versions": {
+    "python": "3.14.7",
+    "pytest": null,
+    "docker": "Docker version 28.3.3, build 980b856"
+  },
+  "cleanup": {
+    "transport": "docker",
+    "action": "cleanup_namespace",
+    "namespace": "aah-draft-w-regression-regression-attempt-7a7bc5d3",
+    "removed": [
+      "compose-project:aah-draft-w-regression-regression-attempt-7a7bc5d3"
+    ],
+    "leftover": [],
+    "errors": [],
+    "stopped": true,
+    "timestamp": "2026-09-04T20:46:03.407988+00:00"
+  },
+  "diagnostic": null,
+  "logs": {
+    "stderr": {
+      "file": "stderr.log",
+      "sha256": "c7c6652b355b31d342e0bb81235d5eec7f5f270ac6f5dde01a2334c9df64d6b4",
+      "bytes": 1706
+    },
+    "stdout": {
+      "file": "stdout.log",
+      "sha256": "47e34bd39e4474b83d0d9f405fbd99155a5b9552fb49258304dd4dc4f752bc9b",
+      "bytes": 34
+    }
+  },
+  "dropped_log_streams": [],
+  "retention": {
+    "local_log_days": 30,
+    "metadata_retention": "milestone",
+    "source": "fixed"
+  }
+}

@@ -1,0 +1,26 @@
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Startup Error [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯⎯[39m
+Error: Cannot find native binding. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+    at file:///Users/ken/Development/projects/Draft/node_modules/rolldown/dist/shared/binding-DmImI4pj.mjs:597:34
+    at file:///Users/ken/Development/projects/Draft/node_modules/rolldown/dist/shared/binding-DmImI4pj.mjs:9:49
+    ... 4 lines matching cause stack trace ...
+    at async CAC.run (file:///Users/ken/Development/projects/Draft/node_modules/vitest/dist/chunks/cac.D805sv8h.js:2346:2) {
+  cause: Error: Cannot find module '@rolldown/binding-wasm32-wasi'
+  Require stack:
+  - /Users/ken/Development/projects/Draft/node_modules/rolldown/dist/shared/binding-DmImI4pj.mjs
+      at file:///Users/ken/Development/projects/Draft/node_modules/rolldown/dist/shared/binding-DmImI4pj.mjs:494:18
+      ... 8 lines matching cause stack trace ...
+      at async CAC.run (file:///Users/ken/Development/projects/Draft/node_modules/vitest/dist/chunks/cac.D805sv8h.js:2346:2) {
+    cause: Error: Cannot find module './rolldown-binding.wasi.cjs'
+    Require stack:
+    - /Users/ken/Development/projects/Draft/node_modules/rolldown/dist/shared/binding-DmImI4pj.mjs
+        at file:///Users/ken/Development/projects/Draft/node_modules/rolldown/dist/shared/binding-DmImI4pj.mjs:494:18
+        ... 8 lines matching cause stack trace ...
+        at async CAC.run (file:///Users/ken/Development/projects/Draft/node_modules/vitest/dist/chunks/cac.D805sv8h.js:2346:2) {
+      cause: [Error]
+    }
+  }
+}
+
+
+
