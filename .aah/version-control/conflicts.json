@@ -39,14 +39,14 @@
       "field_class": "status",
       "base": "done",
       "local": "done",
-      "remote": "in_progress",
+      "remote": "implementing",
       "remote_ref": {
         "number": 3,
         "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
         "url": "https://github.com/maccorless/Draft/issues/3"
       },
       "detected_at": "sync",
-      "status": "resolved"
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-003-status",
