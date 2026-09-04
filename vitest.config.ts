@@ -16,6 +16,9 @@ export default defineConfig({
     env: {
       SENDGRID_API_KEY: 'test-sendgrid-key-placeholder',
       FANTASYPROS_API_KEY: 'test-fantasypros-key-placeholder',
+      // Suppresses per-request Pino JSON logs during test runs — the volume across
+      // 300+ HTTP-driven tests was overflowing the AAH build harness's output buffer.
+      LOG_LEVEL: 'silent',
     },
     // environmentMatchGlobs was removed in Vitest 5 — projects replaces it for
     // per-directory environment overrides (web needs jsdom, everything else node).
