@@ -503,3 +503,129 @@ Error: connect ECONNREFUSED 127.0.0.1:3000
 4:25:07 PM [vite] ws proxy error:
 Error: connect ECONNREFUSED 127.0.0.1:3000
     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:25:23 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:25:39 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:25:55 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:26:11 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:26:27 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:26:43 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:26:59 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:27:15 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:27:31 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:27:47 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:28:03 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:28:19 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:28:35 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:28:51 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:29:07 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:29:23 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:29:39 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:29:55 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:30:11 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:30:27 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:30:43 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:30:59 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:31:15 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:31:31 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:31:47 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:32:03 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:32:19 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:32:35 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:32:51 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:33:07 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:33:23 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:33:39 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:33:55 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:34:11 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:34:27 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:34:43 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:34:59 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:35:15 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:35:31 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:35:47 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:36:03 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+4:36:19 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
