@@ -8,6 +8,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Binoculars, ListNumbers, Target, X } from '@phosphor-icons/react';
 
 import { useAuctionSocket } from '../../lib/useAuctionSocket.js';
+import { TeamIcon } from '../../components/TeamIcon.js';
 import './war-room.css';
 
 interface WarRoomProps {
@@ -34,6 +35,7 @@ interface GridSlot {
 interface GridTeam {
   team_id: string;
   team_name: string;
+  icon_url: string | null;
   remaining_budget_minor: number;
   max_legal_bid_minor: number;
   roster_filled_count: number;
@@ -590,7 +592,10 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
               <tbody>
                 {rosterGrid.map((team) => (
                   <tr key={team.team_id} className={team.team_id === auction?.leading_team_id ? 'war-room__grid-row--leading' : ''}>
-                    <td className="war-room__grid-team-name">{team.team_name}</td>
+                    <td className="war-room__grid-team-name">
+                      <TeamIcon iconUrl={team.icon_url} className="war-room__team-icon" />
+                      {team.team_name}
+                    </td>
                     <td className="war-room__mono">{formatMoney(team.remaining_budget_minor)}</td>
                     <td className="war-room__mono">{formatMoney(team.max_legal_bid_minor)}</td>
                     {rosterSlots.filter((s) => s.is_starter).map((s) => {

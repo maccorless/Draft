@@ -130,6 +130,8 @@ export async function registerLeagueRoutes(
           id: teams.id,
           name: teams.name,
           draft_order: teams.draft_order,
+          icon_url: teams.icon_url,
+          nomination_audio_url: teams.nomination_audio_url,
         })
         .from(teams)
         .where(eq(teams.league_id, req.params.leagueId))

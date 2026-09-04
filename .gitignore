@@ -154,3 +154,6 @@ htmlcov/
 
 # Test runner output (JUnit XML, coverage)
 test-results/
+
+# Team presentation media uploads (F-MOD-015) — local disk, never committed
+server/uploads/

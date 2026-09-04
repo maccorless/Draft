@@ -25,6 +25,7 @@ import { registerReportRoutes } from './draft/reports.js';
 import { registerStrategyRoutes } from './draft/strategy.js';
 import { registerWhammyRoutes } from './draft/whammy.js';
 import { registerWarRoomRoutes } from './draft/war-room.js';
+import { registerTeamMediaRoutes } from './team-media/routes.js';
 import { registerDevRoutes } from './dev/routes.js';
 
 const PORT = parseInt(process.env['PORT'] ?? '3000', 10);
@@ -132,6 +133,9 @@ export async function buildServer() {
   await registerStrategyRoutes(server, sql);
   await registerWhammyRoutes(server, sql);
   await registerWarRoomRoutes(server, sql);
+  // Registered after registerPlayerRoutes, which already registers
+  // @fastify/multipart globally on `server` — registering it twice throws.
+  await registerTeamMediaRoutes(server, sql);
 
   // Wipes-and-reseeds the whole DB — never expose outside local/dev use.
   if (process.env['NODE_ENV'] !== 'production') {

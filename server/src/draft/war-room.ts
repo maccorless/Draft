@@ -85,8 +85,13 @@ export async function registerWarRoomRoutes(
       if (!ctx) return;
       const { draft } = ctx;
 
-      const teamRows = await sql<Array<{ id: string; name: string; draft_order: number }>>`
-        SELECT id, name, draft_order FROM teams
+      const teamRows = await sql<Array<{
+        id: string;
+        name: string;
+        draft_order: number;
+        icon_url: string | null;
+      }>>`
+        SELECT id, name, draft_order, icon_url FROM teams
         WHERE league_id = ${draft.league_id}
         ORDER BY draft_order ASC
       `;
@@ -146,6 +151,7 @@ export async function registerWarRoomRoutes(
           team_id: team.id,
           team_name: team.name,
           draft_order: team.draft_order,
+          icon_url: team.icon_url,
           remaining_budget_minor: remainingBudgetMinor,
           max_legal_bid_minor: computeMaxLegalBid(remainingBudgetMinor, requiredRemainingSpots),
           roster_filled_count: state?.roster_filled_count ?? 0,

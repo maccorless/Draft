@@ -51,6 +51,14 @@ export interface AwardEntry {
   resolution_sequence: number;
 }
 
+export interface NominationAudioCue {
+  team_id: string;
+  audio_url: string;
+  duration_cap_ms: number;
+  /** Distinguishes repeat cues for the same team_id/url so a consumer's useEffect re-fires. */
+  receivedAt: number;
+}
+
 export type ConnectionStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
 
 interface AuctionState {
@@ -65,6 +73,7 @@ interface AuctionState {
   recentAwards: AwardEntry[];
   asOfSequence: number;
   lastError: { code: string; reason: string } | null;
+  nominationAudioCue: NominationAudioCue | null;
 }
 
 const initialState: AuctionState = {
@@ -79,6 +88,7 @@ const initialState: AuctionState = {
   recentAwards: [],
   asOfSequence: -1,
   lastError: null,
+  nominationAudioCue: null,
 };
 
 type Action =
@@ -245,6 +255,18 @@ function reducer(state: AuctionState, action: Action): AuctionState {
         teams: {
           ...state.teams,
           [teamId]: { ...prevTeam, control_mode: msg.type === 'TEAM_AUTO_AGENT_ENABLED' ? 'AUTO_AGENT' : 'MANUAL' },
+        },
+      };
+    }
+
+    case 'TEAM_NOMINATION_AUDIO': {
+      return {
+        ...state,
+        nominationAudioCue: {
+          team_id: String(p['team_id']),
+          audio_url: String(p['audio_url']),
+          duration_cap_ms: Number(p['duration_cap_ms'] ?? 5000),
+          receivedAt: Date.now(),
         },
       };
     }

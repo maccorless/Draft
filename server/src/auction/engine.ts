@@ -639,6 +639,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
     second_bid_deadline_ts: number;
     system_nominated: boolean;
   };
+  let nominationAudioPayload: { team_id: string; audio_url: string; duration_cap_ms: number } | null = null;
 
   try {
     await sql.begin(async (tx) => {
@@ -692,6 +693,25 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
            ${JSON.stringify(nominationPayload)}::jsonb,
            NOW())
       `;
+
+      // Nomination-audio (F-MOD-015): fires at most once per team per draft,
+      // in this same transaction, when the nominating team has a
+      // nomination_audio_url and hasn't played it yet this draft.
+      const audioRows = await tx<[{ nomination_audio_url: string | null }]>`
+        SELECT t.nomination_audio_url
+        FROM teams t
+        JOIN draft_team_states dts ON dts.team_id = t.id AND dts.draft_id = ${draftId}
+        WHERE t.id = ${teamId} AND dts.nomination_audio_played = false
+        LIMIT 1
+      `;
+      const audioUrl = audioRows[0]?.nomination_audio_url ?? null;
+      if (audioUrl) {
+        await tx`
+          UPDATE draft_team_states SET nomination_audio_played = true
+          WHERE draft_id = ${draftId} AND team_id = ${teamId}
+        `;
+        nominationAudioPayload = { team_id: teamId, audio_url: audioUrl, duration_cap_ms: 5000 };
+      }
     });
   } catch (err) {
     console.error('[engine] NOMINATE transaction failed:', err);
@@ -699,6 +719,9 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
   }
 
   broadcast(draftId, { type: 'NOMINATION_STARTED', payload: nominationPayload! });
+  if (nominationAudioPayload) {
+    broadcast(draftId, { type: 'TEAM_NOMINATION_AUDIO', payload: nominationAudioPayload });
+  }
 
   return {
     succeeded: true,

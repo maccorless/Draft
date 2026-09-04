@@ -85,6 +85,8 @@ export const teams = pgTable('teams', {
   team_password_hash: text('team_password_hash').notNull(),
   auth_epoch: integer('auth_epoch').notNull().default(0),
   draft_order: integer('draft_order').notNull(),
+  icon_url: text('icon_url'),
+  nomination_audio_url: text('nomination_audio_url'),
 });
 
 export const memberships = pgTable('memberships', {
@@ -238,6 +240,7 @@ export const draftTeamStates = pgTable('draft_team_states', {
   control_mode: controlModeEnum('control_mode').notNull().default('MANUAL'),
   connected_at: timestamp('connected_at', { withTimezone: true }),
   nominator_match_used: boolean('nominator_match_used').notNull().default(false),
+  nomination_audio_played: boolean('nomination_audio_played').notNull().default(false),
 });
 
 export const playerAuctions = pgTable('player_auctions', {

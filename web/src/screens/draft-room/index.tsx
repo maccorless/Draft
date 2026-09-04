@@ -8,6 +8,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { WifiHigh, WifiMedium, WifiSlash, Robot } from '@phosphor-icons/react';
 
 import { useAuctionSocket } from '../../lib/useAuctionSocket.js';
+import { NominationAudioPlayer } from '../../components/NominationAudioPlayer.js';
+import { TeamIcon } from '../../components/TeamIcon.js';
 import './draft-room.css';
 
 interface DraftRoomProps {
@@ -40,6 +42,7 @@ interface GridSlot {
 interface GridTeam {
   team_id: string;
   team_name: string;
+  icon_url: string | null;
   remaining_budget_minor: number;
   max_legal_bid_minor: number;
   roster_filled_count: number;
@@ -219,6 +222,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
 
   return (
     <div className="draft-room">
+      <NominationAudioPlayer cue={ws.nominationAudioCue} />
       <header className="draft-room__topbar">
         <span className="draft-room__title">Draft Room</span>
         <div className="draft-room__health">
@@ -239,7 +243,10 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
 
       <div className="draft-room__layout">
         <aside className="draft-room__team-context" aria-label="My Team">
-          <h2 className="draft-room__panel-heading">My Team</h2>
+          <h2 className="draft-room__panel-heading">
+            <TeamIcon iconUrl={myGridTeam?.icon_url ?? null} className="draft-room__team-icon" />
+            My Team
+          </h2>
           {myGridTeam ? (
             <dl className="draft-room__stat-list">
               <div className="draft-room__stat">
