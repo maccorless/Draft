@@ -258,7 +258,7 @@ export function LogoutButton({ auth, onLogout }: { auth: AuthState; onLogout: ()
 
 // ── Root with auth flow ───────────────────────────────────────────────────────
 
-function CommissionerRoute({ auth }: { auth: AuthState }) {
+export function CommissionerRoute({ auth, onStaleSession }: { auth: AuthState; onStaleSession: () => void }) {
   const [datasetId, setDatasetId] = useState<string | null>(null);
   const [datasetStatus, setDatasetStatus] = useState<'DRAFT' | 'VALIDATED' | 'FROZEN' | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
@@ -271,13 +271,19 @@ function CommissionerRoute({ auth }: { auth: AuthState }) {
       body: '{}',
     })
       .then(async res => {
+        // 404 here means requireCommissioner couldn't find auth.leagueId at all —
+        // the stored session outlived the league it points to (e.g. dev-seed
+        // reseeded, which always generates a fresh league id). Don't dead-end
+        // on a raw error the user can't act on; log out so they land back on
+        // the sign-in screen and can pick up the current league right away.
+        if (res.status === 404) { onStaleSession(); return; }
         if (!res.ok) { setError(`Failed to create dataset (${res.status})`); return; }
         const data = await res.json();
         setDatasetId(data.id);
         setDatasetStatus(data.status);
       })
       .catch(() => setError('Cannot reach server'));
-  }, [auth.leagueId, auth.token]);
+  }, [auth.leagueId, auth.token, onStaleSession]);
 
   // Draft Control (F-MOD-011) operates whichever draft is currently active —
   // same "pick the most relevant draft" logic DraftGateway uses for owners.
@@ -327,7 +333,7 @@ function pickActiveDraft(drafts: DraftSummary[]): DraftSummary | null {
   return [...drafts].sort((a, b) => STATUS_PRIORITY[a.status] - STATUS_PRIORITY[b.status])[0] ?? null;
 }
 
-function DraftGateway({ auth }: { auth: AuthState }) {
+export function DraftGateway({ auth, onStaleSession }: { auth: AuthState; onStaleSession: () => void }) {
   const [drafts, setDrafts] = useState<DraftSummary[] | null>(null);
   const [error, setError] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -338,12 +344,15 @@ function DraftGateway({ auth }: { auth: AuthState }) {
       headers: { Authorization: `Bearer ${auth.token}` },
     })
       .then(async res => {
+        // Same stale-session case as CommissionerRoute: the league this
+        // session points to no longer exists (e.g. dev-seed reseeded).
+        if (res.status === 404) { onStaleSession(); return; }
         if (!res.ok) { setError(`Failed to load drafts (${res.status})`); return; }
         const data = await res.json();
         setDrafts(data.drafts ?? []);
       })
       .catch(() => setError('Cannot reach server'));
-  }, [auth.leagueId, auth.token]);
+  }, [auth.leagueId, auth.token, onStaleSession]);
 
   // GET /leagues/:id (MOD-010) — status_message and scheduled_draft_start_at
   // for the Lobby header; accepts this OWNER token since MOD-010 widened the
@@ -623,8 +632,8 @@ export function App() {
             ? <Navigate to="/commissioner" replace />
             : <Navigate to="/lobby" replace />
         } />
-        <Route path="/commissioner" element={<CommissionerRoute auth={auth} />} />
-        <Route path="/lobby" element={<DraftGateway auth={auth} />} />
+        <Route path="/commissioner" element={<CommissionerRoute auth={auth} onStaleSession={handleLogout} />} />
+        <Route path="/lobby" element={<DraftGateway auth={auth} onStaleSession={handleLogout} />} />
         <Route path="/draft-room" element={<DraftRoomRoute auth={auth} />} />
         <Route path="/war-room" element={<WarRoomRoute auth={auth} />} />
         <Route path="/draft-complete" element={<DraftCompleteRoute auth={auth} />} />
