@@ -14,6 +14,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
+    "@rolldown/binding-darwin-arm64": "1.2.7",
     "@vitest/coverage-v8": "^5.0.0",
     "typescript": "^5.5.4",
     "vitest": "^5.0.0"
