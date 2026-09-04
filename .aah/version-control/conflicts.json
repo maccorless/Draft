@@ -14,7 +14,7 @@
         "url": "https://github.com/maccorless/Draft/issues/1"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-001-status",
@@ -30,7 +30,7 @@
         "url": "https://github.com/maccorless/Draft/issues/2"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-002-status",
@@ -46,7 +46,7 @@
         "url": "https://github.com/maccorless/Draft/issues/3"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-003-status",
@@ -62,7 +62,7 @@
         "url": "https://github.com/maccorless/Draft/issues/4"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-004-status",
@@ -78,7 +78,7 @@
         "url": "https://github.com/maccorless/Draft/issues/5"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-005-status",
@@ -94,7 +94,7 @@
         "url": "https://github.com/maccorless/Draft/issues/6"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-006-status",
@@ -110,7 +110,7 @@
         "url": "https://github.com/maccorless/Draft/issues/7"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-007-status",
@@ -126,7 +126,7 @@
         "url": "https://github.com/maccorless/Draft/issues/8"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-008-status",
@@ -142,7 +142,7 @@
         "url": "https://github.com/maccorless/Draft/issues/9"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-009-status",
@@ -158,7 +158,7 @@
         "url": "https://github.com/maccorless/Draft/issues/10"
       },
       "detected_at": "lifecycle-update",
-      "status": "open"
+      "status": "resolved"
     }
   ]
 }

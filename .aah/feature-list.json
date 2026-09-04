@@ -122,7 +122,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -233,7 +233,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -346,7 +346,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -454,7 +454,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -567,7 +567,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -680,7 +680,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -794,7 +794,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -901,7 +901,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -1014,7 +1014,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -1122,7 +1122,7 @@
           ]
         }
       ],
-      "passes": false
+      "passes": true
     },
     {
       "status": "pending",
@@ -1237,7 +1237,7 @@
       "passes": false
     },
     {
-      "status": "pending",
+      "status": "implementing",
       "id": "F-MOD-016",
       "title": "Multi-source AAV and player intelligence data",
       "module_ref": "MOD-016",
