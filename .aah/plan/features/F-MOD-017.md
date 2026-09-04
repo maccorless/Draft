@@ -120,6 +120,11 @@ only on MOD-002, not MOD-016):
 
 ## Test Config
 
+- command: DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! npx vitest run --project node server/src/__tests__/F-MOD-017_close_card_and_popover.test.ts --project web web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx
+- test_paths:
+  - server/src/__tests__/F-MOD-017_close_card_and_popover.test.ts
+  - web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx
+
 ## Lint Config
 
 ## Constraints

@@ -49,6 +49,10 @@ export interface AwardEntry {
   price_minor: number;
   roster_slot: string;
   resolution_sequence: number;
+  accepted_bid_count: number;
+  unique_bidder_count: number;
+  aav_minor: number;
+  remaining_budget_minor: number;
 }
 
 export interface NominationAudioCue {
@@ -208,6 +212,10 @@ function reducer(state: AuctionState, action: Action): AuctionState {
         price_minor: Number(p['price_minor']),
         roster_slot: String(p['roster_slot']),
         resolution_sequence: Number(p['resolution_sequence']),
+        accepted_bid_count: Number(p['accepted_bid_count'] ?? 0),
+        unique_bidder_count: Number(p['unique_bidder_count'] ?? 0),
+        aav_minor: Number(p['aav_minor'] ?? 0),
+        remaining_budget_minor: Number(p['remaining_budget_minor'] ?? 0),
       };
       const teamId = award.winning_team_id;
       const prevTeam = state.teams[teamId];
@@ -221,7 +229,8 @@ function reducer(state: AuctionState, action: Action): AuctionState {
               ...state.teams,
               [teamId]: {
                 ...prevTeam,
-                remaining_budget_minor: prevTeam.remaining_budget_minor - award.price_minor,
+                // Server-computed and authoritative — not re-derived client-side.
+                remaining_budget_minor: award.remaining_budget_minor,
                 roster_filled_count: prevTeam.roster_filled_count + 1,
               },
             }

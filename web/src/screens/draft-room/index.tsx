@@ -4,13 +4,16 @@
  * what should I do in the next few seconds. Server is authoritative for every
  * price/deadline/winner here — this component only renders what it broadcasts.
  */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WifiHigh, WifiMedium, WifiSlash, Robot } from '@phosphor-icons/react';
 
 import { useAuctionSocket } from '../../lib/useAuctionSocket.js';
 import { NominationAudioPlayer } from '../../components/NominationAudioPlayer.js';
 import { TeamIcon } from '../../components/TeamIcon.js';
+import { AuctionCloseCard } from '../../components/AuctionCloseCard.js';
+import { PlayerDetailPopover } from '../../components/PlayerDetailPopover.js';
+import type { AwardEntry } from '../../lib/useAuctionSocket.js';
 import './draft-room.css';
 
 interface DraftRoomProps {
@@ -51,6 +54,11 @@ interface GridTeam {
   slots: GridSlot[];
 }
 
+interface AavSourceEntry {
+  source: string;
+  aav_minor: number;
+}
+
 interface DatasetPlayer {
   player_id: string;
   dataset_entry_id: string;
@@ -59,7 +67,19 @@ interface DatasetPlayer {
   nfl_team: string;
   aav_minor: number;
   tier: number | null;
+  projected_points: number | null;
   injury_status?: string | null;
+  injury_detail?: string | null;
+  injury_updated_at?: string | null;
+  bye_week?: number | null;
+  prior_season_stats?: unknown;
+  aav_sources?: AavSourceEntry[];
+}
+
+interface TargetItem {
+  dataset_player_id: string;
+  target_value_minor: number;
+  player_name: string;
 }
 
 function formatMoney(minor: number): string {
@@ -104,6 +124,9 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
   const [players, setPlayers] = useState<DatasetPlayer[]>([]);
   const [customAmount, setCustomAmount] = useState('');
   const [nominateSearch, setNominateSearch] = useState('');
+  const [targets, setTargets] = useState<TargetItem[]>([]);
+  const [closeCardAward, setCloseCardAward] = useState<AwardEntry | null>(null);
+  const [showPopover, setShowPopover] = useState(false);
   const awardCountRef = useRef(0);
 
   useEffect(() => {
@@ -116,6 +139,29 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
       .then((d: { players: DatasetPlayer[] }) => setPlayers(d.players ?? []))
       .catch(() => {});
   }, [draftId, leagueId, token]);
+
+  useEffect(() => {
+    if (!teamId) return;
+    fetch(`/drafts/${draftId}/teams/${teamId}/target-values`, { headers: { authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d: { targets: TargetItem[] }) => setTargets(d.targets ?? []))
+      .catch(() => {});
+  }, [draftId, teamId, token]);
+
+  // A close card is ephemeral overlay state, independent of the nomination
+  // flow underneath — new awards prepend to recentAwards, so the newest is
+  // always index 0 (PRD.md §29).
+  useEffect(() => {
+    if (ws.recentAwards.length > 0) {
+      setCloseCardAward(ws.recentAwards[0]!);
+    }
+  }, [ws.recentAwards.length]);
+
+  // The popover is scoped to whichever player is currently up for auction —
+  // close it rather than let it silently show stale data for a new player.
+  useEffect(() => {
+    setShowPopover(false);
+  }, [ws.currentAuction?.player_auction_id]);
 
   const refreshGrid = useMemo(
     () => () => {
@@ -179,6 +225,31 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
     [auction, players],
   );
 
+  // Mechanically selected: same position + same tier, not yet drafted, per
+  // the popover's "comparable remaining players" requirement — same approach
+  // War Room's tierBoard/comparable lists already use.
+  const comparablePlayers = useMemo(() => {
+    if (!auction || auction.tier === null) return [];
+    return players
+      .filter((p) => p.position === auction.position && p.tier === auction.tier && !drafted.has(p.name) && p.name !== auction.player_name)
+      .sort((a, b) => b.aav_minor - a.aav_minor)
+      .slice(0, 6);
+  }, [auction, players, drafted]);
+
+  const myTargetValueMinor = useMemo(() => {
+    if (!auction) return null;
+    return targets.find((t) => t.player_name === auction.player_name)?.target_value_minor ?? null;
+  }, [auction, targets]);
+
+  // Stable identity: the countdown timers re-render DraftRoom every 200ms
+  // while a nomination deadline is active, so an inline arrow here would
+  // reset AuctionCloseCard's auto-dismiss effect on every tick.
+  const dismissCloseCard = useCallback(() => setCloseCardAward(null), []);
+
+  const closeCardTeamName = closeCardAward
+    ? rosterGrid.find((t) => t.team_id === closeCardAward.winning_team_id)?.team_name ?? 'Unknown team'
+    : '';
+
   const isLeading = !!(auction && teamId && auction.leading_team_id === teamId);
   const isNominatorOfOpen = !!(auction && teamId && auction.nominator_team_id === teamId);
   const canPlaceBid = !!(auction && teamId && !isLeading && ws.draftStatus === 'RUNNING');
@@ -234,6 +305,21 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
   return (
     <div className="draft-room">
       <NominationAudioPlayer cue={ws.nominationAudioCue} />
+      {closeCardAward && (
+        <AuctionCloseCard
+          award={closeCardAward}
+          winningTeamName={closeCardTeamName}
+          onDismiss={dismissCloseCard}
+        />
+      )}
+      {showPopover && auction && activePlayerDetail && (
+        <PlayerDetailPopover
+          player={activePlayerDetail}
+          targetValueMinor={myTargetValueMinor}
+          comparables={comparablePlayers}
+          onClose={() => setShowPopover(false)}
+        />
+      )}
       <header className="draft-room__topbar">
         <span className="draft-room__title">Draft Room</span>
         <div className="draft-room__health">
@@ -335,8 +421,16 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
           ) : (
             <>
               <div className="draft-room__player">
-                <h1 className="draft-room__player-name" data-testid="active-player-name">
-                  {auction.player_name}
+                <h1 className="draft-room__player-name">
+                  <button
+                    type="button"
+                    className="draft-room__player-name-btn"
+                    data-testid="active-player-name"
+                    onClick={() => setShowPopover(true)}
+                    aria-label={`View details for ${auction.player_name}`}
+                  >
+                    {auction.player_name}
+                  </button>
                   {activePlayerDetail?.injury_status && (
                     <span className="draft-room__injury-indicator" data-testid="injury-indicator" title={activePlayerDetail.injury_status}>
                       {activePlayerDetail.injury_status}

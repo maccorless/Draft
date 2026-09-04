@@ -15,7 +15,7 @@ import type WebSocket from 'ws';
 import postgres from 'postgres';
 
 import { AsyncQueue } from './queue.js';
-import { resolveEffectivePrimarySource } from '../player/aav-resolution.js';
+import { resolveEffectivePrimarySource, resolvePlayerPrimaryAav } from '../player/aav-resolution.js';
 
 export interface DraftRuntime {
   queue: AsyncQueue;
@@ -827,6 +827,7 @@ interface AwardableAuction {
   id: string;
   draft_id: string;
   league_id: string;
+  dataset_id: string;
   current_bid_minor: number;
   current_leader_id: string;
   dataset_player_id: string;
@@ -837,7 +838,7 @@ interface AwardableAuction {
 async function findAwardableAuctions(sql: postgres.Sql): Promise<AwardableAuction[]> {
   return sql<AwardableAuction[]>`
     SELECT
-      pa.id, pa.draft_id, d.league_id,
+      pa.id, pa.draft_id, d.league_id, d.dataset_id,
       pa.current_bid_minor, pa.current_leader_id,
       pa.dataset_player_id, p.name AS player_name, p.position AS player_position
     FROM player_auctions pa
@@ -941,8 +942,17 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
     auction.player_position,
   );
 
+  // Primary AAV for the close card's over/under diff (F-MOD-017) — static
+  // reference data, resolved the same way nomination does, ahead of the
+  // transaction (same pattern as the slot lookup above).
+  const resolvedAav = await resolvePlayerPrimaryAav(sql, auction.dataset_id, auction.dataset_player_id);
+  const aavMinor = resolvedAav?.aav_minor ?? 0;
+
   let resolutionSequence: number;
   let acquisitionId: string;
+  let acceptedBidCount: number;
+  let uniqueBidderCount: number;
+  let remainingBudgetMinor: number;
 
   await sql.begin(async (tx) => {
     // Get next resolution_sequence
@@ -980,13 +990,26 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
     `;
 
     // UPDATE draft_team_states
-    await tx`
+    const [updatedTeamState] = await tx<[{ remaining_budget_minor: number }]>`
       UPDATE draft_team_states
       SET remaining_budget_minor = remaining_budget_minor - ${auction.current_bid_minor},
           roster_filled_count = roster_filled_count + 1,
           required_remaining_spots = GREATEST(0, required_remaining_spots - 1)
       WHERE draft_id = ${draftId} AND team_id = ${auction.current_leader_id}
+      RETURNING remaining_budget_minor
     `;
+    remainingBudgetMinor = updatedTeamState!.remaining_budget_minor;
+
+    // Accepted-bid / unique-bidder counts for the close card (F-MOD-017) —
+    // computed here from bid_attempts, not the client's 10-entry bidLadder,
+    // so auctions with more than 10 bids still report true totals.
+    const [bidStats] = await tx<[{ accepted_count: number; unique_bidders: number }]>`
+      SELECT COUNT(*)::int AS accepted_count, COUNT(DISTINCT team_id)::int AS unique_bidders
+      FROM bid_attempts
+      WHERE player_auction_id = ${auctionId} AND accepted = true
+    `;
+    acceptedBidCount = bidStats?.accepted_count ?? 0;
+    uniqueBidderCount = bidStats?.unique_bidders ?? 0;
 
     // INSERT roster_entry (if slot found)
     if (slot) {
@@ -1012,6 +1035,10 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
            price_minor: auction.current_bid_minor,
            roster_slot: slot?.slotLabel ?? 'BN',
            resolution_sequence: resolutionSequence,
+           accepted_bid_count: acceptedBidCount,
+           unique_bidder_count: uniqueBidderCount,
+           aav_minor: aavMinor,
+           remaining_budget_minor: remainingBudgetMinor,
          })}::jsonb,
          NOW())
     `;
@@ -1056,6 +1083,10 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
       price_minor: auction.current_bid_minor,
       roster_slot: slot?.slotLabel ?? 'BN',
       resolution_sequence: resolutionSequence!,
+      accepted_bid_count: acceptedBidCount!,
+      unique_bidder_count: uniqueBidderCount!,
+      aav_minor: aavMinor,
+      remaining_budget_minor: remainingBudgetMinor!,
     },
   });
 
