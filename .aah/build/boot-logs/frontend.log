@@ -803,3 +803,9 @@ Error: connect ECONNREFUSED 127.0.0.1:3000
 5:13:40 PM [vite] ws proxy error:
 Error: connect ECONNREFUSED 127.0.0.1:3000
     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+5:13:56 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+5:14:12 PM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
