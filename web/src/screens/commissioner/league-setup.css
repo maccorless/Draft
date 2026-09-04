@@ -45,6 +45,13 @@
   color: var(--color-text-muted);
 }
 
+.league-setup__hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
 .league-setup__form input,
 .league-setup__form select,
 .league-setup__form textarea {

@@ -268,7 +268,7 @@ export async function registerLeagueRoutes(
         configId = cfg!.id;
       }
 
-      // Insert new slot definitions
+      // Insert the commissioner's explicit slot definitions.
       if (slots.length > 0) {
         await db.insert(rosterSlotDefinitions).values(
           slots.map((s) => ({
@@ -279,6 +279,25 @@ export async function registerLeagueRoutes(
             slot_count: s.slot_count,
           })),
         );
+      }
+
+      // Auto-manage the bench slot definition. The auction engine's
+      // assignRosterSlot (server/src/auction/engine.ts) needs an actual
+      // roster_slot_definitions row (is_starter=false) to have somewhere to
+      // assign an overflow/bench pick to — without one, a player bought
+      // after every starter slot is full is still awarded and paid for, but
+      // silently gets no roster_entries row at all (assignRosterSlot returns
+      // null and the insert is skipped). The commissioner configures bench
+      // capacity via the separate bench_slots count, not by adding their own
+      // 'BN' row, so this endpoint materializes that row for them.
+      if (bench_slots > 0) {
+        await db.insert(rosterSlotDefinitions).values({
+          config_id: configId,
+          position: 'BN',
+          priority: 9999,
+          is_starter: false,
+          slot_count: bench_slots,
+        });
       }
 
       return reply.status(200).send();

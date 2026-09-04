@@ -98,7 +98,7 @@ function computeWouldFill(slots: RosterSlotDef[], filled: GridSlot[], playerPosi
     const slotPos = slot.position.toUpperCase();
     const alreadyFilled = filledByPos.get(slot.position) ?? 0;
     if (alreadyFilled >= slot.slot_count) continue;
-    if (slotPos === pos || slotPos === 'BN' || slotPos === 'BENCH' || (slotPos === 'FLEX' && ['RB', 'WR', 'TE'].includes(pos))) {
+    if (slotPos === pos || slotPos === 'BN' || slotPos === 'BENCH' || slotPos === 'SUPERFLEX' || (slotPos === 'FLEX' && ['RB', 'WR', 'TE'].includes(pos))) {
       return slot.is_starter ? slot.position : 'BENCH';
     }
   }

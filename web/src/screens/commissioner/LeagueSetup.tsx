@@ -84,8 +84,19 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
   const [statusMessage, setStatusMessage] = useState('');
 
   const [benchSlots, setBenchSlots] = useState('6');
+  // Standard fantasy football default: QB1 / RB2 / WR2 / TE1 / FLEX1 (RB/WR/TE) /
+  // K1 / DEF1 = 9 starters. No Superflex by default (add one via "+ Add slot" —
+  // position "SUPERFLEX" accepts any position, including QB). Bench is
+  // configured via the separate "Bench slots" field below, not a row here —
+  // the server auto-manages the actual bench slot definition from that count.
   const [rosterSlots, setRosterSlots] = useState<RosterSlotRow[]>([
     { position: 'QB', priority: 1, is_starter: true, slot_count: 1 },
+    { position: 'RB', priority: 2, is_starter: true, slot_count: 2 },
+    { position: 'WR', priority: 3, is_starter: true, slot_count: 2 },
+    { position: 'TE', priority: 4, is_starter: true, slot_count: 1 },
+    { position: 'FLEX', priority: 5, is_starter: true, slot_count: 1 },
+    { position: 'K', priority: 6, is_starter: true, slot_count: 1 },
+    { position: 'DEF', priority: 7, is_starter: true, slot_count: 1 },
   ]);
 
   const [initialBudget, setInitialBudget] = useState('200');
@@ -394,6 +405,13 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
         <form className="league-setup__form" onSubmit={submitRosterConfig}>
           <label htmlFor="bench-slots">Bench slots</label>
           <input id="bench-slots" type="number" min={0} value={benchSlots} onChange={(e) => setBenchSlots(e.target.value)} />
+          <p className="league-setup__hint">
+            Every drafted player counts toward roster size regardless of position — there's no
+            limit on how many of one position a team can draft. "Starter" only controls where a
+            pick lands: the lowest-priority open starter slot the player is eligible for, or
+            bench if none is open (never the other way around). Use position "FLEX" for RB/WR/TE,
+            or "SUPERFLEX" for any position including QB.
+          </p>
           <table className="league-setup__slot-table">
             <thead>
               <tr><th>Position</th><th>Priority</th><th>Starter</th><th>Count</th><th /></tr>

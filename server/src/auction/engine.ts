@@ -896,13 +896,15 @@ async function assignRosterSlot(
     const filled = filledMap.get(slot.id) ?? 0;
     if (filled >= slot.slot_count) continue; // slot is full
 
-    // Position matching: exact match, or FLEX (accepts RB/WR/TE), or BN (accepts all)
+    // Position matching: exact match, FLEX (accepts RB/WR/TE), SUPERFLEX
+    // (accepts any position — a QB-eligible flex slot), or BN/BENCH (accepts all)
     const pos = slot.position.toUpperCase();
     const playerPos = playerPosition.toUpperCase();
     if (
       pos === playerPos ||
       pos === 'BN' ||
       pos === 'BENCH' ||
+      pos === 'SUPERFLEX' ||
       (pos === 'FLEX' && ['RB', 'WR', 'TE', 'RB/WR/TE'].includes(playerPos))
     ) {
       return { slotId: slot.id, slotLabel: slot.position };
