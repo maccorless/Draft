@@ -16,6 +16,9 @@
 # Local Claude tooling and worktrees
 .claude/
 
+# Claude Code skill-resolution lockfile — machine-local, auto-regenerated
+skills-lock.json
+
 # OS
 .DS_Store
 Thumbs.db
