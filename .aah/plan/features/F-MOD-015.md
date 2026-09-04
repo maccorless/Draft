@@ -137,6 +137,11 @@ api_contracts:
 
 ## Test Config
 
+- command: DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! npx vitest run --project node server/src/__tests__/F-MOD-015_team_media.test.ts --project web web/src/__tests__/F-MOD-015_team_media.test.tsx
+- test_paths:
+  - server/src/__tests__/F-MOD-015_team_media.test.ts
+  - web/src/__tests__/F-MOD-015_team_media.test.tsx
+
 ## Lint Config
 
 ## Constraints

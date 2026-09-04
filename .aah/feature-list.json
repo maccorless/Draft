@@ -1234,6 +1234,13 @@
         "F-MOD-002"
       ],
       "api_contracts": "```yaml\napi_contracts:\n  produces:\n    - operation_id: uploadTeamMedia\n      schema_file: schema/MOD-015-api-schema.yaml\n      request_schema: \"multipart/form-data (icon, nomination_audio)\"\n      response_schema: TeamMediaResponse\n    - operation_id: deleteTeamMedia\n      schema_file: schema/MOD-015-api-schema.yaml\n      request_schema: DeleteTeamMediaRequest\n      response_schema: TeamMediaResponse\n```",
+      "test_config": {
+        "command": "DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! npx vitest run --project node server/src/__tests__/F-MOD-015_team_media.test.ts --project web web/src/__tests__/F-MOD-015_team_media.test.tsx",
+        "test_paths": [
+          "server/src/__tests__/F-MOD-015_team_media.test.ts",
+          "web/src/__tests__/F-MOD-015_team_media.test.tsx"
+        ]
+      },
       "passes": false
     },
     {
