@@ -1,0 +1,106 @@
+openapi: "3.1.0"
+info:
+  title: MOD-016 Multi-Source AAV — Primary/Secondary Selection
+  version: "1.0.0"
+  description: |
+    Commissioner selection of a dataset's Primary/Secondary AAV source, over the
+    player_aav_sources rows this module's schema restructuring introduces
+    (PRD §10). The extended listPlayers response lives in the amended
+    schema/MOD-001-api-schema.yaml (PlayerEntry), not here.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /leagues/{leagueId}/datasets/{datasetId}/aav-sources:
+    put:
+      operationId: setAavSources
+      summary: Set the dataset's Primary/Secondary AAV source (commissioner only)
+      description: |
+        Validated against the source values actually present among the dataset's
+        currently-loaded player_aav_sources rows; an unrecognized or not-yet-loaded
+        source is rejected.
+      tags: [player-intelligence]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/datasetId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetAavSourcesRequest"
+      responses:
+        "200":
+          description: Selection persisted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AavSourceSelectionResponse"
+        "400":
+          description: A named source has no player_aav_sources rows in this dataset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Non-commissioner or auth_epoch-invalidated token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    leagueId:
+      name: leagueId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    datasetId:
+      name: datasetId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    SetAavSourcesRequest:
+      type: object
+      required: [primary_aav_source]
+      properties:
+        primary_aav_source:
+          type: string
+          enum: [CSV, EXCEL, ESPN_PDF, FANTASYPROS]
+        secondary_aav_source:
+          type: string
+          enum: [CSV, EXCEL, ESPN_PDF, FANTASYPROS]
+          nullable: true
+
+    AavSourceSelectionResponse:
+      type: object
+      required: [primary_aav_source]
+      properties:
+        primary_aav_source:
+          type: string
+        secondary_aav_source:
+          type: string
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

@@ -91,7 +91,7 @@ components:
 
     ReportTeamEntry:
       type: object
-      required: [team_id, team_name, acquisitions, final_budget_minor]
+      required: [team_id, team_name, acquisitions, final_budget_minor, projected_starter_points, roster_depth_score, aav_efficiency_pct]
       properties:
         team_id:
           type: string
@@ -105,6 +105,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ReportAcquisitionEntry"
+        projected_starter_points:
+          type: number
+          description: >-
+            Sum of projected fantasy points for acquisitions whose active RosterEntry maps to an
+            is_starter=true RosterSlotDefinition (PRD §36.1). Not an optimized weekly-lineup
+            recommendation — reads the draft's existing starter-first assignment, does not recompute it.
+        roster_depth_score:
+          type: object
+          required: [value, calculation_version]
+          description: >-
+            Separately labeled, versioned bench/depth-oriented figure, distinct from
+            projected_starter_points (PRD §36.2).
+          properties:
+            value:
+              type: number
+            calculation_version:
+              type: string
+        aav_efficiency_pct:
+          type: number
+          description: >-
+            Purchase price vs. the frozen dataset's aav_minor for this team's acquisitions (PRD §36.3).
+            Labeled as AAV efficiency only — never owner skill or fair value (CLAUDE.md constraint #6).
 
     DraftSummaryReport:
       type: object

@@ -1,0 +1,133 @@
+openapi: "3.1.0"
+info:
+  title: MOD-014 Pre-Draft Experience — Do Not Draft
+  version: "1.0.0"
+  description: |
+    New Do Not Draft REST surface (PRD §12.3). Auth/lobby restyle and the
+    Watch List/Nomination Queue/Target Values/Auto-Agent tabs surfaced in the
+    Lobby reuse existing MOD-004/MOD-008 endpoints and are not redefined here.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /drafts/{draftId}/teams/{teamId}/do-not-draft:
+    get:
+      operationId: listDoNotDraft
+      summary: List a team's private Do Not Draft entries
+      tags: [do-not-draft]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: List of Do Not Draft entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoNotDraftListResponse"
+
+    post:
+      operationId: addDoNotDraft
+      summary: Add a player to a team's Do Not Draft list
+      tags: [do-not-draft]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddDoNotDraftRequest"
+      responses:
+        "201":
+          description: Entry added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DoNotDraftEntry"
+        "403":
+          description: token.team_id does not match :teamId, or token.league_id does not match the draft's league_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /drafts/{draftId}/teams/{teamId}/do-not-draft/{playerId}:
+    delete:
+      operationId: removeDoNotDraft
+      summary: Remove a player from a team's Do Not Draft list
+      tags: [do-not-draft]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Entry removed
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    draftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    teamId:
+      name: teamId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    AddDoNotDraftRequest:
+      type: object
+      required: [player_id]
+      properties:
+        player_id:
+          type: string
+          format: uuid
+
+    DoNotDraftEntry:
+      type: object
+      required: [player_id]
+      properties:
+        player_id:
+          type: string
+          format: uuid
+        player_name:
+          type: string
+
+    DoNotDraftListResponse:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/DoNotDraftEntry"
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

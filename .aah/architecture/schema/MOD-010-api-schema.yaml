@@ -1,0 +1,303 @@
+openapi: "3.1.0"
+info:
+  title: MOD-010 Commissioner League Setup and Readiness Checklist
+  version: "1.0.0"
+  description: |
+    League identity/config, per-team overrides, password generation, Whammy
+    configuration write path, and the pre-draft readiness checklist (PRD §41).
+
+security:
+  - bearerAuth: []
+
+paths:
+  /leagues/{leagueId}:
+    put:
+      operationId: updateLeague
+      summary: Update league identity, name-lock, and scheduled draft start time
+      tags: [league-setup]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLeagueRequest"
+      responses:
+        "200":
+          description: League updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeagueSummary"
+        "403":
+          description: Non-commissioner token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /leagues/{leagueId}/teams/{teamId}:
+    put:
+      operationId: updateTeam
+      summary: Update a team's starting-budget override and name-lock display
+      tags: [league-setup]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTeamRequest"
+      responses:
+        "200":
+          description: Team updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamSummary"
+
+  /leagues/{leagueId}/passwords/generate:
+    post:
+      operationId: generatePasswords
+      summary: Generate or set the commissioner, host, or a team's password (shown once)
+      description: |
+        Bumps the affected scope's auth_epoch, invalidating previously issued tokens
+        for that scope (CLAUDE.md constraint #12). Plaintext is returned exactly once
+        and never persisted or re-returned.
+      tags: [league-setup]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeneratePasswordsRequest"
+      responses:
+        "200":
+          description: Password generated/set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratePasswordsResponse"
+
+  /leagues/{leagueId}/readiness:
+    get:
+      operationId: getDraftReadiness
+      summary: Pre-draft readiness checklist (PRD §41)
+      tags: [league-setup]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      responses:
+        "200":
+          description: One pass/fail row per readiness item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+
+  /leagues/{leagueId}/config/whammy:
+    put:
+      operationId: setWhammyConfig
+      summary: Create or update the league's Whammy configuration
+      description: |
+        Follows the /leagues/{leagueId}/config/* convention MOD-001 established for
+        roster and auction config. MOD-009 only ever read WhammyConfig; this is its
+        write path.
+      tags: [league-setup]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhammyConfigRequest"
+      responses:
+        "200":
+          description: Whammy configuration saved
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    leagueId:
+      name: leagueId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    teamId:
+      name: teamId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    UpdateLeagueRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        name_lock:
+          type: boolean
+        scheduled_draft_start_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    LeagueSummary:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        logo_url:
+          type: string
+          nullable: true
+        name_lock:
+          type: boolean
+        scheduled_draft_start_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    UpdateTeamRequest:
+      type: object
+      properties:
+        starting_budget_override_minor:
+          type: integer
+          nullable: true
+        name_lock:
+          type: boolean
+        draft_order:
+          type: integer
+
+    TeamSummary:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        starting_budget_override_minor:
+          type: integer
+          nullable: true
+        draft_order:
+          type: integer
+        icon_url:
+          type: string
+          nullable: true
+          description: Added by MOD-015.
+        nomination_audio_url:
+          type: string
+          nullable: true
+          description: Added by MOD-015.
+
+    GeneratePasswordsRequest:
+      type: object
+      required: [scope]
+      properties:
+        scope:
+          type: string
+          enum: [COMMISSIONER, HOST, TEAM]
+        team_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Required when scope=TEAM.
+        custom_password:
+          type: string
+          nullable: true
+          description: When supplied, stored exactly as entered instead of generating a random value.
+
+    GeneratePasswordsResponse:
+      type: object
+      required: [scope, password]
+      properties:
+        scope:
+          type: string
+          enum: [COMMISSIONER, HOST, TEAM]
+        team_id:
+          type: string
+          format: uuid
+          nullable: true
+        password:
+          type: string
+          description: Plaintext, returned exactly once.
+
+    ReadinessItem:
+      type: object
+      required: [key, label, status]
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        status:
+          type: string
+          enum: [PASS, FAIL]
+        detail:
+          type: string
+          nullable: true
+
+    ReadinessResponse:
+      type: object
+      required: [items, all_ready]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReadinessItem"
+        all_ready:
+          type: boolean
+
+    WhammyConfigRequest:
+      type: object
+      required: [enabled]
+      properties:
+        enabled:
+          type: boolean
+        allow_positive:
+          type: boolean
+        allow_negative:
+          type: boolean
+        max_amount_minor:
+          type: integer
+        max_per_team:
+          type: integer
+        max_per_draft:
+          type: integer
+        commissioner_approval_required:
+          type: boolean
+        allowed_event_types:
+          type: array
+          items:
+            type: string
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

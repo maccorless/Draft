@@ -1,0 +1,143 @@
+openapi: "3.1.0"
+info:
+  title: MOD-015 Team Presentation Media
+  version: "1.0.0"
+  description: |
+    Team icon and optional nomination MP3 upload/replace/remove (PRD §5.1).
+    Files are stored on local disk under the server package and served
+    statically; teams.icon_url / teams.nomination_audio_url store the served
+    path. The TEAM_NOMINATION_AUDIO broadcast is a WS event emitted from the
+    existing nomination transaction in MOD-002's engine, not a REST operation.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /leagues/{leagueId}/teams/{teamId}/media:
+    post:
+      operationId: uploadTeamMedia
+      summary: Upload or replace a team's icon and/or nomination MP3 (multipart)
+      description: |
+        Authorized for that team's own owner token or the league's commissioner.
+        Upload-or-replace semantics — an existing URL for the same media type is
+        overwritten, not duplicated.
+      tags: [team-media]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                icon:
+                  type: string
+                  format: binary
+                nomination_audio:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Media stored; URLs updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMediaResponse"
+        "403":
+          description: Caller is neither that team's owner nor the league's commissioner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    delete:
+      operationId: deleteTeamMedia
+      summary: Remove a team's icon and/or nomination audio
+      tags: [team-media]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteTeamMediaRequest"
+      responses:
+        "200":
+          description: Specified media column(s) cleared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TeamMediaResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    leagueId:
+      name: leagueId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    teamId:
+      name: teamId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    DeleteTeamMediaRequest:
+      type: object
+      required: [media]
+      properties:
+        media:
+          type: array
+          items:
+            type: string
+            enum: [icon, nomination_audio]
+
+    TeamMediaResponse:
+      type: object
+      required: [team_id]
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        icon_url:
+          type: string
+          nullable: true
+        nomination_audio_url:
+          type: string
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+
+x-websocket-events:
+  description: Emitted from MOD-002's nomination transaction, not from this module's endpoints directly.
+  events:
+    - type: TEAM_NOMINATION_AUDIO
+      payload:
+        team_id: uuid
+        audio_url: string
+        duration_cap_ms: integer
+      description: >-
+        Broadcast at most once per team per draft, on that team's first nomination,
+        when nomination_audio_url is set and nomination_audio_played is false.

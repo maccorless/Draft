@@ -337,3 +337,320 @@ modules:
         - Draft Room: Whammy notification toast (brief; shows affected team + amount)
     depends_on: [MOD-002]
     cloud_services: [svc-001, svc-002]
+
+  # ─── Iteration 2 — PRD/IA coverage gap-fill (added post-audit, 2026-09-03) ──
+  # MOD-000..MOD-009 above were built and marked done, but a full re-check against
+  # PRD.md and screen-information-architecture.md found substantial Core MVP
+  # (PRD §43) coverage gaps — mostly frontend, plus two backend/data-model gaps
+  # (MOD-015, MOD-016). These modules close those gaps.
+
+  - id: MOD-010
+    name: commissioner-league-setup-ui
+    description: >
+      Commissioner Console "League Setup" section (currently a placeholder — see
+      web/src/screens/commissioner/index.tsx ComingSoon). Builds the UI for league
+      name/logo, password generation + override (PRD §4.4), roster/scoring/auction
+      configuration forms over MOD-001's existing PUT /leagues/:id/config/roster and
+      PUT /leagues/:id/config/auction endpoints, team creation/management (name-lock
+      toggle, per-team starting-budget override — extends POST /leagues/:id/teams),
+      scheduled draft start date/time (new field + display in Lobby/Draft
+      Room/War Room headers per PRD §5.2), Primary/Secondary AAV source selection
+      (built on MOD-016's multi-source schema), Whammy configuration form (over
+      MOD-009's WhammyConfig), and the pre-draft readiness checklist (PRD §41 — team
+      count, roster config, budget feasibility, dataset frozen, AAV sources selected,
+      timers, Auto-Agent defaults, team media validity, all shown as pass/fail rows).
+    demo_criteria: >
+      Commissioner opens League Setup, sets league name/logo, generates/overrides
+      passwords, configures roster/scoring/auction rules, creates 12 teams each with
+      a starting-budget override, sets a scheduled draft start time (visible in Lobby
+      immediately), selects Primary/Secondary AAV sources, configures a Whammy, and
+      sees a readiness checklist that turns all-green once every prerequisite is met.
+    smoke_test: >
+      Render League Setup section → fill league/team/roster/auction/AAV/Whammy forms →
+      submit each → assert corresponding PUT/POST calls fire and succeed → set scheduled
+      start time → assert it appears in GET /leagues/:id (or new field) → readiness
+      checklist reflects FROZEN dataset + configured teams as ready.
+    layers:
+      db:
+        - leagues.logo_url, leagues.name_lock (bool), leagues.scheduled_draft_start_at (nullable timestamp)
+        - teams.starting_budget_override_minor (nullable; falls back to AuctionConfiguration.initial_budget_minor)
+      api:
+        - PUT /leagues/:id (name, logo_url, name_lock, scheduled_draft_start_at)
+        - PUT /leagues/:id/teams/:teamId (starting_budget_override_minor, draft_order)
+        - POST /leagues/:id/passwords/generate (commissioner/host/team password generation; returns shown-once values)
+        - GET /leagues/:id/readiness (aggregates PRD §41 checklist items; pass/fail per item)
+      ui:
+        - Commissioner Console "League Setup" section (replaces ComingSoon): league identity form, password generation panel, roster/scoring/auction config forms, team roster table with per-team budget override and name-lock toggle, AAV Primary/Secondary selectors, Whammy config form, scheduled-start picker, readiness checklist
+        - Scheduled start time surfaced in Pre-Draft Lobby header, Draft Room header, War Room header ("Not yet scheduled" when unset)
+    depends_on: [MOD-001, MOD-009, MOD-015, MOD-016]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-011
+    name: commissioner-draft-control-ui
+    description: >
+      Commissioner Console "Draft Control" section (currently a placeholder). Builds
+      the live-operation UI over MOD-002/MOD-004's existing backend: pause/resume,
+      timer extend/reset, nominate-for-owner, bid-for-owner, Manual/Auto-Agent toggle
+      per team, budget adjustment, and for the currently-open (unresolved) auction
+      only — return player, correct winner, manually assign player (PRD §30, these
+      are unrestricted since nothing has resolved yet, distinct from MOD-012's
+      already-awarded-pick corrections). Also builds the Draft Health panel (IA §9.1:
+      status, current round/cycle, auctions completed, current auction, current timer,
+      connected owners, Auto-Agent teams, reconnecting teams, warnings) and the Audit
+      log (IA §9.6: recent commissioner actions and system exceptions, sourced from
+      the existing DraftEvent log).
+    demo_criteria: >
+      Commissioner pauses a running draft, resumes it, extends the current timer,
+      nominates and bids on behalf of a disconnected team, toggles that team into and
+      out of Auto-Agent, adjusts a team's budget, and — on the currently open,
+      unresolved auction — reassigns it to a different player. Draft Health panel
+      shows live counts; Audit log shows every action just taken.
+    smoke_test: >
+      POST /drafts/:id/pause → assert status=PAUSED broadcast; POST /drafts/:id/resume
+      → RUNNING; commissioner-issued NOMINATE_PLAYER/BID_ABSOLUTE WS commands on behalf
+      of a team_id the commissioner doesn't own → accepted; PUT control-mode →
+      AUTO_AGENT → assert broadcast; GET /drafts/:id/audit-log → assert the actions
+      above all appear in order.
+    layers:
+      api:
+        - POST /drafts/:id/timers/extend (body: seconds; commissioner only; open auction only)
+        - POST /drafts/:id/teams/:teamId/budget-adjustment (commissioner only; reason required; ledger entry)
+        - Commissioner-issued WS commands reuse existing NOMINATE_PLAYER/BID_ABSOLUTE/BID_RELATIVE with an on_behalf_of_team_id field, authorized via requireCommissioner
+        - POST /drafts/:id/auctions/current/reassign (open, unresolved auction only: change player and/or manually award — no legality replay needed since nothing has resolved)
+        - GET /drafts/:id/health (status, round/cycle, auctions completed, current auction+timer, connected/auto-agent/reconnecting team counts, warnings)
+        - GET /drafts/:id/audit-log (paginated DraftEvent read filtered to commissioner-relevant + exception event types)
+      ui:
+        - Commissioner Console "Draft Control" section (replaces ComingSoon): pause/resume + timer controls, nominate/bid-for-owner form, per-team Manual/Auto-Agent toggle grid, budget adjustment form, open-auction reassign panel
+        - Draft Health panel (persistent within this section)
+        - Audit log table (filterable, most-recent-first)
+    depends_on: [MOD-002, MOD-004]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-012
+    name: commissioner-corrections-rollback-ui
+    description: >
+      Commissioner Console "Corrections & Rollback" section (currently a
+      placeholder), plus the Whammy trigger/approve/reject panel. The backend for
+      both is fully built and tested (server/src/draft/corrections.ts,
+      server/src/draft/whammy.ts) — this module is UI-only. Per PRD §31: the price
+      correction flow leads with plain old-vs-new price + budget delta + legality
+      statement before confirm, and routes to rollback when illegal or non-price;
+      the rollback flow leads with plain-language pick-range cost before the
+      detailed per-pick preview, and after confirm offers the re-apply assist
+      (each undone pick one click from re-award, erroneous one editable first). The
+      Whammy panel covers trigger, pending-approval list, and apply/reject (IA §9.5).
+    demo_criteria: >
+      Commissioner corrects an already-awarded pick's price; sees old/new price,
+      budget delta, and a legal/illegal statement before confirming. An illegal
+      correction attempt is refused with a rollback offer. Commissioner rolls back
+      the last 3 picks; sees the plain-language cost statement, then the detailed
+      preview, confirms, and is shown the re-apply assist with all 3 picks one click
+      from re-award. Commissioner triggers a Whammy, sees it in a pending-approval
+      list (when approval is required), and applies or rejects it.
+    smoke_test: >
+      Render Corrections & Rollback → submit a price correction on a legal pick →
+      assert POST /drafts/:id/corrections/price call + success UI; submit one that
+      would make a later pick illegal → assert rejection + rollback offer shown;
+      trigger POST /drafts/:id/rollback for N=3 → assert preview → confirm → assert
+      re-apply assist renders 3 re-awardable rows; render Whammy panel → trigger →
+      approve/reject via existing whammy endpoints.
+    layers:
+      ui:
+        - Commissioner Console "Corrections & Rollback" section (replaces ComingSoon): price-correction form (pick selector, new price, live old/new/delta/legality preview) over POST /drafts/:id/corrections/price
+        - Rollback panel (pick/count selector, plain-language cost statement, detailed per-pick preview, confirm) over POST /drafts/:id/rollback
+        - Re-apply assist (post-rollback): ordered list of undone picks, each one-click re-award via existing manual-award path, erroneous pick's fields editable first
+        - Whammy panel (trigger form, pending-approval list, apply/reject buttons) over existing POST /drafts/:id/whammy and approve/reject endpoints
+    depends_on: [MOD-005, MOD-009]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-013
+    name: draft-summary-report-routing-and-metrics
+    description: >
+      Wires the already-built DraftComplete component (web/src/screens/draft-complete/index.tsx)
+      into actual app routing — it currently has no App.tsx route and is never reached;
+      an owner whose draft finishes just sees inline "Draft complete." text in the
+      Draft Room. Adds a /draft-complete route, redirects Draft Room/War Room clients
+      there on the DRAFT_COMPLETE broadcast, and routes an owner who authenticates
+      after completion straight there instead of the Pre-Draft Lobby (IA §18). Also
+      adds the PRD §36.1–§36.3 metrics the current component is missing (projected
+      drafted-starter points, a versioned roster-depth measure, AAV acquisition
+      efficiency vs. the selected AAV source) and splits the flat all-teams view into
+      the PRD §36.4 Owner view (requesting team's own full detail) and League summary
+      view (all teams side by side) — both viewable/downloadable by every owner.
+    demo_criteria: >
+      When a draft completes, all connected Draft Room/War Room clients are
+      automatically navigated to the Draft Summary Report. An owner logging in after
+      completion lands there directly. The Owner view shows that team's picks plus
+      its projected-starter-points/roster-depth/AAV-efficiency metrics; the League
+      summary view shows all teams' metrics side by side; both are reachable by any
+      owner.
+    smoke_test: >
+      Complete a draft in an integration test → assert DRAFT_COMPLETE broadcast →
+      assert a connected client's route changes to /draft-complete; authenticate a
+      fresh session against a COMPLETE draft → assert initial route is
+      /draft-complete not /lobby; GET /drafts/:id/report → assert response includes
+      per-team projected_starter_points, roster_depth_score, aav_efficiency_pct fields.
+    layers:
+      api:
+        - Extend GET /drafts/:id/report response with per-team projected_starter_points, roster_depth_score (versioned formula), aav_efficiency_pct (vs. selected AAV source)
+      ui:
+        - App.tsx: /draft-complete route; DRAFT_COMPLETE broadcast triggers navigation for all connected clients; post-auth gateway checks draft status===COMPLETE before routing to Lobby
+        - DraftComplete component: Owner view / League summary view tab split; render the three new metrics per team
+    depends_on: [MOD-006]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-014
+    name: pre-draft-experience
+    description: >
+      Two currently-unstyled/incomplete pre-draft screens. (1) web/src/App.tsx's
+      SiteLogin and LeagueLogin components are raw inline-styled placeholder forms
+      (a `styles` object with hex colors), never touched by the brand design system
+      used in commissioner-console.css/draft-room.css/war-room.css — restyle them to
+      match. (2) web/src/screens/lobby/index.tsx (Pre-Draft Lobby, IA §0.1) has no
+      CSS file and shows only league/team name + scheduled time; it's missing
+      readiness/status messaging from the commissioner and the tabs to owner prep
+      tools that IA §0.1 calls for — Watch List, Nomination Queue, Target Values
+      (all three already built in MOD-008's War Room and reachable via existing
+      endpoints), Do Not Draft (new — PRD §12.3, Core MVP, currently absent
+      everywhere), and Auto-Agent configuration (MOD-004's existing willingness_pct
+      control). Team icon/audio upload (MOD-015) is also surfaced here per IA §0.1.
+    demo_criteria: >
+      Site/league/team login screens render with the product's visual design system
+      instead of bare HTML forms. An authenticated owner in an UPCOMING draft sees a
+      styled Pre-Draft Lobby with readiness messaging and can, before the draft
+      starts, manage Watch List/Queue/Targets/Do Not Draft, configure Auto-Agent, and
+      upload their team icon/audio — all from Lobby tabs, using the same underlying
+      endpoints the War Room already calls.
+    smoke_test: >
+      Render SiteLogin/LeagueLogin → assert they use the shared design tokens/CSS
+      classes, not the `styles` inline object; render Lobby for an UPCOMING draft →
+      assert Watch List/Queue/Targets/DND/Auto-Agent tabs render and each calls its
+      existing (or MOD-015/new DND) endpoint; assert Do Not Draft add/remove persists
+      and is excluded from Auto-Agent's acquisition candidates.
+    layers:
+      db:
+        - DoNotDraftItem (per owner per draft; player_id; excluded from that team's Auto-Agent candidate set)
+      api:
+        - POST/GET/DELETE /drafts/:id/teams/:teamId/do-not-draft
+        - Auto-Agent bid-candidate selection (MOD-004) filters out a team's Do Not Draft player_ids
+      ui:
+        - web/src/App.tsx SiteLogin/LeagueLogin restyled onto the shared design system (CSS files, not inline `styles`)
+        - Pre-Draft Lobby: readiness/status messaging section; tabs to Watch List/Nomination Queue/Target Values (reuse MOD-008 components/endpoints)/Do Not Draft (new)/Auto-Agent config (reuse MOD-004)/team icon+audio upload (MOD-015)
+    depends_on: [MOD-000, MOD-004, MOD-008, MOD-015]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-015
+    name: team-presentation-media
+    description: >
+      Team icon and optional nomination MP3 (PRD §5.1, Core MVP) — currently absent
+      from both schema and code entirely. Owner or commissioner may upload, replace,
+      or remove each team's icon and/or nomination audio. The optional MP3 plays
+      only on that team's first nomination of the draft, is capped at 5 seconds of
+      playback (source file need not be trimmed), plays at most once per draft, is
+      presentation-only (must never block nomination/bidding), and is broadcast to
+      clients that permit audio.
+    demo_criteria: >
+      Owner uploads a team icon and a nomination MP3 longer than 5 seconds. The icon
+      appears wherever the team is shown (roster grid, War Room grid). On that team's
+      first nomination of the draft, eligible clients receive a play-audio signal;
+      playback is capped at 5 seconds; a second nomination by the same team later in
+      the draft does not replay audio.
+    smoke_test: >
+      POST /leagues/:id/teams/:teamId/media (icon) → assert icon_url set and returned
+      in team reads; POST .../media (mp3) → assert audio_url set; run a draft, first
+      nomination by that team → assert a TEAM_NOMINATION_AUDIO broadcast fires
+      exactly once for that team for the rest of the draft, carrying a duration_cap_ms=5000.
+    layers:
+      db:
+        - teams.icon_url, teams.nomination_audio_url
+        - draft_team_states.nomination_audio_played (bool; set true after first qualifying nomination, never reset)
+      api:
+        - POST /leagues/:id/teams/:teamId/media (multipart; icon and/or mp3; owner or commissioner)
+        - DELETE /leagues/:id/teams/:teamId/media (remove icon or audio)
+        - On NOMINATION_STARTED for a team with nomination_audio_url set and nomination_audio_played=false → broadcast TEAM_NOMINATION_AUDIO {team_id, audio_url, duration_cap_ms: 5000}; set nomination_audio_played=true in the same transaction as the nomination
+      ui:
+        - Media upload control (icon + optional MP3) — surfaced in MOD-010 (League Setup, commissioner-side) and MOD-014 (Pre-Draft Lobby, owner-side)
+        - Client-side audio player: on TEAM_NOMINATION_AUDIO, play audio_url capped at 5000ms, non-blocking
+        - Team icon rendered in War Room roster/budget grid and Draft Room team context
+    depends_on: [MOD-001, MOD-002]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-016
+    name: player-intelligence-and-multisource-aav
+    description: >
+      Two related Core MVP data gaps. (1) Multi-source AAV (PRD §10): the current
+      player_dataset_entries schema stores exactly one aav_minor/tier/source per
+      player per dataset, so a player can never carry more than one named AAV value
+      at a time — there is no way to show "ESPN $46 / FantasyPros $51" side by side,
+      nor for the commissioner to pick a Primary and an optional Secondary AAV
+      source. (2) Player intelligence fields (PRD §9.2): the players table has only
+      name/position/nfl_team/espn_player_id — no bye week, injury status/detail,
+      practice/depth-chart status, freshness timestamp, or prior-season stats exist
+      anywhere. This module changes the schema to one AAV row per player per source
+      per dataset, adds Primary/Secondary AAV source selection (consumed by MOD-010's
+      UI), extends MOD-007's adapters (ESPN PDF, FantasyPros, Excel, CSV) to populate
+      per-source rows and the new player fields where each source provides them, and
+      surfaces injury indicator (Draft Room, IA §2.1) and full player detail incl.
+      all configured AAVs (War Room, IA §4.1).
+    demo_criteria: >
+      Importing from two different sources (e.g. CSV then FantasyPros) for the same
+      player produces two AAV rows, both visible in War Room's player detail; the
+      commissioner selects one as Primary and one as Secondary in League Setup; the
+      Draft Room shows the Primary AAV and an injury indicator when a player has
+      one; War Room's player intelligence panel shows all configured AAVs, bye week,
+      and injury freshness.
+    smoke_test: >
+      Import the same player from two adapters into one dataset → assert two rows in
+      the (renamed/restructured) AAV-sources table for that player+dataset; PUT
+      primary/secondary AAV source selection → GET player list → assert primary_aav_minor
+      resolves from the selected source; GET player detail → assert bye_week,
+      injury_status, injury_detail, freshness fields present when the source supplied them.
+    layers:
+      db:
+        - players: bye_week, injury_status, injury_detail, injury_updated_at, prior_season_stats (jsonb)
+        - player_dataset_entries restructured to player_aav_sources (dataset_id, player_id, source, aav_minor, tier, projected_points) — one row per player per source per dataset, replacing the single-row-per-player shape
+        - draft_datasets.primary_aav_source, draft_datasets.secondary_aav_source (nullable)
+      api:
+        - GET /leagues/:id/players response includes all configured AAV sources per player plus resolved primary_aav_minor/secondary_aav_minor and the new intelligence fields
+        - PUT /leagues/:id/datasets/:id/aav-sources (set primary/secondary selection from currently-loaded sources)
+        - MOD-007 adapters (espn-pdf.ts, fantasypros.ts, excel.ts) and the CSV adapter updated to upsert into player_aav_sources keyed by (dataset_id, player_id, source) instead of overwriting a single row, and to populate bye_week/injury fields where the source provides them
+      ui:
+        - Draft Room: injury indicator next to player name/position when injury_status is set
+        - War Room player intelligence panel: all configured AAV sources listed, bye week, injury detail + freshness
+        - MOD-010 League Setup: Primary/Secondary AAV source dropdowns populated from currently-loaded sources
+    depends_on: [MOD-001, MOD-007]
+    cloud_services: [svc-001, svc-002]
+
+  - id: MOD-017
+    name: auction-close-card-and-player-detail
+    description: >
+      Two Draft Room enhancements that don't exist anywhere in the codebase yet.
+      (1) Auction Close Card (PRD §29): an ephemeral, non-blocking card shown for
+      ~2-4 seconds immediately after a player is awarded, showing player, winning
+      team, winning price, Primary AAV difference, accepted-bid count, unique-bidder
+      count, and the winning team's remaining budget — must never delay the next
+      nomination. (2) Expandable player detail popover (IA §3): clicking the active
+      player in the Draft Room opens a dismissible side panel/popover with
+      prior-season stats, projections, injury detail/freshness, all visible AAVs,
+      the owner's Target if set, tier, and comparable remaining players — dismissible
+      without losing bidding controls underneath.
+    demo_criteria: >
+      When a player is awarded, all Draft Room clients see a close card with the
+      required fields for 2-4 seconds while the next nomination proceeds unblocked.
+      Clicking the active player opens a detail panel with stats/projections/AAVs/
+      target/tier/comparables; closing it returns focus to bidding controls without
+      any state loss.
+    smoke_test: >
+      Award a player in an integration/component test → assert a close-card render
+      appears with player/team/price/AAV-diff/bid-count/bidder-count and disappears
+      after its timeout without blocking the next NOMINATION_STARTED event; click the
+      active player name → assert detail panel renders MOD-016 fields → dismiss →
+      assert bid controls remain interactive.
+    layers:
+      api:
+        - Extend the PLAYER_AWARDED broadcast (server/src/auction/engine.ts resolution transaction) with accepted_bid_count, unique_bidder_count, the awarded auction's aav_minor, and the winning team's post-award remaining_budget_minor — computed server-side in the same transaction, not derivable from the client's capped bidLadder
+      ui:
+        - Draft Room: AuctionCloseCard component, triggered on PLAYER_AWARDED broadcast, auto-dismisses after 2-4s, does not block the next nomination render
+        - Draft Room: player detail popover (click active player name) — stats/projections/injury/AAVs/target/tier/comparables, dismissible overlay
+    depends_on: [MOD-002]
+    cloud_services: [svc-001, svc-002]

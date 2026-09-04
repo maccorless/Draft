@@ -1,13 +1,13 @@
 {
-  "total_all_tokens": 508945491,
-  "total_io_tokens": 1406268,
-  "total_cache_tokens": 507539223,
-  "total_input_tokens": 5945,
-  "total_output_tokens": 1400323,
-  "total_cache_read_tokens": 491593697,
-  "total_cache_creation_tokens": 15945526,
+  "total_all_tokens": 577324921,
+  "total_io_tokens": 1930363,
+  "total_cache_tokens": 575394558,
+  "total_input_tokens": 6354,
+  "total_output_tokens": 1924009,
+  "total_cache_read_tokens": 556863187,
+  "total_cache_creation_tokens": 18531371,
   "session_count": 5,
-  "updated_at": "2026-09-03T22:51:04.448823+00:00",
+  "updated_at": "2026-09-04T00:05:21.404551+00:00",
   "sessions": [
     {
       "session_id": "dc397d7e-8283-48fd-8eaa-dfc2dad9e4a1",
@@ -119,49 +119,58 @@
     },
     {
       "session_id": "67646fa7-648d-407d-a281-914c05253f1a",
-      "timestamp": "2026-09-03T22:51:04.448823+00:00",
-      "input_tokens": 162,
-      "output_tokens": 36339,
-      "cache_read_input_tokens": 8497592,
-      "cache_creation_input_tokens": 297563,
-      "total_io_tokens": 36501,
-      "total_cache_tokens": 8795155,
-      "total_all_tokens": 8831656,
-      "main_thread_tokens": 8831656,
+      "timestamp": "2026-09-04T00:05:21.404551+00:00",
+      "input_tokens": 569,
+      "output_tokens": 559889,
+      "cache_read_input_tokens": 73694842,
+      "cache_creation_input_tokens": 2882196,
+      "total_io_tokens": 560458,
+      "total_cache_tokens": 76577038,
+      "total_all_tokens": 77137496,
+      "main_thread_tokens": 77137496,
       "subagent_tokens": 0,
       "by_phase": {
+        "plan": {
+          "input_tokens": 287,
+          "output_tokens": 471703,
+          "cache_read_input_tokens": 53147415,
+          "cache_creation_input_tokens": 2390468,
+          "total_io_tokens": 471990,
+          "total_cache_tokens": 55537883,
+          "total_all_tokens": 56009873
+        },
         "build": {
-          "input_tokens": 162,
-          "output_tokens": 36339,
-          "cache_read_input_tokens": 8497592,
-          "cache_creation_input_tokens": 297563,
-          "total_io_tokens": 36501,
-          "total_cache_tokens": 8795155,
-          "total_all_tokens": 8831656
+          "input_tokens": 282,
+          "output_tokens": 88186,
+          "cache_read_input_tokens": 20547427,
+          "cache_creation_input_tokens": 491728,
+          "total_io_tokens": 88468,
+          "total_cache_tokens": 21039155,
+          "total_all_tokens": 21127623
         }
       }
     },
     {
       "session_id": "07d6013d-08b2-4beb-8be1-3bac6c603da5",
-      "timestamp": "2026-09-03T22:42:04.460494+00:00",
-      "input_tokens": 18,
-      "output_tokens": 3764,
-      "cache_read_input_tokens": 559357,
-      "cache_creation_input_tokens": 78198,
-      "total_io_tokens": 3782,
-      "total_cache_tokens": 637555,
-      "total_all_tokens": 641337,
-      "main_thread_tokens": 641337,
+      "timestamp": "2026-09-03T23:02:09.847620+00:00",
+      "input_tokens": 20,
+      "output_tokens": 3900,
+      "cache_read_input_tokens": 631597,
+      "cache_creation_input_tokens": 79410,
+      "total_io_tokens": 3920,
+      "total_cache_tokens": 711007,
+      "total_all_tokens": 714927,
+      "main_thread_tokens": 714927,
       "subagent_tokens": 0,
       "by_phase": {
         "build": {
-          "input_tokens": 18,
-          "output_tokens": 3764,
-          "cache_read_input_tokens": 559357,
-          "cache_creation_input_tokens": 78198,
-          "total_io_tokens": 3782,
-          "total_cache_tokens": 637555,
-          "total_all_tokens": 641337
+          "input_tokens": 20,
+          "output_tokens": 3900,
+          "cache_read_input_tokens": 631597,
+          "cache_creation_input_tokens": 79410,
+          "total_io_tokens": 3920,
+          "total_cache_tokens": 711007,
+          "total_all_tokens": 714927
         }
       }
     }
@@ -170,13 +179,13 @@
     {
       "model": "claude-sonnet-5",
       "sessions": 4,
-      "input_tokens": 1416,
-      "output_tokens": 356434,
-      "cache_read_input_tokens": 108617148,
-      "cache_creation_input_tokens": 1350792,
-      "total_io_tokens": 357850,
-      "total_cache_tokens": 109967940,
-      "total_all_tokens": 110325790
+      "input_tokens": 1825,
+      "output_tokens": 880120,
+      "cache_read_input_tokens": 173886638,
+      "cache_creation_input_tokens": 3936637,
+      "total_io_tokens": 881945,
+      "total_cache_tokens": 177823275,
+      "total_all_tokens": 178705220
     }
   ]
 }

@@ -25,11 +25,26 @@ paths:
               $ref: "#/components/schemas/WhammyRequest"
       responses:
         "200":
-          description: Whammy applied or queued for approval; BudgetLedgerEntry created if no approval required
+          description: >-
+            Whammy applied immediately (WhammyResponse), or — when the league's
+            WhammyConfig.commissioner_approval_required is true — queued instead with
+            no budget effect yet (WhammyPendingApprovalResponse). The UI branches on
+            the presence of `status: PENDING_APPROVAL`.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WhammyResponse"
+                oneOf:
+                  - $ref: "#/components/schemas/WhammyResponse"
+                  - $ref: "#/components/schemas/WhammyPendingApprovalResponse"
+        "409":
+          description: >-
+            One of WHAMMY_DISABLED, WHAMMY_POSITIVE_NOT_ALLOWED,
+            WHAMMY_NEGATIVE_NOT_ALLOWED, WHAMMY_MAX_PER_TEAM_EXCEEDED,
+            WHAMMY_MAX_PER_DRAFT_EXCEEDED, or WHAMMY_ROSTER_COMPLETION_INFEASIBLE.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /drafts/{draftId}/whammy/{whammyId}/approve:
     post:
@@ -46,6 +61,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WhammyResponse"
+        "409":
+          description: >-
+            WHAMMY_NOT_PENDING (event is not in PENDING_APPROVAL status), or
+            WHAMMY_ROSTER_COMPLETION_INFEASIBLE (re-checked at approval time — the
+            situation may have changed since the whammy was queued).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /drafts/{draftId}/whammy/{whammyId}/reject:
     post:
@@ -62,6 +86,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WhammyRejectResponse"
+        "409":
+          description: WHAMMY_NOT_PENDING — event is not in PENDING_APPROVAL status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 x-websocket-events:
   events:
@@ -121,6 +151,25 @@ components:
         amount_minor:
           type: integer
         new_remaining_budget_minor:
+          type: integer
+
+    WhammyPendingApprovalResponse:
+      type: object
+      required: [whammy_id, status, team_id, amount_minor]
+      description: >-
+        Returned by triggerWhammy in place of WhammyResponse when the league's
+        WhammyConfig.commissioner_approval_required is true. No budget effect yet.
+      properties:
+        whammy_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PENDING_APPROVAL]
+        team_id:
+          type: string
+          format: uuid
+        amount_minor:
           type: integer
 
     WhammyRejectResponse:

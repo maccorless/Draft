@@ -318,6 +318,23 @@ components:
           items:
             $ref: "#/components/schemas/TeamSummary"
 
+    PlayerAavSourceEntry:
+      type: object
+      required: [source, aav_minor]
+      description: One row per (player, source) — added by MOD-016's player_aav_sources restructuring.
+      properties:
+        source:
+          type: string
+          enum: [CSV, EXCEL, ESPN_PDF, FANTASYPROS]
+        aav_minor:
+          type: integer
+        tier:
+          type: integer
+          nullable: true
+        projected_points:
+          type: number
+          nullable: true
+
     PlayerEntry:
       type: object
       required: [player_id, dataset_entry_id, name, position, aav_minor]
@@ -336,13 +353,50 @@ components:
           type: string
         aav_minor:
           type: integer
-          description: Average Auction Value in cents
+          description: >-
+            Average Auction Value in cents, resolved from the dataset's primary_aav_source
+            (MOD-016). Kept top-level for backward compatibility with existing Draft Room/War Room
+            consumers, equal to primary_aav_minor.
         projected_points:
           type: number
           nullable: true
         tier:
           type: integer
           nullable: true
+        primary_aav_minor:
+          type: integer
+          nullable: true
+          description: Added by MOD-016. Resolved from the dataset's selected primary_aav_source.
+        secondary_aav_minor:
+          type: integer
+          nullable: true
+          description: Added by MOD-016. Resolved from the dataset's selected secondary_aav_source, if any.
+        aav_sources:
+          type: array
+          description: Added by MOD-016. Every AAV source currently loaded for this player in this dataset.
+          items:
+            $ref: "#/components/schemas/PlayerAavSourceEntry"
+        bye_week:
+          type: integer
+          nullable: true
+          description: Added by MOD-016.
+        injury_status:
+          type: string
+          nullable: true
+          description: Added by MOD-016.
+        injury_detail:
+          type: string
+          nullable: true
+          description: Added by MOD-016.
+        injury_updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Added by MOD-016.
+        prior_season_stats:
+          type: object
+          nullable: true
+          description: Added by MOD-016. Freeform per-source stat payload.
 
     PlayerListResponse:
       type: object

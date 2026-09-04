@@ -1,0 +1,278 @@
+openapi: "3.1.0"
+info:
+  title: MOD-011 Commissioner Draft Control Live-Operation UI
+  version: "1.0.0"
+  description: |
+    New REST surface for live draft operation: timer extension, budget adjustment,
+    open (unresolved) auction reassignment, Draft Health, and the Audit log.
+    Pause/resume, nominate/bid-for-owner, and Manual/Auto-Agent toggle reuse
+    existing MOD-002/MOD-004 endpoints and WS commands and are not redefined here.
+
+security:
+  - bearerAuth: []
+
+paths:
+  /drafts/{draftId}/timers/extend:
+    post:
+      operationId: extendTimer
+      summary: Extend the current open auction's deadline (commissioner only)
+      tags: [draft-control]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExtendTimerRequest"
+      responses:
+        "200":
+          description: Deadline extended; auction_version incremented
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExtendTimerResponse"
+        "409":
+          description: No open auction to extend
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /drafts/{draftId}/teams/{teamId}/budget-adjustment:
+    post:
+      operationId: adjustBudget
+      summary: Commissioner budget adjustment with required reason
+      tags: [draft-control]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - $ref: "#/components/parameters/teamId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BudgetAdjustmentRequest"
+      responses:
+        "200":
+          description: Ledger entry created (reason_type=COMMISSIONER_ADJUSTMENT)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BudgetAdjustmentResponse"
+        "400":
+          description: Missing/empty reason
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /drafts/{draftId}/auctions/current/reassign:
+    post:
+      operationId: reassignCurrentAuction
+      summary: Change player and/or manually award the currently open, unresolved auction
+      description: |
+        Unrestricted (no legality replay) since nothing has resolved yet. An already-awarded
+        pick is out of scope here — see MOD-012's corrections/rollback.
+      tags: [draft-control]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReassignAuctionRequest"
+      responses:
+        "200":
+          description: Open auction reassigned
+        "409":
+          description: Target auction is already resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /drafts/{draftId}/health:
+    get:
+      operationId: getDraftHealth
+      summary: Draft Health panel data (screen-information-architecture.md §9.1)
+      tags: [draft-control]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: Live draft health snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DraftHealthResponse"
+
+  /drafts/{draftId}/audit-log:
+    get:
+      operationId: getAuditLog
+      summary: Paginated, read-only projection of the DraftEvent log for commissioner-relevant + exception events
+      tags: [draft-control]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - name: cursor
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit log page, most-recent-first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditLogResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    draftId:
+      name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    teamId:
+      name: teamId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ExtendTimerRequest:
+      type: object
+      required: [seconds]
+      properties:
+        seconds:
+          type: integer
+          minimum: 1
+
+    ExtendTimerResponse:
+      type: object
+      required: [player_auction_id, new_deadline_at, auction_version]
+      properties:
+        player_auction_id:
+          type: string
+          format: uuid
+        new_deadline_at:
+          type: string
+          format: date-time
+        auction_version:
+          type: integer
+
+    BudgetAdjustmentRequest:
+      type: object
+      required: [delta_minor, reason]
+      properties:
+        delta_minor:
+          type: integer
+          description: Exact entered delta in cents; never rounded or clamped server-side.
+        reason:
+          type: string
+          minLength: 1
+
+    BudgetAdjustmentResponse:
+      type: object
+      required: [team_id, new_remaining_budget_minor]
+      properties:
+        team_id:
+          type: string
+          format: uuid
+        new_remaining_budget_minor:
+          type: integer
+
+    ReassignAuctionRequest:
+      type: object
+      properties:
+        new_player_dataset_entry_id:
+          type: string
+          format: uuid
+          nullable: true
+        award_to_team_id:
+          type: string
+          format: uuid
+          nullable: true
+        award_price_minor:
+          type: integer
+          nullable: true
+
+    DraftHealthResponse:
+      type: object
+      required: [status, auctions_completed, connected_team_count, auto_agent_team_count, reconnecting_team_count, warnings]
+      properties:
+        status:
+          type: string
+        round_or_cycle:
+          type: integer
+          nullable: true
+        auctions_completed:
+          type: integer
+        current_player_auction_id:
+          type: string
+          format: uuid
+          nullable: true
+        current_deadline_at:
+          type: string
+          format: date-time
+          nullable: true
+        connected_team_count:
+          type: integer
+        auto_agent_team_count:
+          type: integer
+        reconnecting_team_count:
+          type: integer
+        warnings:
+          type: array
+          items:
+            type: string
+
+    AuditLogEntry:
+      type: object
+      required: [event_type, occurred_at]
+      properties:
+        event_type:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        payload:
+          type: object
+
+    AuditLogResponse:
+      type: object
+      required: [entries]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLogEntry"
+        next_cursor:
+          type: string
+          nullable: true
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
