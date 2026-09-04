@@ -1145,7 +1145,7 @@
       "passes": false
     },
     {
-      "status": "pending",
+      "status": "implementing",
       "id": "F-MOD-011",
       "title": "Commissioner Draft Control Live-Operation UI",
       "module_ref": "MOD-011",
@@ -1219,7 +1219,7 @@
       "passes": false
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-015",
       "title": "Team icon and nomination audio media",
       "module_ref": "MOD-015",
