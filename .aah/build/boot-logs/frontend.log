@@ -49,3 +49,4 @@ Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 1:23:23 PM [vite] (client) hmr update /src/screens/commissioner/LeagueSetup.tsx
 1:23:29 PM [vite] (client) hmr update /src/screens/commissioner/LeagueSetup.tsx
 1:23:35 PM [vite] (client) hmr update /src/screens/commissioner/LeagueSetup.tsx
+1:42:10 PM [vite] (client) hmr update /src/App.tsx
