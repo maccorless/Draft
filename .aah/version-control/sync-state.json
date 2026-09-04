@@ -70,8 +70,8 @@
         }
       },
       "remote_updated_at": "2026-09-04T21:06:58Z",
-      "lifecycle": "done",
-      "status_label": "aah:done",
+      "lifecycle": "in_progress",
+      "status_label": "aah:in_progress",
       "last_seen_comment_id": 0
     },
     "F-MOD-003": {
