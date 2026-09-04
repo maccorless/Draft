@@ -18,8 +18,9 @@
 3:45:36 PM [tsx] unlink in ./../node_modules/@fastify/busboy/deps/dicer/lib/Dicer.js Process hasn't exited. Killing process...
 3:45:37 PM [tsx] unlink in ./../node_modules/fast-json-stringify/node_modules/ajv/node_modules/fast-uri/lib/schemes.js Process hasn't exited. Killing process...
 4:47:46 PM [tsx] change in ./src/draft/strategy.ts Process hasn't exited. Killing process...
-req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/players","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61012},"msg":"incoming request"}
-{"level":30,"time":1788544814992,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-a","req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/readiness","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61013},"msg":"incoming request"}
+4:49:22 PM [tsx] change in ./src/auction/engine.ts Process hasn't exited. Killing process...
+4:49:30 PM [tsx] change in ./src/auction/engine.ts Process hasn't exited. Killing process...
+el":30,"time":1788544814992,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-a","req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/readiness","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61013},"msg":"incoming request"}
 {"level":30,"time":1788544814992,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-6","res":{"statusCode":200},"responseTime":4.063708000001498,"msg":"request completed"}
 {"level":30,"time":1788544814994,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-7","res":{"statusCode":200},"responseTime":4.008124999934807,"msg":"request completed"}
 {"level":30,"time":1788544814996,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-8","res":{"statusCode":200},"responseTime":4.8846660000272095,"msg":"request completed"}
@@ -62,8 +63,9 @@ req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/player
 3:45:36 PM [tsx] unlink in ./../node_modules/readable-stream/lib/internal/streams/pipeline.js Process hasn't exited. Killing process...
 3:45:37 PM [tsx] unlink in ./../node_modules/@fastify/ajv-compiler/node_modules/ajv/dist/compile/validate/index.js Process hasn't exited. Killing process...
 4:47:46 PM [tsx] change in ./src/draft/strategy.ts Process hasn't exited. Killing process...
-ime":14.967583000077866,"msg":"request completed"}
-{"level":30,"time":1788544834222,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-r","req":{"method":"PUT","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/config/auction","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61052},"msg":"incoming request"}
+4:49:22 PM [tsx] change in ./src/auction/engine.ts Process hasn't exited. Killing process...
+4:49:30 PM [tsx] change in ./src/auction/engine.ts Process hasn't exited. Killing process...
+5-ed5a-4ac1-973e-748fb6526cf2/config/auction","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61052},"msg":"incoming request"}
 {"level":30,"time":1788544834236,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-r","res":{"statusCode":200},"responseTime":13.936165999970399,"msg":"request completed"}
 {"level":30,"time":1788544834242,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-s","req":{"method":"GET","url":"/leagues/84df5c25-ed5a-4ac1-973e-748fb6526cf2/readiness","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":61054},"msg":"incoming request"}
 {"level":30,"time":1788544834256,"pid":72907,"hostname":"Mac.localdomain","reqId":"req-s","res":{"statusCode":200},"responseTime":13.925458000041544,"msg":"request completed"}
@@ -485,12 +487,14 @@ Require stack:
 Node.js v24.8.0
 4:47:46 PM [tsx] change in ./src/draft/strategy.ts Rerunning...
 {"level":50,"time":1788558467196,"pid":92998,"hostname":"Mac.localdomain","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3000","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3000},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3000"}
-sg":"request completed"}
-{"level":30,"time":1788549260611,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3g","res":{"statusCode":200},"responseTime":5.431874999776483,"msg":"request completed"}
-{"level":30,"time":1788549260612,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3h","res":{"statusCode":200},"responseTime":5.850499999709427,"msg":"request completed"}
-{"level":30,"time":1788549260612,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3m","res":{"statusCode":200},"responseTime":2.6938749998807907,"msg":"request completed"}
-{"level":30,"time":1788549260612,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3n","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/teams/f0f3ca1d-ae6c-43c7-8f6d-86dd55903a3b/watchlist","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63688},"msg":"incoming request"}
-{"level":30,"time":1788549260613,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3o","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/teams/f0f3ca1d-ae6c-43c7-8f6d-86dd55903a3b/nomination-queue","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63690},"msg":"incoming request"}
+4:49:22 PM [tsx] change in ./src/auction/engine.ts Rerunning...
+{"level":30,"time":1788558562820,"pid":93115,"hostname":"Mac.localdomain","msg":"Server listening at http://127.0.0.1:3000"}
+{"level":30,"time":1788558562820,"pid":93115,"hostname":"Mac.localdomain","msg":"Server listening at http://192.168.2.101:3000"}
+{"level":30,"time":1788558564612,"pid":93115,"hostname":"Mac.localdomain","reqId":"req-1","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":52126},"msg":"incoming request"}
+4:49:30 PM [tsx] change in ./src/auction/engine.ts Restarting...
+{"level":30,"time":1788558570589,"pid":93134,"hostname":"Mac.localdomain","msg":"Server listening at http://127.0.0.1:3000"}
+{"level":30,"time":1788558570589,"pid":93134,"hostname":"Mac.localdomain","msg":"Server listening at http://192.168.2.101:3000"}
+,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3o","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/teams/f0f3ca1d-ae6c-43c7-8f6d-86dd55903a3b/nomination-queue","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63690},"msg":"incoming request"}
 {"level":30,"time":1788549260613,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3k","res":{"statusCode":200},"responseTime":4.563833999913186,"msg":"request completed"}
 {"level":30,"time":1788549260613,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3p","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/teams/f0f3ca1d-ae6c-43c7-8f6d-86dd55903a3b/target-values","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63691},"msg":"incoming request"}
 {"level":30,"time":1788549260614,"pid":75230,"hostname":"Mac.localdomain","reqId":"req-3q","req":{"method":"GET","url":"/drafts/1359fca8-0315-4a63-bf64-849246c5341b/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":63693},"msg":"incoming request"}
@@ -806,3 +810,8 @@ Node.js v24.8.0
 {"level":30,"time":1788558500611,"pid":92999,"hostname":"Mac.localdomain","reqId":"req-3","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":52078},"msg":"incoming request"}
 {"level":30,"time":1788558516613,"pid":92999,"hostname":"Mac.localdomain","reqId":"req-4","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":52093},"msg":"incoming request"}
 {"level":30,"time":1788558532609,"pid":92999,"hostname":"Mac.localdomain","reqId":"req-5","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":52095},"msg":"incoming request"}
+{"level":30,"time":1788558548612,"pid":92999,"hostname":"Mac.localdomain","reqId":"req-6","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":52105},"msg":"incoming request"}
+4:49:22 PM [tsx] change in ./src/auction/engine.ts Restarting...
+{"level":50,"time":1788558562832,"pid":93116,"hostname":"Mac.localdomain","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3000","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3000},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3000"}
+4:49:30 PM [tsx] change in ./src/auction/engine.ts Rerunning...
+{"level":50,"time":1788558570589,"pid":93133,"hostname":"Mac.localdomain","err":{"type":"Error","message":"listen EADDRINUSE: address already in use 0.0.0.0:3000","stack":"Error: listen EADDRINUSE: address already in use 0.0.0.0:3000\n    at Server.setupListenHandle [as _listen2] (node:net:1940:16)\n    at listenInCluster (node:net:1997:12)\n    at node:net:2206:7\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)","code":"EADDRINUSE","errno":-48,"syscall":"listen","address":"0.0.0.0","port":3000},"msg":"listen EADDRINUSE: address already in use 0.0.0.0:3000"}
