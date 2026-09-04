@@ -1,0 +1,191 @@
+feedback_id: UF-01-03
+wave: 1
+source: user
+started_at: '2026-09-04T23:05:00Z'
+feedback_details: |
+  Reported live while reviewing the app (Draft Room / Commissioner Console), with a reference screenshot of a commercial fantasy draft tool (FantasyPros Draft Simulator) attached for design inspiration only.
+  1. BUG (confirmed root cause): server/src/auction/engine.ts line 396 builds
+     the BID_REJECTED "reason" string as
+     `Bid ${command.bid_amount_minor} must exceed current ${auction.current_bid_minor}`
+     — raw *_minor integer cents interpolated directly into a user-facing
+     message instead of being formatted as whole dollars (e.g. 2600 shown
+     instead of $26). Same pattern likely exists in other BID_REJECTED reason
+     strings in engine.ts (STALE_STATE, AUCTION_NOT_OPEN, and the
+     max-legal-bid rejection) — audit all user-facing reason strings in
+     engine.ts for raw *_minor leakage and format through the same
+     dollar-formatting the web client already uses (formatMoney in
+     web/src/screens/draft-room/index.tsx) — either format server-side before
+     sending, or keep the reason machine-readable/code-only server-side and
+     have the client format amounts into its own displayed message using the
+     `code` field plus structured amounts, whichever fits the existing
+     BID_REJECTED payload contract in shared-types best.
+
+     Separately, confirmed how a legitimate "Bid X must exceed current X"
+     rejection (bid_amount_minor == current_bid_minor) can arise: the client's
+     "+$1" relative-bid button (web/src/screens/draft-room/index.tsx line 278)
+     computes `auction.current_bid_minor + 100` from its OWN local React
+     state at click time rather than having the server compute the increment
+     from a server-side current value. A rapid double-click, or a click that
+     races an incoming BID_ACCEPTED/leader-change broadcast the client hasn't
+     applied to local state yet, can produce a bid_amount_minor equal to (or
+     behind) the true current price by the time the server processes it. Fix
+     scope: prevent/handle this client-side (disable the +$1 button
+     immediately on click until the pending request resolves or a fresh
+     auction state arrives — standard optimistic-UI debounce) so a legitimate
+     race surfaces as a clear "someone just bid — try again" style message
+     rather than a raw BID_TOO_LOW with cents in it. Do not change the
+     server's stale-state/BID_TOO_LOW validation logic itself — it is correct
+     (rejects bid_amount_minor <= current_bid_minor); this is a message-
+     formatting and client-side UX fix, not a bid-pipeline correctness bug.
+
+  2. GAP to verify: commissioner edits to AuctionConfiguration's
+     nomination_timer_ms / second_bid_timer_ms / rebid_timer_ms should take
+     effect starting with the very next PlayerAuction/nomination turn, not
+     require a restart. Verify server/src/auction/engine.ts's nomination and
+     second-bid/rebid timer scheduling (dispatchNominationTurn,
+     processNominateCommand, and wherever second_bid_timer_ms/rebid_timer_ms
+     are read) re-reads auction_configurations fresh per auction/turn rather
+     than caching a value at draft-start or server-boot time. If it already
+     re-reads fresh every time (dispatchNominationTurn does, per
+     F-MOD-002-rework-01), confirm the commissioner-facing config-edit route
+     (server/src/league/routes.ts AuctionConfiguration update) doesn't require
+     restarting the draft/server for the new value to be picked up, and add a
+     regression test proving a mid-draft config edit changes the NEXT
+     nomination's timer without a restart. If a caching gap is found, fix it.
+
+  3. Missing UI affordance: an owner who is also the commissioner needs a
+     visible "Pause Draft" action reachable from within their own Draft Room
+     screen (web/src/screens/draft-room/), not only from the separate
+     Commissioner Console (web/src/screens/commissioner/DraftControl.tsx).
+     Clicking it should pause the draft (existing POST /drafts/:id/pause) and
+     take them into Commissioner Console controls.
+
+  4. Navigation gap: confirm/add a clear way for an owner to open their War
+     Room (web/src/screens/war-room/) in addition to their Draft Room — per
+     CLAUDE.md, "Same owner may open both as synchronized windows sharing one
+     team identity," implying a link/button in the Draft Room (and vice
+     versa) to open the other as a separate window, not just direct URL
+     knowledge.
+
+  5. UX gap: the Draft Room should always display the viewing owner's own
+     roster-so-far with starter vs. bench slot status clearly visible (which
+     starter slots are filled/open, bench count), so the owner always knows
+     what roster needs remain. Ground this in
+     knowledge/screen-information-architecture.md's Draft Room section and
+     the existing RosterEntry/roster_slot_definitions data already available
+     server-side.
+
+  6. UX/layout: general feedback that the Draft Room has a lot of unused
+     screen real estate and needs a design/layout pass. Evaluate using this
+     repo's available UI/UX skills (design-review, frontend-design,
+     ui-ux-pro-max) and, for inspiration only (not a spec to copy), the
+     attached reference screenshot of a commercial draft simulator showing a
+     rankings/players panel with tabs, a center suggestions/board panel, and
+     a right sidebar with pick order + other teams' remaining needs. This
+     app's own knowledge/screen-information-architecture.md and any existing
+     design-spec.yaml remain authoritative for what the Draft Room must show;
+     the layout pass should better use the freed/underused space to surface
+     items 3-5 (pause action, War Room link, own-roster-with-needs) plus
+     whatever else the IA doc calls for that isn't currently visible, rather
+     than adopting the reference tool's specific feature set.
+
+  Routing intent: items 1-2 are bug/verification fixes (server + client), scoped to the auction module (F-MOD-002) and possibly a dedicated web client fix. Items 3-6 are a UI/UX-focused rework of the Draft Room screen (and War Room cross-navigation) — likely lands on whichever feature/module owns web/src/screens/draft-room and web/src/screens/war-room per module-map.yaml. All were reported together in one live-review session and should be planned together but may span more than one feature depending on module ownership.
+steps:
+- phase: plan
+  input: >
+    Rework F-MOD-002 (owns the Draft Room screen and the bid/nomination
+    engine) to fix: (1) BID_REJECTED reason strings in
+    server/src/auction/engine.ts interpolating raw *_minor cents unformatted
+    (e.g. "Bid 2600 must exceed current 2600") — format as whole dollars, or
+    move formatting to the client via structured payload fields, matching the
+    existing formatMoney convention; (2) the Draft Room's "+$1" relative-bid
+    button computing the increment from local client state instead of a
+    server-driven value — debounce/disable it on click until the pending
+    bid resolves or a fresh auction-state event arrives, so a legitimate race
+    surfaces as a clear retry message, not a raw cents-based rejection; (3)
+    verify AuctionConfiguration's nomination_timer_ms/second_bid_timer_ms/
+    rebid_timer_ms are re-read fresh per auction/turn (dispatchNominationTurn
+    already does per F-MOD-002-rework-01 — confirm second-bid/rebid timers do
+    too) so a commissioner's mid-draft config edit takes effect on the next
+    auction without a restart, adding a regression test for it; (4) add a
+    "Pause Draft" action inside the Draft Room itself (calling the existing
+    POST /drafts/:id/pause) for an owner who is also commissioner, instead of
+    requiring navigation to the separate Commissioner Console; (5) add clear
+    navigation from Draft Room to War Room (web/src/screens/war-room/, owned
+    by F-MOD-008) and back, opening as a separate window per CLAUDE.md's
+    "Draft Room vs War Room ... same owner may open both as synchronized
+    windows"; (6) always show the viewing owner's own roster-so-far in the
+    Draft Room with starter-vs-bench slot status clearly visible (which
+    slots are filled/open), grounded in
+    knowledge/screen-information-architecture.md's Draft Room section and the
+    existing RosterEntry/roster_slot_definitions data; (7) a general Draft
+    Room layout/design pass to make better use of currently-unused screen
+    real estate while surfacing items 4-6 — use this repo's design-review /
+    frontend-design / ui-ux-pro-max skills as needed; the user attached a
+    commercial draft-simulator screenshot purely as layout inspiration (a
+    rankings panel with tabs, a center suggestions panel, a right sidebar
+    with pick order and team needs) — it is not a spec to copy, and
+    knowledge/screen-information-architecture.md plus any existing
+    design-spec.yaml remain authoritative for what the Draft Room must show.
+    Items 1-3 are bug/verification fixes; items 4-7 are a UI/UX-scoped
+    rework of the same screen — bundle into F-MOD-002's rework since all
+    touch the same Draft Room component and its WS client. If any part is
+    better owned by F-MOD-008 (War Room's side of the cross-navigation) or
+    F-MOD-011 (Commissioner Draft Control, for consistency with its existing
+    pause button), note it but keep the primary rework on F-MOD-002 unless
+    the Draft Room/War Room link genuinely requires changing War Room's own
+    file. F-MOD-002-rework-01 already exists (done, promoted) — this is a
+    NEW rework of the original F-MOD-002 spec (or of -rework-01 if that's how
+    the tooling models a second rework of the same feature); use
+    core.plan.create_rework_entry against whichever is the current
+    superseding entry. The remaining blast_radius_features (F-MOD-003, 004,
+    005, 006, 009, 010, 012, 013, 015, 017) are downstream DAG dependents
+    only — do not pre-rework them; the reactive regression gate will catch
+    any real collateral damage.
+  output: >
+    F-MOD-002 was already implemented (passes: true) — Case A, forward
+    rework. Updated F-MOD-002.md in place: the UI-layer paragraph now
+    specifies the +$1 button's disable-until-resolved behavior, dollar-
+    formatted BID_REJECTED reasons, the in-Draft-Room Pause action, the
+    Draft Room <-> War Room cross-link, and the always-visible own-roster
+    starter/bench display with a layout revisit to fit them; added a new
+    "Live-effect configuration" paragraph confirming timer values must be
+    re-read per-use, not cached; added 7 new behavioral-expectation bullets
+    covering all of it. Created the superseding entry via
+    core.plan.create_rework_entry (feature-id F-MOD-002): F-MOD-002-rework-02
+    (F-MOD-002-rework-01 already exists as the prior, completed rework;
+    -rework-02 supersedes the base F-MOD-002.md spec, which now carries both
+    reworks' combined requirements). Prerequisites [F-MOD-001], already
+    built. dag.json rebuilt and validated acyclic. F-MOD-002 (original) and
+    F-MOD-002-rework-01 (prior rework) both keep passes: true and are
+    untouched. Did not touch F-MOD-008 (War Room) or F-MOD-011 (Commissioner
+    Draft Control) specs — the Draft Room -> War Room link and the in-room
+    pause action are additions to F-MOD-002's own screen calling existing
+    endpoints/screens, not changes to what those other modules own.
+    Remaining blast_radius_features left alone per the reactive-handling
+    rule.
+  affected_features:
+  - F-MOD-002-rework-02
+  completed_at: '2026-09-04T23:35:00Z'
+  affected_modules:
+  - MOD-002
+  - MOD-008
+  - MOD-014
+  - MOD-011
+  blast_radius_features:
+  - F-MOD-002
+  - F-MOD-002-rework-01
+  - F-MOD-003
+  - F-MOD-004
+  - F-MOD-005
+  - F-MOD-006
+  - F-MOD-008
+  - F-MOD-009
+  - F-MOD-010
+  - F-MOD-011
+  - F-MOD-012
+  - F-MOD-013
+  - F-MOD-014
+  - F-MOD-015
+  - F-MOD-017
+status: in_progress
