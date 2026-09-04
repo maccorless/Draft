@@ -22,6 +22,14 @@ disk under the `server/` package (a directory the Fastify server serves statical
 corresponding `teams.icon_url` / `teams.nomination_audio_url` columns store the path/URL the
 server serves them from. Do not introduce S3 or any other cloud storage dependency.
 
+**Known production caveat (do not silently fix, just flag):** Railway's default filesystem is
+ephemeral — local disk does not survive a redeploy/restart. This is a non-issue for local
+development (the target for this iteration), but uploaded media would be lost on the first
+Railway redeploy after upload. Leave a `// TODO(railway-volume):` comment at the file-storage
+write path noting that a persistent Railway volume mounted at the upload directory (no new
+service, just a `railway.toml` volume mount) is the fix when this ships to Railway — do not
+implement the volume mount as part of this feature.
+
 **Schema:** add `teams.icon_url` (nullable text) and `teams.nomination_audio_url` (nullable
 text) to `server/db/schema/index.ts`'s `teams` table, and `draft_team_states.nomination_audio_played`
 (boolean, default false, never reset once true) to the `draft_team_states` table — per

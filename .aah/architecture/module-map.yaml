@@ -344,6 +344,53 @@ modules:
   # (PRD §43) coverage gaps — mostly frontend, plus two backend/data-model gaps
   # (MOD-015, MOD-016). These modules close those gaps.
 
+  - id: MOD-016
+    name: player-intelligence-and-multisource-aav
+    description: >
+      Two related Core MVP data gaps. (1) Multi-source AAV (PRD §10): the current
+      player_dataset_entries schema stores exactly one aav_minor/tier/source per
+      player per dataset, so a player can never carry more than one named AAV value
+      at a time — there is no way to show "ESPN $46 / FantasyPros $51" side by side,
+      nor for the commissioner to pick a Primary and an optional Secondary AAV
+      source. (2) Player intelligence fields (PRD §9.2): the players table has only
+      name/position/nfl_team/espn_player_id — no bye week, injury status/detail,
+      practice/depth-chart status, freshness timestamp, or prior-season stats exist
+      anywhere. This module changes the schema to one AAV row per player per source
+      per dataset, adds Primary/Secondary AAV source selection (consumed by MOD-010's
+      UI), extends MOD-007's adapters (ESPN PDF, FantasyPros, Excel, CSV) to populate
+      per-source rows and the new player fields where each source provides them, and
+      surfaces injury indicator (Draft Room, IA §2.1) and full player detail incl.
+      all configured AAVs (War Room, IA §4.1).
+    demo_criteria: >
+      Importing from two different sources (e.g. CSV then FantasyPros) for the same
+      player produces two AAV rows, both visible in War Room's player detail; the
+      commissioner selects one as Primary and one as Secondary in League Setup; the
+      Draft Room shows the Primary AAV and an injury indicator when a player has
+      one; War Room's player intelligence panel shows all configured AAVs, bye week,
+      and injury freshness.
+    smoke_test: >
+      Import the same player from two adapters into one dataset → assert two rows in
+      the (renamed/restructured) AAV-sources table for that player+dataset; PUT
+      primary/secondary AAV source selection → GET player list → assert primary_aav_minor
+      resolves from the selected source; GET player detail → assert bye_week,
+      injury_status, injury_detail, freshness fields present when the source supplied them.
+    layers:
+      db:
+        - players: bye_week, injury_status, injury_detail, injury_updated_at, prior_season_stats (jsonb)
+        - player_dataset_entries restructured to player_aav_sources (dataset_id, player_id, source, aav_minor, tier, projected_points) — one row per player per source per dataset, replacing the single-row-per-player shape
+        - draft_datasets.primary_aav_source, draft_datasets.secondary_aav_source (nullable)
+      api:
+        - GET /leagues/:id/players response includes all configured AAV sources per player plus resolved primary_aav_minor/secondary_aav_minor and the new intelligence fields
+        - PUT /leagues/:id/datasets/:id/aav-sources (set primary/secondary selection from currently-loaded sources)
+        - MOD-007 adapters (espn-pdf.ts, fantasypros.ts, excel.ts) and the CSV adapter updated to upsert into player_aav_sources keyed by (dataset_id, player_id, source) instead of overwriting a single row, and to populate bye_week/injury fields where the source provides them
+        - server/db/seed-data.ts updated to insert into player_aav_sources (source='CSV') instead of the removed player_dataset_entries shape — this is the dev-seed path (npm run db:seed and POST /dev/reseed) and does NOT go through the adapter pipeline, so updating the adapters alone does not fix it
+      ui:
+        - Draft Room: injury indicator next to player name/position when injury_status is set
+        - War Room player intelligence panel: all configured AAV sources listed, bye week, injury detail + freshness
+        - MOD-010 League Setup: Primary/Secondary AAV source dropdowns populated from currently-loaded sources
+    depends_on: [MOD-001, MOD-007]
+    cloud_services: [svc-001, svc-002]
+
   - id: MOD-010
     name: commissioner-league-setup-ui
     description: >
@@ -372,10 +419,10 @@ modules:
       checklist reflects FROZEN dataset + configured teams as ready.
     layers:
       db:
-        - leagues.logo_url, leagues.name_lock (bool), leagues.scheduled_draft_start_at (nullable timestamp)
+        - leagues.logo_url, leagues.name_lock (bool), leagues.scheduled_draft_start_at (nullable timestamp), leagues.status_message (nullable text — IA §0.1 "readiness/status messaging from the commissioner if provided")
         - teams.starting_budget_override_minor (nullable; falls back to AuctionConfiguration.initial_budget_minor)
       api:
-        - PUT /leagues/:id (name, logo_url, name_lock, scheduled_draft_start_at)
+        - PUT /leagues/:id (name, logo_url, name_lock, scheduled_draft_start_at, status_message)
         - PUT /leagues/:id/teams/:teamId (starting_budget_override_minor, draft_order)
         - POST /leagues/:id/passwords/generate (commissioner/host/team password generation; returns shown-once values)
         - GET /leagues/:id/readiness (aggregates PRD §41 checklist items; pass/fail per item)
@@ -573,52 +620,6 @@ modules:
         - Client-side audio player: on TEAM_NOMINATION_AUDIO, play audio_url capped at 5000ms, non-blocking
         - Team icon rendered in War Room roster/budget grid and Draft Room team context
     depends_on: [MOD-001, MOD-002]
-    cloud_services: [svc-001, svc-002]
-
-  - id: MOD-016
-    name: player-intelligence-and-multisource-aav
-    description: >
-      Two related Core MVP data gaps. (1) Multi-source AAV (PRD §10): the current
-      player_dataset_entries schema stores exactly one aav_minor/tier/source per
-      player per dataset, so a player can never carry more than one named AAV value
-      at a time — there is no way to show "ESPN $46 / FantasyPros $51" side by side,
-      nor for the commissioner to pick a Primary and an optional Secondary AAV
-      source. (2) Player intelligence fields (PRD §9.2): the players table has only
-      name/position/nfl_team/espn_player_id — no bye week, injury status/detail,
-      practice/depth-chart status, freshness timestamp, or prior-season stats exist
-      anywhere. This module changes the schema to one AAV row per player per source
-      per dataset, adds Primary/Secondary AAV source selection (consumed by MOD-010's
-      UI), extends MOD-007's adapters (ESPN PDF, FantasyPros, Excel, CSV) to populate
-      per-source rows and the new player fields where each source provides them, and
-      surfaces injury indicator (Draft Room, IA §2.1) and full player detail incl.
-      all configured AAVs (War Room, IA §4.1).
-    demo_criteria: >
-      Importing from two different sources (e.g. CSV then FantasyPros) for the same
-      player produces two AAV rows, both visible in War Room's player detail; the
-      commissioner selects one as Primary and one as Secondary in League Setup; the
-      Draft Room shows the Primary AAV and an injury indicator when a player has
-      one; War Room's player intelligence panel shows all configured AAVs, bye week,
-      and injury freshness.
-    smoke_test: >
-      Import the same player from two adapters into one dataset → assert two rows in
-      the (renamed/restructured) AAV-sources table for that player+dataset; PUT
-      primary/secondary AAV source selection → GET player list → assert primary_aav_minor
-      resolves from the selected source; GET player detail → assert bye_week,
-      injury_status, injury_detail, freshness fields present when the source supplied them.
-    layers:
-      db:
-        - players: bye_week, injury_status, injury_detail, injury_updated_at, prior_season_stats (jsonb)
-        - player_dataset_entries restructured to player_aav_sources (dataset_id, player_id, source, aav_minor, tier, projected_points) — one row per player per source per dataset, replacing the single-row-per-player shape
-        - draft_datasets.primary_aav_source, draft_datasets.secondary_aav_source (nullable)
-      api:
-        - GET /leagues/:id/players response includes all configured AAV sources per player plus resolved primary_aav_minor/secondary_aav_minor and the new intelligence fields
-        - PUT /leagues/:id/datasets/:id/aav-sources (set primary/secondary selection from currently-loaded sources)
-        - MOD-007 adapters (espn-pdf.ts, fantasypros.ts, excel.ts) and the CSV adapter updated to upsert into player_aav_sources keyed by (dataset_id, player_id, source) instead of overwriting a single row, and to populate bye_week/injury fields where the source provides them
-      ui:
-        - Draft Room: injury indicator next to player name/position when injury_status is set
-        - War Room player intelligence panel: all configured AAV sources listed, bye week, injury detail + freshness
-        - MOD-010 League Setup: Primary/Secondary AAV source dropdowns populated from currently-loaded sources
-    depends_on: [MOD-001, MOD-007]
     cloud_services: [svc-001, svc-002]
 
   - id: MOD-017

@@ -45,7 +45,9 @@ of most-recently-resolved picks to undo. Before confirming, the UI shows the pla
 statement (e.g. "This will undo picks #18 through #10 (8 players). Those players return to the
 pool.") derived from the currently active acquisitions ordered by `resolution_sequence`, followed by
 the detailed per-pick preview (player, team, price for each pick that will be reversed). If the draft
-is not already `PAUSED`, the UI pauses it first (existing pause control/endpoint from MOD-011) before
+is not already `PAUSED`, the UI pauses it first (existing pause control/endpoint from MOD-002,
+`server/src/auction/routes.ts` — MOD-011 only wires a button to this pre-existing endpoint, it
+does not build it) before
 submitting. Confirming calls `POST /drafts/:draftId/rollback` with `{count}`. A `409
 DRAFT_NOT_PAUSED` or `409 NO_PICKS_TO_ROLLBACK` is shown inline without side effects. A `200`
 (`RollbackResponse`: `rolled_back, picks_reversed[]` — each `{acquisition_id, player_name, team_id,

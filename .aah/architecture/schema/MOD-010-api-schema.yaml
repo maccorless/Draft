@@ -158,6 +158,12 @@ components:
           type: string
           format: date-time
           nullable: true
+        status_message:
+          type: string
+          nullable: true
+          description: >-
+            Free-text commissioner status note surfaced in the Pre-Draft Lobby
+            (screen-information-architecture.md §0.1). Null renders nothing.
 
     LeagueSummary:
       type: object
@@ -176,6 +182,9 @@ components:
         scheduled_draft_start_at:
           type: string
           format: date-time
+          nullable: true
+        status_message:
+          type: string
           nullable: true
 
     UpdateTeamRequest:
