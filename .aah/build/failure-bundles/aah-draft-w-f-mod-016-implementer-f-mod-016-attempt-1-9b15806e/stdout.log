@@ -1,0 +1,93 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[***REDACTED***[39m
+
+{"level":30,"time":1788490095845,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-1","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096030,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-1","res":{"statusCode":500},"responseTime":184.02408400000002,"msg":"request completed"}
+{"level":30,"time":1788490096030,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-2","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096031,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-2","res":{"statusCode":403},"responseTime":0.6004169999999931,"msg":"request completed"}
+{"level":30,"time":1788490096031,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-3","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096031,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-3","res":{"statusCode":403},"responseTime":0.24041699999997945,"msg":"request completed"}
+{"level":30,"time":1788490096044,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-4","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[33m[39m[31mx[39m{"level":30,"time":1788490096220,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-4","res":{"statusCode":500},"responseTime":176.003833,"msg":"request completed"}
+{"level":30,"time":1788490096220,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-5","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096220,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-5","res":{"statusCode":403},"responseTime":0.1033750000000282,"msg":"request completed"}
+{"level":30,"time":1788490096220,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-6","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096220,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-6","res":{"statusCode":403},"responseTime":0.1013749999999618,"msg":"request completed"}
+{"level":30,"time":1788490096223,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-7","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/excel","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096223,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-7","res":{"statusCode":403},"responseTime":0.108333000000016,"msg":"request completed"}
+{"level":30,"time":1788490096234,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-8","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[33m[39m[31mx[39m{"level":30,"time":1788490096410,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-8","res":{"statusCode":500},"responseTime":176.01858300000015,"msg":"request completed"}
+{"level":30,"time":1788490096410,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-9","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096410,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-9","res":{"statusCode":403},"responseTime":0.11249999999995453,"msg":"request completed"}
+{"level":30,"time":1788490096410,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-a","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096410,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-a","res":{"statusCode":403},"responseTime":0.1224170000000413,"msg":"request completed"}
+{"level":30,"time":1788490096410,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-b","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096410,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-b","res":{"statusCode":403},"responseTime":0.07558399999993526,"msg":"request completed"}
+{"level":30,"time":1788490096422,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-c","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[33m[39m[31mx[39m{"level":30,"time":1788490096598,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-c","res":{"statusCode":500},"responseTime":176.37937499999998,"msg":"request completed"}
+{"level":30,"time":1788490096598,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-d","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096598,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-d","res":{"statusCode":403},"responseTime":0.08816699999988487,"msg":"request completed"}
+{"level":30,"time":1788490096598,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-e","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096598,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-e","res":{"statusCode":403},"responseTime":0.08579200000008314,"msg":"request completed"}
+{"level":30,"time":1788490096609,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-f","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[33m[39m[31mx[39m{"level":30,"time":1788490096784,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-f","res":{"statusCode":500},"responseTime":175.1111249999999,"msg":"request completed"}
+{"level":30,"time":1788490096784,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-g","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096784,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-g","res":{"statusCode":403},"responseTime":0.07637500000009823,"msg":"request completed"}
+{"level":30,"time":1788490096784,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-h","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096784,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-h","res":{"statusCode":403},"responseTime":0.06912499999998545,"msg":"request completed"}
+{"level":30,"time":1788490096785,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-i","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/excel","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096785,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-i","res":{"statusCode":403},"responseTime":0.06116700000006858,"msg":"request completed"}
+{"level":30,"time":1788490096794,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-j","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[33m[39m[31mx[39m{"level":30,"time":1788490096969,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-j","res":{"statusCode":500},"responseTime":174.84124999999995,"msg":"request completed"}
+{"level":30,"time":1788490096969,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-k","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096969,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-k","res":{"statusCode":403},"responseTime":0.051750000000083674,"msg":"request completed"}
+{"level":30,"time":1788490096969,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-l","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096969,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-l","res":{"statusCode":403},"responseTime":0.0650420000001759,"msg":"request completed"}
+{"level":30,"time":1788490096970,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-m","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/excel","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096970,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-m","res":{"statusCode":403},"responseTime":0.05129099999999198,"msg":"request completed"}
+{"level":30,"time":1788490096970,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-n","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/freeze","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096970,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-n","res":{"statusCode":403},"responseTime":0.03350000000000364,"msg":"request completed"}
+{"level":30,"time":1788490096970,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-o","req":{"method":"GET","url":"/leagues/undefined/players","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490096970,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-o","res":{"statusCode":403},"responseTime":0.031582999999955064,"msg":"request completed"}
+{"level":30,"time":1788490096977,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-p","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[33m[39m[31mx[39m{"level":30,"time":1788490097153,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-p","res":{"statusCode":500},"responseTime":175.64587499999993,"msg":"request completed"}
+{"level":30,"time":1788490097153,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-q","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097153,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-q","res":{"statusCode":403},"responseTime":0.06850000000008549,"msg":"request completed"}
+{"level":30,"time":1788490097153,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-r","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097153,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-r","res":{"statusCode":403},"responseTime":0.06291600000008657,"msg":"request completed"}
+{"level":30,"time":1788490097153,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-s","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/freeze","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097153,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-s","res":{"statusCode":403},"responseTime":0.036665999999968335,"msg":"request completed"}
+{"level":30,"time":1788490097153,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-t","req":{"method":"GET","url":"/leagues/undefined/players","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097153,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-t","res":{"statusCode":403},"responseTime":0.032332999999880485,"msg":"request completed"}
+{"level":30,"time":1788490097158,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-u","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[33m[39m[31mx[39m{"level":30,"time":1788490097333,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-u","res":{"statusCode":500},"responseTime":175.26020800000015,"msg":"request completed"}
+{"level":30,"time":1788490097333,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-v","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097333,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-v","res":{"statusCode":403},"responseTime":0.08212499999990541,"msg":"request completed"}
+{"level":30,"time":1788490097334,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-w","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097334,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-w","res":{"statusCode":403},"responseTime":0.06041700000014316,"msg":"request completed"}
+{"level":30,"time":1788490097334,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-x","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/excel","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097334,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-x","res":{"statusCode":403},"responseTime":0.05812500000001819,"msg":"request completed"}
+{"level":30,"time":1788490097334,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-y","req":{"method":"PUT","url":"/leagues/undefined/datasets/undefined/aav-sources","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097334,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-y","res":{"statusCode":403},"responseTime":0.0880419999998594,"msg":"request completed"}
+{"level":30,"time":1788490097341,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-z","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[33m[39m[31mx[39m{"level":30,"time":1788490097523,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-z","res":{"statusCode":500},"responseTime":182.48391700000002,"msg":"request completed"}
+{"level":30,"time":1788490097523,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-10","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097523,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-10","res":{"statusCode":403},"responseTime":0.07675000000017462,"msg":"request completed"}
+{"level":30,"time":1788490097523,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-11","req":{"method":"POST","url":"/leagues/undefined/datasets/undefined/import/csv","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097524,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-11","res":{"statusCode":403},"responseTime":0.06737500000008367,"msg":"request completed"}
+{"level":30,"time":1788490097524,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-12","req":{"method":"PUT","url":"/leagues/undefined/datasets/undefined/aav-sources","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097524,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-12","res":{"statusCode":403},"responseTime":0.06654200000002675,"msg":"request completed"}
+{"level":30,"time":1788490097529,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-13","req":{"method":"POST","url":"/leagues","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[33m[39m[31mx[39m{"level":30,"time":1788490097704,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-13","res":{"statusCode":500},"responseTime":174.99908400000004,"msg":"request completed"}
+{"level":30,"time":1788490097704,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-14","req":{"method":"POST","url":"/leagues/undefined/datasets","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097704,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-14","res":{"statusCode":403},"responseTime":0.06795800000008967,"msg":"request completed"}
+{"level":30,"time":1788490097704,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-15","req":{"method":"PUT","url":"/leagues/undefined/datasets/undefined/aav-sources","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1788490097704,"pid":39200,"hostname":"Kens-Mac-mini.local","reqId":"req-15","res":{"statusCode":401},"responseTime":0.140041999999994,"msg":"request completed"}
+[33m[39m[31mx[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m10 failed[39m[22m[90m (10)[39m
+[2m   Start at [22m 21:48:15
+[2m   Duration [22m 2.46s[2m (tests 96%, import 3%, transform 1%)[22m
+
+JUNIT report written to /Users/ken/Development/projects/Draft/test-results/junit.xml

@@ -1,0 +1,193 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+[globalSetup] Skipping truncate: DATABASE_URL is not draft_test
+
+[31m⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 10 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_import_from_one_source_creates_exactly_one_player_aav_sources_row
+[31m[1mPostgresError[22m: password ***REDACTED*** failed for user "ken"[39m
+[90m [2m❯[22m ErrorResponse node_modules/postgres/src/connection.js:[2m817:22[22m[39m
+[90m [2m❯[22m handle node_modules/postgres/src/connection.js:[2m489:6[22m[39m
+[90m [2m❯[22m Socket.data node_modules/postgres/src/connection.js:[2m324:9[22m[39m
+[90m [2m❯[22m cachedError node_modules/postgres/src/query.js:[2m170:23[22m[39m
+[90m [2m❯[22m new Query node_modules/postgres/src/query.js:[2m36:24[22m[39m
+[90m [2m❯[22m sql node_modules/postgres/src/index.js:[2m112:11[22m[39m
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m139:54[22m[39m
+    [90m137|[39m     ].join('\n'));
+    [90m138|[39m
+    [90m139|[39m     const rows = await sql<Array<{ source: string }>>`
+    [90m   |[39m                                                      [31m^[39m
+    [90m140|[39m       SELECT pas.source FROM player_aav_sources pas
+    [90m141|[39m       JOIN players p ON p.id = pas.player_id
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/19]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_import_from_one_source_creates_exactly_one_player_aav_sources_row
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_import_same_player_from_second_source_adds_row_without_touching_first
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_reimport_from_same_source_updates_in_place_not_duplicated
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_csv_bye_week_and_injury_fields_are_persisted_onto_players
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_later_import_without_intelligence_fields_does_not_clear_them
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_listPlayers_includes_aav_sources_and_intelligence_fields
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_listPlayers_returns_null_intelligence_fields_when_source_never_supplied_them
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_setAavSources_persists_selection_and_resolves_primary_secondary
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_setAavSources_rejects_source_not_loaded_and_makes_no_change
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_setAavSources_401_when_no_token_provided
+[31m[1mPostgresError[22m: password ***REDACTED*** failed for user "ken"[39m
+[90m [2m❯[22m ErrorResponse node_modules/postgres/src/connection.js:[2m817:22[22m[39m
+[90m [2m❯[22m handle node_modules/postgres/src/connection.js:[2m489:6[22m[39m
+[90m [2m❯[22m Socket.data node_modules/postgres/src/connection.js:[2m324:9[22m[39m
+[90m [2m❯[22m cachedError node_modules/postgres/src/query.js:[2m170:23[22m[39m
+[90m [2m❯[22m new Query node_modules/postgres/src/query.js:[2m36:24[22m[39m
+[90m [2m❯[22m sql node_modules/postgres/src/index.js:[2m112:11[22m[39m
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m85:14[22m[39m
+    [90m 83|[39m       testLeagueId = '';
+    [90m 84|[39m     }
+    [90m 85|[39m     await sql`DELETE FROM players WHERE id NOT IN (
+    [90m   |[39m              [31m^[39m
+    [90m 86|[39m       SELECT DISTINCT player_id FROM player_aav_sources
+    [90m 87|[39m     )`;
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/19]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_import_same_player_from_second_source_adds_row_without_touching_first
+[31m[1mPostgresError[22m: password ***REDACTED*** failed for user "ken"[39m
+[90m [2m❯[22m ErrorResponse node_modules/postgres/src/connection.js:[2m817:22[22m[39m
+[90m [2m❯[22m handle node_modules/postgres/src/connection.js:[2m489:6[22m[39m
+[90m [2m❯[22m Socket.data node_modules/postgres/src/connection.js:[2m324:9[22m[39m
+[90m [2m❯[22m cachedError node_modules/postgres/src/query.js:[2m170:23[22m[39m
+[90m [2m❯[22m new Query node_modules/postgres/src/query.js:[2m36:24[22m[39m
+[90m [2m❯[22m sql node_modules/postgres/src/index.js:[2m112:11[22m[39m
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m161:73[22m[39m
+    [90m159|[39m     ]);
+    [90m160|[39m
+    [90m161|[39m     const rows = await sql<Array<{ source: string; aav_minor: number }…
+    [90m   |[39m                                                                         [31m^[39m
+    [90m162|[39m       SELECT pas.source, pas.aav_minor FROM player_aav_sources pas
+    [90m163|[39m       JOIN players p ON p.id = pas.player_id
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/19]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_reimport_from_same_source_updates_in_place_not_duplicated
+[31m[1mPostgresError[22m: password ***REDACTED*** failed for user "ken"[39m
+[90m [2m❯[22m ErrorResponse node_modules/postgres/src/connection.js:[2m817:22[22m[39m
+[90m [2m❯[22m handle node_modules/postgres/src/connection.js:[2m489:6[22m[39m
+[90m [2m❯[22m Socket.data node_modules/postgres/src/connection.js:[2m324:9[22m[39m
+[90m [2m❯[22m cachedError node_modules/postgres/src/query.js:[2m170:23[22m[39m
+[90m [2m❯[22m new Query node_modules/postgres/src/query.js:[2m36:24[22m[39m
+[90m [2m❯[22m sql node_modules/postgres/src/index.js:[2m112:11[22m[39m
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m188:57[22m[39m
+    [90m186|[39m     ].join('\n'));
+    [90m187|[39m
+    [90m188|[39m     const rows = await sql<Array<{ aav_minor: number }>>`
+    [90m   |[39m                                                         [31m^[39m
+    [90m189|[39m       SELECT pas.aav_minor FROM player_aav_sources pas
+    [90m190|[39m       JOIN players p ON p.id = pas.player_id
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/19]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_csv_bye_week_and_injury_fields_are_persisted_onto_players
+[31m[1mPostgresError[22m: password ***REDACTED*** failed for user "ken"[39m
+[90m [2m❯[22m ErrorResponse node_modules/postgres/src/connection.js:[2m817:22[22m[39m
+[90m [2m❯[22m handle node_modules/postgres/src/connection.js:[2m489:6[22m[39m
+[90m [2m❯[22m Socket.data node_modules/postgres/src/connection.js:[2m324:9[22m[39m
+[90m [2m❯[22m cachedError node_modules/postgres/src/query.js:[2m170:23[22m[39m
+[90m [2m❯[22m new Query node_modules/postgres/src/query.js:[2m36:24[22m[39m
+[90m [2m❯[22m sql node_modules/postgres/src/index.js:[2m112:11[22m[39m
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m213:8[22m[39m
+    [90m211|[39m       injury_detail: string | null;
+    [90m212|[39m       injury_updated_at: Date | null;
+    [90m213|[39m     }>>`
+    [90m   |[39m        [31m^[39m
+    [90m214|[39m       SELECT bye_week, injury_status, injury_detail, injury_updated_at
+    [90m215|[39m       FROM players WHERE name = 'F016 Hurt Player'
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/19]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_later_import_without_intelligence_fields_does_not_clear_them
+[31m[1mPostgresError[22m: password ***REDACTED*** failed for user "ken"[39m
+[90m [2m❯[22m ErrorResponse node_modules/postgres/src/connection.js:[2m817:22[22m[39m
+[90m [2m❯[22m handle node_modules/postgres/src/connection.js:[2m489:6[22m[39m
+[90m [2m❯[22m Socket.data node_modules/postgres/src/connection.js:[2m324:9[22m[39m
+[90m [2m❯[22m cachedError node_modules/postgres/src/query.js:[2m170:23[22m[39m
+[90m [2m❯[22m new Query node_modules/postgres/src/query.js:[2m36:24[22m[39m
+[90m [2m❯[22m sql node_modules/postgres/src/index.js:[2m112:11[22m[39m
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m237:94[22m[39m
+    [90m235|[39m     ]);
+    [90m236|[39m
+    [90m237|[39m     const [row] = await sql<Array<{ bye_week: number | null; injury_st…
+    [90m   |[39m                                                                                              [31m^[39m
+    [90m238|[39m       SELECT bye_week, injury_status FROM players WHERE name = 'F016 P…
+    [90m239|[39m     `;
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/19]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_listPlayers_includes_aav_sources_and_intelligence_fields
+[31m[1mAssertionError[22m: expected 403 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m269:28[22m[39m
+    [90m267|[39m       headers: { authorization: ***REDACTED*** ***REDACTED*** },
+    [90m268|[39m     });
+    [90m269|[39m     expect(res.statusCode).toBe(200);
+    [90m   |[39m                            [31m^[39m
+    [90m270|[39m     const body = res.json<{
+    [90m271|[39m       players: Array<{
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/19]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_listPlayers_returns_null_intelligence_fields_when_source_never_supplied_them
+[31m[1mTypeError[22m: Cannot read properties of undefined (reading 'find')[39m
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m312:33[22m[39m
+    [90m310|[39m     });
+    [90m311|[39m     const body = res.json<{ players: Array<{ name: string; bye_week: n…
+    [90m312|[39m     const player = body.players.find((p) => p.name === 'F016 Plain Pla…
+    [90m   |[39m                                 [31m^[39m
+    [90m313|[39m     expect(player!.bye_week).toBeNull();
+    [90m314|[39m     expect(player!.injury_status).toBeNull();
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/19]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_setAavSources_persists_selection_and_resolves_primary_secondary
+[31m[1mAssertionError[22m: expected 403 to be 200 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 200[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m340:31[22m[39m
+    [90m338|[39m       payload: { primary_aav_source: 'EXCEL', secondary_aav_source: 'C…
+    [90m339|[39m     });
+    [90m340|[39m     expect(putRes.statusCode).toBe(200);
+    [90m   |[39m                               [31m^[39m
+    [90m341|[39m     expect(putRes.json<{ primary_aav_source: string; secondary_aav_sou…
+    [90m342|[39m       primary_aav_source: 'EXCEL',
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/19]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts[2m > [22mF-MOD-016 multi-source AAV[2m > [22mtest_F_MOD_016_setAavSources_rejects_source_not_loaded_and_makes_no_change
+[31m[1mAssertionError[22m: expected 403 to be 400 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 400[39m
+[31m+ 403[39m
+
+[36m [2m❯[22m server/src/__tests__/F-MOD-016_multi_source_aav.test.ts:[2m381:28[22m[39m
+    [90m379|[39m       payload: { primary_aav_source: 'FANTASYPROS' },
+    [90m380|[39m     });
+    [90m381|[39m     expect(res.statusCode).toBe(400);
+    [90m   |[39m                            [31m^[39m
+    [90m382|[39m
+    [90m383|[39m     const [row] = await sql<Array<{ primary_aav_source: string | null …
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/19]⎯[22m[39m
+
