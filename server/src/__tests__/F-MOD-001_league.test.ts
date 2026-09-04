@@ -272,6 +272,74 @@ describe.skipIf(SKIP_DB)('F-MOD-001 league CRUD', () => {
     expect(res.statusCode).toBe(200);
   });
 
+  it('test_F_MOD_001_set_roster_config_auto_creates_bench_slot_definition', async () => {
+    // The commissioner submits only starter slots plus a bench_slots count —
+    // never a manual 'BN' row (the UI doesn't ask for one). The auction
+    // engine's assignRosterSlot needs an actual roster_slot_definitions row
+    // to assign bench picks to, so the endpoint must materialize one itself.
+    const c = await server.inject({
+      method: 'POST',
+      url: '/leagues',
+      payload: { name: 'Bench Auto League', site_password: 's', commissioner_password: 'c' },
+    });
+    testLeagueId = c.json<{ id: string }>().id;
+    const token = makeCommToken(testLeagueId);
+
+    await server.inject({
+      method: 'PUT',
+      url: `/leagues/${testLeagueId}/config/roster`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        bench_slots: 6,
+        slots: [
+          { position: 'QB', priority: 1, is_starter: true, slot_count: 1 },
+          { position: 'RB', priority: 2, is_starter: true, slot_count: 2 },
+        ],
+      },
+    });
+
+    const rows = await sql<{ position: string; is_starter: boolean; slot_count: number }[]>`
+      SELECT rsd.position, rsd.is_starter, rsd.slot_count
+      FROM roster_slot_definitions rsd
+      JOIN roster_configurations rc ON rc.id = rsd.config_id
+      WHERE rc.league_id = ${testLeagueId}
+    `;
+    const bench = rows.find((r) => r.position === 'BN');
+    expect(bench).toBeTruthy();
+    expect(bench?.is_starter).toBe(false);
+    expect(bench?.slot_count).toBe(6);
+    // Exactly one bench row — not duplicated if the commissioner re-saves.
+    expect(rows.filter((r) => r.position === 'BN').length).toBe(1);
+  });
+
+  it('test_F_MOD_001_set_roster_config_zero_bench_slots_creates_no_bench_row', async () => {
+    const c = await server.inject({
+      method: 'POST',
+      url: '/leagues',
+      payload: { name: 'No Bench League', site_password: 's', commissioner_password: 'c' },
+    });
+    testLeagueId = c.json<{ id: string }>().id;
+    const token = makeCommToken(testLeagueId);
+
+    await server.inject({
+      method: 'PUT',
+      url: `/leagues/${testLeagueId}/config/roster`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: {
+        bench_slots: 0,
+        slots: [{ position: 'QB', priority: 1, is_starter: true, slot_count: 1 }],
+      },
+    });
+
+    const rows = await sql<{ position: string }[]>`
+      SELECT rsd.position
+      FROM roster_slot_definitions rsd
+      JOIN roster_configurations rc ON rc.id = rsd.config_id
+      WHERE rc.league_id = ${testLeagueId}
+    `;
+    expect(rows.some((r) => r.position === 'BN')).toBe(false);
+  });
+
   it('test_F_MOD_001_set_roster_config_empty_slots_returns_4xx', async () => {
     const c = await server.inject({
       method: 'POST',

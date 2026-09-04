@@ -810,6 +810,56 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     ws2.close();
   }, 15000);
 
+  it('test_F_MOD_002_superflex_slot_accepts_any_position_including_QB', async () => {
+    await setupDraft();
+    // Override the default roster with a SUPERFLEX-only starter slot (no
+    // dedicated QB slot) to prove SUPERFLEX genuinely accepts any position,
+    // not just RB/WR/TE like FLEX.
+    await server.inject({
+      method: 'PUT',
+      url: `/leagues/${leagueId}/config/roster`,
+      headers: { authorization: `Bearer ${commToken}` },
+      payload: {
+        bench_slots: 0,
+        slots: [
+          { position: 'SUPERFLEX', priority: 1, is_starter: true, slot_count: 1 },
+          { position: 'BN', priority: 99, is_starter: false, slot_count: 6 },
+        ],
+      },
+    });
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    // Nominate Josh Allen (QB) — same player used by the FLEX/starter-first test above.
+    const [nomMsg] = await Promise.all([
+      waitForMessage(ws1, 4000),
+      waitForMessage(ws2, 4000),
+      Promise.resolve().then(() =>
+        ws1.send(JSON.stringify({
+          type: 'NOMINATE_COMMAND',
+          payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+        })),
+      ),
+    ]);
+    const auctionId = String(nomMsg.payload?.['player_auction_id'] ?? '');
+
+    await sql`UPDATE player_auctions SET rebid_deadline = NOW() - INTERVAL '1 second' WHERE id = ${auctionId}`;
+
+    const award = await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
+
+    expect(award.type).toBe('PLAYER_AWARDED');
+    expect(award.payload?.['roster_slot']).toBe('SUPERFLEX');
+
+    await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
+
+    ws1.close();
+    ws2.close();
+  }, 10000);
+
   it('test_F_MOD_002_auth_epoch_revocation_returns_ERROR_on_next_command', async () => {
     await setupDraft();
     await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
