@@ -104,6 +104,65 @@ describe.skipIf(SKIP_DB)('F-MOD-001 dataset and draft', () => {
     expect(typeof body.id).toBe('string');
   });
 
+  it('test_F_MOD_001_create_dataset_is_idempotent_returns_existing_draft_dataset', async () => {
+    const { leagueId, token } = await createLeague();
+
+    const first = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const firstId = first.json<{ id: string }>().id;
+
+    const second = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(second.statusCode).toBe(200);
+    expect(second.json<{ id: string }>().id).toBe(firstId);
+  });
+
+  it('test_F_MOD_001_create_dataset_returns_the_frozen_dataset_when_one_exists', async () => {
+    const { leagueId, token } = await createLeague();
+
+    const dsRes = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const datasetId = dsRes.json<{ id: string }>().id;
+
+    const csv = [
+      'name,position,nfl_team,aav_minor,projected_points,tier',
+      'Patrick Mahomes,QB,KC,5000,380,1',
+    ].join('\n');
+    const { body, contentType } = multipartBody('file', csv);
+    await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets/${datasetId}/import/csv`,
+      headers: { authorization: `Bearer ${token}`, 'content-type': contentType },
+      payload: body,
+    });
+    await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets/${datasetId}/freeze`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+
+    // Simulates reopening the Commissioner Console after the dataset is
+    // already FROZEN — must return the frozen one, never a fresh empty one.
+    const reopened = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(reopened.statusCode).toBe(200);
+    const body2 = reopened.json<{ id: string; status: string }>();
+    expect(body2.id).toBe(datasetId);
+    expect(body2.status).toBe('FROZEN');
+  });
+
   // ── POST .../import/csv ───────────────────────────────────────────────────
 
   it('test_F_MOD_001_csv_import_parses_in_worker_thread_returns_rows_imported', async () => {

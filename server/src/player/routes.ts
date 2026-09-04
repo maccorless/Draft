@@ -234,15 +234,42 @@ export async function registerPlayerRoutes(
 
   /**
    * POST /leagues/:leagueId/datasets
-   * Creates an empty DraftDataset (status=DRAFT, version=1).
+   * Idempotent get-or-create: the Commissioner Console calls this on every
+   * mount, so unconditionally inserting here would spawn a fresh empty
+   * dataset (status=DRAFT) on every page load — shadowing an already-FROZEN
+   * dataset the moment the commissioner reopens the console, which silently
+   * broke pre-draft readiness (§41) for a league whose draft was otherwise
+   * fully set up. Reuse an existing dataset instead: prefer one already
+   * FROZEN (the one locked in for the current/created draft) over an
+   * in-progress DRAFT/VALIDATED one, so readiness reflects reality and a
+   * commissioner mid-import doesn't lose their in-progress dataset reference
+   * by navigating away and back. Only create a new one when the league has
+   * none at all yet (status=DRAFT, version=1).
    */
   server.post<{ Params: LeagueParams }>(
     '/leagues/:leagueId/datasets',
     { preHandler: requireCommissioner(server, db) },
     async (req, reply) => {
+      const leagueId = req.params.leagueId;
+
+      const existing = await db
+        .select({
+          id: draftDatasets.id,
+          status: draftDatasets.status,
+          version: draftDatasets.version,
+          frozen_at: draftDatasets.frozen_at,
+        })
+        .from(draftDatasets)
+        .where(eq(draftDatasets.league_id, leagueId));
+
+      if (existing.length > 0) {
+        const frozen = existing.find((d) => d.status === 'FROZEN');
+        return reply.status(200).send(frozen ?? existing[0]!);
+      }
+
       const [dataset] = await db
         .insert(draftDatasets)
-        .values({ league_id: req.params.leagueId, status: 'DRAFT', version: 1 })
+        .values({ league_id: leagueId, status: 'DRAFT', version: 1 })
         .returning({
           id: draftDatasets.id,
           status: draftDatasets.status,

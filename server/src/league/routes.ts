@@ -546,12 +546,18 @@ export async function registerLeagueRoutes(
         .limit(1);
       let rosterValid = false;
       if (rosterConfig) {
+        // Bench is also a real roster_slot_definitions row (is_starter=false) —
+        // the auction engine's assignRosterSlot (server/src/auction/engine.ts)
+        // requires it to exist to have a roster_slot_id to assign bench picks
+        // to. Sum only the starter rows here and add bench_slots once, rather
+        // than double-counting the bench row's own slot_count on top of it.
         const slots = await db
-          .select({ slot_count: rosterSlotDefinitions.slot_count })
+          .select({ slot_count: rosterSlotDefinitions.slot_count, is_starter: rosterSlotDefinitions.is_starter })
           .from(rosterSlotDefinitions)
           .where(eq(rosterSlotDefinitions.config_id, rosterConfig.id));
-        const sum = slots.reduce((acc, s) => acc + s.slot_count, 0) + rosterConfig.bench_slots;
-        rosterValid = slots.length > 0 && sum === rosterConfig.total_roster_size;
+        const starterSlots = slots.filter((s) => s.is_starter);
+        const starterSum = starterSlots.reduce((acc, s) => acc + s.slot_count, 0);
+        rosterValid = starterSlots.length > 0 && starterSum + rosterConfig.bench_slots === rosterConfig.total_roster_size;
       }
       items.push({
         key: 'roster_config',

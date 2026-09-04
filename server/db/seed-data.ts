@@ -27,6 +27,8 @@ import {
   players,
   playerAavSources,
   drafts,
+  autoAgentConfigs,
+  whammyConfigs,
 } from './schema/index.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -59,6 +61,33 @@ interface CsvPlayerRow {
   nfl_team: string;
   aav_minor: number;
   tier: number | null;
+}
+
+// Deterministic placeholder team icon — a colored circle with the team's
+// initials, as a self-contained SVG data URI (no file storage / upload round
+// trip needed for dev-seed data). Satisfies GET /leagues/:id/readiness's
+// team_media check and renders correctly wherever icon_url is used
+// (War Room roster grid, Draft Room team context — see MOD-015).
+const ICON_PALETTE = [
+  '#c8351f', '#1f6fc8', '#1fa855', '#c8951f', '#7a1fc8',
+  '#1fc8b0', '#c81f7a', '#5c8a1f', '#1f3ac8', '#c86b1f',
+];
+
+function teamIconDataUri(name: string, index: number): string {
+  const initials = name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+  const color = ICON_PALETTE[index % ICON_PALETTE.length];
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">` +
+    `<circle cx="32" cy="32" r="32" fill="${color}"/>` +
+    `<text x="32" y="32" font-family="sans-serif" font-size="24" font-weight="700" ` +
+    `fill="#ffffff" text-anchor="middle" dominant-baseline="central">${initials}</text>` +
+    `</svg>`;
+  return `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
 }
 
 function loadPlayersCsv(): CsvPlayerRow[] {
@@ -150,6 +179,7 @@ export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
         team_password_hash: teamPasswordHash,
         auth_epoch: 0,
         draft_order: i + 1,
+        icon_url: teamIconDataUri(name, i),
       })),
     )
     .returning();
@@ -198,6 +228,26 @@ export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
       status: 'CREATED',
     })
     .returning();
+
+  // ─── Auto-Agent defaults (one row per team, PRD §41 readiness) ────────────
+  await db.insert(autoAgentConfigs).values(
+    insertedTeams.map((t) => ({
+      draft_id: draft!.id,
+      team_id: t.id,
+      willingness_pct: '0.800',
+      enabled: false, // MANUAL by default — owners opt into Auto-Agent live
+    })),
+  );
+
+  // ─── Whammy configuration (disabled by default — PRD §41 readiness only
+  // requires the row to exist, "configured or intentionally disabled") ──────
+  await db.insert(whammyConfigs).values({
+    league_id: league!.id,
+    enabled: false,
+    max_amount_minor: 1000, // $10.00 — only meaningful if enabled later
+    allow_positive: true,
+    allow_negative: true,
+  });
 
   return {
     leagueId: league!.id,

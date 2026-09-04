@@ -469,4 +469,47 @@ describe.skipIf(SKIP_DB)('F-MOD-010 commissioner league setup', () => {
     expect(body.all_ready).toBe(false);
     expect(body.items.some((i) => i.status === 'FAIL')).toBe(true);
   });
+
+  it('test_F_MOD_010_readiness_roster_config_passes_when_bench_is_also_a_slot_row', async () => {
+    // Bench must exist as its own roster_slot_definitions row (is_starter=false)
+    // for the auction engine's assignRosterSlot (server/src/auction/engine.ts)
+    // to have a roster_slot_id to assign bench picks to — this is the real,
+    // already-shipped data shape (see server/db/seed-data.ts). The readiness
+    // check must not double-count that row's slot_count on top of
+    // roster_configurations.bench_slots.
+    const c = await server.inject({
+      method: 'POST',
+      url: '/leagues',
+      payload: { name: 'Roster Math League', site_password: 's', commissioner_password: 'c' },
+    });
+    testLeagueId = c.json<{ id: string }>().id;
+    const token = makeCommToken(testLeagueId);
+
+    const [rosterConfig] = await sql<[{ id: string }]>`
+      INSERT INTO roster_configurations (league_id, total_roster_size, bench_slots)
+      VALUES (${testLeagueId}, 15, 6)
+      RETURNING id
+    `;
+    await sql`
+      INSERT INTO roster_slot_definitions (config_id, position, priority, is_starter, slot_count)
+      VALUES
+        (${rosterConfig!.id}, 'QB', 1, true, 1),
+        (${rosterConfig!.id}, 'RB', 2, true, 2),
+        (${rosterConfig!.id}, 'WR', 3, true, 2),
+        (${rosterConfig!.id}, 'TE', 4, true, 1),
+        (${rosterConfig!.id}, 'FLEX', 5, true, 1),
+        (${rosterConfig!.id}, 'K', 6, true, 1),
+        (${rosterConfig!.id}, 'DEF', 7, true, 1),
+        (${rosterConfig!.id}, 'BN', 99, false, 6)
+    `;
+
+    const res = await server.inject({
+      method: 'GET',
+      url: `/leagues/${testLeagueId}/readiness`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const body = res.json<{ items: Array<{ key: string; status: string }> }>();
+    const rosterItem = body.items.find((i) => i.key === 'roster_config');
+    expect(rosterItem?.status).toBe('PASS');
+  });
 });
