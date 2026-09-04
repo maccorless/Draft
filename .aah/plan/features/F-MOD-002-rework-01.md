@@ -100,3 +100,9 @@ produces:
     request_schema: {}
     response_schema: NOMINATION_TURN_CHANGED
 ```
+
+## Test Config
+
+- command: DATABASE_URL=postgres://localhost/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! NODE_ENV=test npx vitest run --reporter=verbose server/src/__tests__/F-MOD-002_auction.test.ts -t "rework_01"
+- test_paths:
+  - server/src/__tests__/F-MOD-002_auction.test.ts
