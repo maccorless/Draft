@@ -1303,7 +1303,7 @@
       "passes": false
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-017",
       "title": "Auction close card and player detail popover",
       "module_ref": "MOD-017",

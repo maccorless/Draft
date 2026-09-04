@@ -30,8 +30,8 @@
     "status": "not_applicable"
   },
   "findings": {
-    "linting": "[{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n",
-    "static_analysis": "[{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n"
+    "linting": "[{\"filePath\":\"/Users/ken/Development/projects/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/ken/Development/projects/Draft/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n",
+    "static_analysis": "[{\"filePath\":\"/Users/ken/Development/projects/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/ken/Development/projects/Draft/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n"
   },
   "commands": {
     "linting": "npx eslint . --format=json",
@@ -41,8 +41,8 @@
     "schema_version": 2,
     "rel_path": ".",
     "branch": "main",
-    "commit_sha": "7475be7e039be9ba0c4492f8644e775cb98372a4e6bbb7e6251bf595e1c22959",
-    "head_sha": "fae53dc1872268374eea461d75e108f31f7e4865",
+    "commit_sha": "b9fc006c4f1c540dcd19a303e5d883fd10ba09f3004c954ef5bdee3ccd572342",
+    "head_sha": "5e482289697412cbcf98625530b7cd3b0f172b93",
     "clean": true
   },
   "schema_version": 1,
@@ -54,18 +54,18 @@
       "core.build.quality_checks",
       "run-project",
       "--project-path",
-      "/Users/kcorless/Projects/Software/Draft",
+      "/Users/ken/Development/projects/Draft",
       "--subject-branch",
       "main"
     ],
     "exit_code": 0,
-    "stdout_sha256": "01ee6e07432da3c408ad62220ee6c360065dc8a8e372a4ad986f0d77803bce8c",
+    "stdout_sha256": "02a124a8d75a6178bd34bb0338e9e2500e17c89fa5e13f7fc7f27c01bea5db8b",
     "stderr_sha256": "ff32ec3a23f166bdb07394c8081890b535cde4ee85661ab34b6ea75c00ee821c",
-    "duration_ms": 1886,
-    "host_pid": 21063,
-    "timestamp": "2026-09-01T20:56:32.517158+00:00",
-    "session_secret_sha256": "866ac2d0a3e1b61fe17f129b52fb8463e1b44f606eb1edf0b7269fd88971a035",
+    "duration_ms": 714,
+    "host_pid": 61384,
+    "timestamp": "2026-09-04T14:28:06.071079+00:00",
+    "session_secret_sha256": "eee7cb01daa080a785e232ce38366fecd5ad00f59f78a65c8acfc85fe195a36b",
     "schema_version": 1,
-    "signature": "35c92d7010034ce426c04de205eebd10c67f153beb7200b49adba3cc0f3a9fc3"
+    "signature": "1941bcecc9b68b641fe2a6d99f7899c7599a8d851cfe1621f042136b6dcabca2"
   }
 }
