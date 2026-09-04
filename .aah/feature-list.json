@@ -1125,7 +1125,7 @@
       "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-010",
       "title": "Commissioner League Setup and Readiness Checklist",
       "module_ref": "MOD-010",
@@ -1303,7 +1303,7 @@
       "passes": false
     },
     {
-      "status": "pending",
+      "status": "implementing",
       "id": "F-MOD-017",
       "title": "Auction close card and player detail popover",
       "module_ref": "MOD-017",
