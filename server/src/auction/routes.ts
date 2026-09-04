@@ -11,7 +11,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 
-import { broadcast, startAwardTimer, stopAwardTimer } from './engine.js';
+import { broadcast, startAwardTimer, stopAwardTimer, triggerCurrentNominationTurn } from './engine.js';
 
 interface TokenClaims {
   league_id: string;
@@ -176,6 +176,11 @@ export async function registerDraftRoutes(
         type: 'DRAFT_STATUS_CHANGED',
         payload: { draft_id: draft.id, status: 'RUNNING' },
       });
+
+      // Dispatch the first nomination turn — closes the gap where a draft with
+      // every team on AUTO_AGENT would otherwise never nominate a player
+      // (F-MOD-002-rework-01).
+      await triggerCurrentNominationTurn(sql, draft.id, draft.league_id);
 
       return reply.send({ draft_id: draft.id, status: 'RUNNING' });
     },

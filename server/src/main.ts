@@ -20,6 +20,8 @@ import { registerDraftRoutes } from './auction/routes.js';
 import { registerAuctionWsHandler } from './ws/auction-handler.js';
 import { registerSessionRoutes } from './session/routes.js';
 import { registerAutoAgentRoutes } from './auction/auto-agent-routes.js';
+import { setPostNominationHook } from './auction/engine.js';
+import { triggerAutoAgentBidsOnNomination } from './auction/auto-agent.js';
 import { registerCorrectionRoutes } from './draft/corrections.js';
 import { registerDraftControlRoutes } from './draft/draft-control.js';
 import { registerReportRoutes } from './draft/reports.js';
@@ -76,6 +78,12 @@ async function recoverRunningDrafts(): Promise<void> {
 }
 
 // ─── Fastify setup ───────────────────────────────────────────────────────────
+
+// Wire the auction engine's post-nomination hook to auto-agent reactive
+// bidding (F-MOD-002-rework-01) — engine.ts cannot import auto-agent.ts
+// directly (auto-agent.ts already imports engine.ts), so this is set once at
+// boot rather than at either module's load time.
+setPostNominationHook(triggerAutoAgentBidsOnNomination);
 
 export async function buildServer() {
   const server = Fastify({

@@ -550,3 +550,35 @@ export async function getTopNominationQueueEntry(
   const top = rows[0];
   return top ? { dataset_player_id: top.dataset_player_id, aav_minor: top.aav_minor ?? 0 } : null;
 }
+
+/**
+ * Returns the first "legal" entry in a team's nomination queue: the first item
+ * (ascending queue_position) whose player has not already been nominated or
+ * awarded in this draft. Returns null if the queue is empty or every queued
+ * player is already OPEN/AWARDED elsewhere.
+ *
+ * Used by auto-nomination (F-MOD-002-rework-01): both the AUTO_AGENT-immediate
+ * path and the MANUAL nomination-timer-expiry path consult this first, before
+ * falling back to highest-AAV selection.
+ */
+export async function getFirstLegalNominationQueueEntry(
+  sql: postgres.Sql,
+  draftId: string,
+  teamId: string,
+): Promise<{ dataset_player_id: string } | null> {
+  const rows = await sql<Array<{ dataset_player_id: string }>>`
+    SELECT nqi.dataset_player_id
+    FROM nomination_queue_items nqi
+    WHERE nqi.draft_id = ${draftId}
+      AND nqi.team_id = ${teamId}
+      AND NOT EXISTS (
+        SELECT 1 FROM player_auctions pa
+        WHERE pa.draft_id = ${draftId}
+          AND pa.dataset_player_id = nqi.dataset_player_id
+          AND pa.status IN ('OPEN', 'AWARDED')
+      )
+    ORDER BY nqi.queue_position ASC
+    LIMIT 1
+  `;
+  return rows[0] ?? null;
+}

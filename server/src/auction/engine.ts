@@ -16,6 +16,7 @@ import postgres from 'postgres';
 
 import { AsyncQueue } from './queue.js';
 import { resolveEffectivePrimarySource, resolvePlayerPrimaryAav } from '../player/aav-resolution.js';
+import { getFirstLegalNominationQueueEntry } from '../draft/strategy.js';
 
 export interface DraftRuntime {
   queue: AsyncQueue;
@@ -25,6 +26,12 @@ export interface DraftRuntime {
   teamSessions: Map<string, Set<WebSocket>>;
   /** Grace timers: when all of a team's windows drop, a timer is started (F-MOD-004 acts on expiry) */
   graceTimers: Map<string, ReturnType<typeof setTimeout>>;
+  /**
+   * Nomination-turn deadline for the CURRENT nominator (MANUAL teams only —
+   * F-MOD-002-rework-01). Cleared whenever a nomination actually starts (manual
+   * or system) or a new turn is dispatched. At most one pending at a time.
+   */
+  nominationTimer: ReturnType<typeof setTimeout> | null;
 }
 
 // ─── Per-draft runtimes (keyed by draft_id) ──────────────────────────────────
@@ -40,7 +47,14 @@ const draftCompletedMap = new Map<string, boolean>();
 export function getOrCreateRuntime(draftId: string): DraftRuntime {
   let rt = draftRuntimes.get(draftId);
   if (!rt) {
-    rt = { queue: new AsyncQueue(), clients: new Set(), awardTimer: null, teamSessions: new Map(), graceTimers: new Map() };
+    rt = {
+      queue: new AsyncQueue(),
+      clients: new Set(),
+      awardTimer: null,
+      teamSessions: new Map(),
+      graceTimers: new Map(),
+      nominationTimer: null,
+    };
     draftRuntimes.set(draftId, rt);
   }
   return rt;
@@ -62,6 +76,7 @@ export function getConnectionCounts(draftId: string): {
 export function removeRuntime(draftId: string): void {
   const rt = draftRuntimes.get(draftId);
   if (rt?.awardTimer) clearInterval(rt.awardTimer);
+  if (rt?.nominationTimer) clearTimeout(rt.nominationTimer);
   for (const t of rt?.graceTimers.values() ?? []) clearTimeout(t);
   draftRuntimes.delete(draftId);
 }
@@ -163,6 +178,29 @@ export async function readAuthEpoch(
     SELECT auth_epoch FROM leagues WHERE id = ${claims.league_id} LIMIT 1
   `;
   return rows[0]?.auth_epoch ?? null;
+}
+
+// ─── Post-nomination hook (auto-agent reactive bidding) ───────────────────────
+// engine.ts cannot import auto-agent.ts (auto-agent.ts already imports engine.ts
+// for processBidCommand/broadcast/computeMaxLegalBid — importing back would be
+// circular). Auto-nomination (F-MOD-002-rework-01) still needs to trigger other
+// AUTO_AGENT teams' reactive bidding after a system-nominated auction opens, the
+// same way the WS handler does after a manual NOMINATE_COMMAND. main.ts wires
+// this hook to auto-agent.ts's triggerAutoAgentBidsOnNomination at boot.
+
+export type PostNominationHook = (
+  draftId: string,
+  leagueId: string,
+  playerAuctionId: string,
+  currentBidMinor: number,
+  nominatorTeamId: string,
+  sql: postgres.Sql,
+) => Promise<void>;
+
+let postNominationHook: PostNominationHook | null = null;
+
+export function setPostNominationHook(hook: PostNominationHook): void {
+  postNominationHook = hook;
 }
 
 // ─── max_legal_bid ─────────────────────────────────────────────────────────────
@@ -731,6 +769,14 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
     return { succeeded: false };
   }
 
+  // A nomination just started (manual or system) — any pending nomination-turn
+  // deadline for this draft is now moot (F-MOD-002-rework-01).
+  const rt = getOrCreateRuntime(draftId);
+  if (rt.nominationTimer) {
+    clearTimeout(rt.nominationTimer);
+    rt.nominationTimer = null;
+  }
+
   broadcast(draftId, { type: 'NOMINATION_STARTED', payload: nominationPayload! });
   if (nominationAudioPayload) {
     broadcast(draftId, { type: 'TEAM_NOMINATION_AUDIO', payload: nominationAudioPayload });
@@ -744,14 +790,186 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
   };
 }
 
+// ─── Auto-nomination (F-MOD-002-rework-01) ─────────────────────────────────────
+//
+// Both trigger paths — an AUTO_AGENT team's turn (immediate, no timer) and a
+// MANUAL team's nomination-timer expiry — select a player the same way and
+// route through the same processNominateCommand path as a manual nomination
+// (systemNominated: true), so second-bid timer start, the DraftEvent append,
+// and the Auto-Agent reactive-bidding trigger on other AUTO_AGENT teams all
+// fire identically to a manual nomination.
+
+/**
+ * Selects the player an auto-nomination should open:
+ * (1) the first legal (not already OPEN/AWARDED) entry in the team's
+ *     Nomination Queue, if one exists; otherwise
+ * (2) the highest-aav_minor available player at a position where the team
+ *     still has an open roster slot (starter or bench), excluding any player
+ *     on the team's Do Not Draft list.
+ * Returns null if no eligible player exists (nothing left to nominate).
+ */
+async function selectAutoNominationPlayer(
+  sql: postgres.Sql,
+  draftId: string,
+  teamId: string,
+  leagueId: string,
+  datasetId: string,
+): Promise<{ playerId: string } | null> {
+  const queueEntry = await getFirstLegalNominationQueueEntry(sql, draftId, teamId);
+  if (queueEntry) return { playerId: queueEntry.dataset_player_id };
+
+  const effectiveSource = await resolveEffectivePrimarySource(sql, datasetId);
+  const candidates = await sql<Array<{ id: string; position: string }>>`
+    SELECT p.id, p.position
+    FROM players p
+    JOIN player_aav_sources pas
+      ON pas.player_id = p.id AND pas.dataset_id = ${datasetId} AND pas.source = ${effectiveSource}
+    WHERE NOT EXISTS (
+        SELECT 1 FROM player_auctions pa
+        WHERE pa.draft_id = ${draftId} AND pa.dataset_player_id = p.id
+          AND pa.status IN ('OPEN', 'AWARDED')
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM do_not_draft_items ddi
+        WHERE ddi.draft_id = ${draftId} AND ddi.team_id = ${teamId} AND ddi.dataset_player_id = p.id
+      )
+    ORDER BY pas.aav_minor DESC
+  `;
+
+  for (const candidate of candidates) {
+    const slot = await assignRosterSlot(sql, draftId, teamId, leagueId, candidate.position);
+    if (slot) return { playerId: candidate.id };
+  }
+  return null;
+}
+
+/**
+ * Auto-nominates on a team's behalf: selects a player per selectAutoNominationPlayer,
+ * opens it at min_bid_minor through the normal nomination path (systemNominated:
+ * true), then triggers other AUTO_AGENT teams' reactive bidding — same as a
+ * manual nomination.
+ */
+async function processAutoNomination(
+  sql: postgres.Sql,
+  draftId: string,
+  leagueId: string,
+  teamId: string,
+): Promise<void> {
+  const draftRows = await sql<[{ dataset_id: string; status: string }]>`
+    SELECT dataset_id, status FROM drafts WHERE id = ${draftId} LIMIT 1
+  `;
+  const draft = draftRows[0];
+  if (!draft || draft.status !== 'RUNNING') return;
+
+  const cfgRows = await sql<[{ min_bid_minor: number }]>`
+    SELECT min_bid_minor FROM auction_configurations WHERE league_id = ${leagueId} LIMIT 1
+  `;
+  const minBidMinor = cfgRows[0]?.min_bid_minor ?? 100;
+
+  const candidate = await selectAutoNominationPlayer(sql, draftId, teamId, leagueId, draft.dataset_id);
+  if (!candidate) return; // nothing eligible left to auto-nominate
+
+  const result = await processNominateCommand({
+    draftId,
+    teamId,
+    leagueId,
+    serverReceiptTime: new Date(),
+    sql,
+    command: { player_dataset_entry_id: candidate.playerId, opening_bid_minor: minBidMinor },
+    systemNominated: true,
+  });
+
+  if (result.succeeded && result.auctionId && postNominationHook) {
+    await postNominationHook(
+      draftId,
+      leagueId,
+      result.auctionId,
+      result.openingBidMinor!,
+      result.nominatorTeamId!,
+      sql,
+    );
+  }
+}
+
+/**
+ * Dispatches the current nomination turn for `teamId`: an AUTO_AGENT team
+ * auto-nominates immediately (no timer wait); a MANUAL team gets a
+ * nomination-turn deadline that auto-nominates on their behalf if it elapses
+ * with no NOMINATE_COMMAND received. Always clears any previously pending
+ * nomination timer for the draft first — at most one is ever pending.
+ */
+async function dispatchNominationTurn(
+  sql: postgres.Sql,
+  draftId: string,
+  leagueId: string,
+  teamId: string,
+  controlMode: string,
+  nominationTimerMs?: number,
+): Promise<void> {
+  const rt = getOrCreateRuntime(draftId);
+  if (rt.nominationTimer) {
+    clearTimeout(rt.nominationTimer);
+    rt.nominationTimer = null;
+  }
+
+  if (controlMode === 'AUTO_AGENT') {
+    await processAutoNomination(sql, draftId, leagueId, teamId);
+    return;
+  }
+
+  let timerMs = nominationTimerMs;
+  if (timerMs === undefined) {
+    const cfgRows = await sql<[{ nomination_timer_ms: number }]>`
+      SELECT nomination_timer_ms FROM auction_configurations WHERE league_id = ${leagueId} LIMIT 1
+    `;
+    timerMs = cfgRows[0]?.nomination_timer_ms ?? 90000;
+  }
+
+  const timer = setTimeout(() => {
+    rt.nominationTimer = null;
+    rt.queue.enqueue(async () => {
+      // Re-check the draft is still RUNNING before firing — it may have been
+      // paused between scheduling and expiry.
+      const draftRows = await sql<[{ status: string }]>`
+        SELECT status FROM drafts WHERE id = ${draftId} LIMIT 1
+      `;
+      if (draftRows[0]?.status !== 'RUNNING') return;
+      await processAutoNomination(sql, draftId, leagueId, teamId);
+    });
+  }, timerMs);
+  timer.unref?.();
+  rt.nominationTimer = timer;
+}
+
+/** Team + turn-eligibility rows shared by advanceNominationTurn and triggerCurrentNominationTurn. */
+interface NominationTurnState {
+  team_id: string;
+  required_remaining_spots: number;
+  control_mode: string;
+}
+
+async function loadNominationTurnStates(
+  sql: postgres.Sql,
+  draftId: string,
+): Promise<Map<string, NominationTurnState>> {
+  const rows = await sql<NominationTurnState[]>`
+    SELECT team_id, required_remaining_spots, control_mode
+    FROM draft_team_states WHERE draft_id = ${draftId}
+  `;
+  return new Map(rows.map((r) => [r.team_id, r]));
+}
+
 // ─── Nomination turn advance (shared: PASS_NOMINATION and post-award) ─────────
 
 /**
- * Advances nomination_cursor to the next team (draft_order order, wrapping)
- * and broadcasts NOMINATION_TURN_CHANGED. Called both when an owner explicitly
- * passes their nomination, and after every awarded pick — nomination order is
- * a fixed round-robin independent of who wins each auction, so a normal award
- * must advance the turn exactly like an explicit pass does.
+ * Advances nomination_cursor to the next ELIGIBLE team (draft_order order,
+ * wrapping; teams with a completed roster — required_remaining_spots <= 0 —
+ * are skipped and never re-selected) and broadcasts NOMINATION_TURN_CHANGED.
+ * Called both when an owner explicitly passes their nomination, and after
+ * every awarded pick — nomination order is a fixed round-robin independent of
+ * who wins each auction, so a normal award must advance the turn exactly like
+ * an explicit pass does. Also dispatches the new team's turn (auto-nominate
+ * immediately if AUTO_AGENT, else start their nomination-turn deadline).
  */
 async function advanceNominationTurn(
   sql: postgres.Sql,
@@ -770,14 +988,26 @@ async function advanceNominationTurn(
   `;
   if (teamsRows.length === 0) return;
 
-  const newCursor = (draft.nomination_cursor + 1) % teamsRows.length;
-  const nextTeam = teamsRows[newCursor];
-  if (!nextTeam) return;
+  const stateMap = await loadNominationTurnStates(sql, draftId);
+
+  let newCursor = draft.nomination_cursor;
+  let nextTeam: { id: string; draft_order: number } | undefined;
+  for (let i = 1; i <= teamsRows.length; i++) {
+    const idx = (draft.nomination_cursor + i) % teamsRows.length;
+    const candidate = teamsRows[idx]!;
+    const state = stateMap.get(candidate.id);
+    if (state && state.required_remaining_spots <= 0) continue; // completed roster — never re-selected
+    newCursor = idx;
+    nextTeam = candidate;
+    break;
+  }
+  if (!nextTeam) return; // every team has a completed roster — draft should already be COMPLETE
 
   const cfgRows2 = await sql<[{ nomination_timer_ms: number }]>`
     SELECT nomination_timer_ms FROM auction_configurations WHERE league_id = ${leagueId} LIMIT 1
   `;
-  const nominationDeadlineMs = Date.now() + (cfgRows2[0]?.nomination_timer_ms ?? 90000);
+  const nominationTimerMs = cfgRows2[0]?.nomination_timer_ms ?? 90000;
+  const nominationDeadlineMs = Date.now() + nominationTimerMs;
 
   // Same reasoning as NOMINATION_STARTED above: one payload object for both
   // the persisted event and the broadcast, so replay can never drift from
@@ -801,6 +1031,44 @@ async function advanceNominationTurn(
   });
 
   broadcast(draftId, { type: 'NOMINATION_TURN_CHANGED', payload: turnChangedPayload });
+
+  const nextState = stateMap.get(nextTeam.id);
+  await dispatchNominationTurn(
+    sql, draftId, leagueId, nextTeam.id, nextState?.control_mode ?? 'MANUAL', nominationTimerMs,
+  );
+}
+
+/**
+ * Dispatches the CURRENT nomination_cursor's turn without advancing it — used
+ * once, right after DRAFT_STARTED, to close the gap where a draft with every
+ * team on AUTO_AGENT would otherwise never nominate a first player.
+ */
+export async function triggerCurrentNominationTurn(
+  sql: postgres.Sql,
+  draftId: string,
+  leagueId: string,
+): Promise<void> {
+  const draftRows = await sql<[{ nomination_cursor: number }]>`
+    SELECT nomination_cursor FROM drafts WHERE id = ${draftId} LIMIT 1
+  `;
+  const draft = draftRows[0];
+  if (!draft) return;
+
+  const teamsRows = await sql<Array<{ id: string }>>`
+    SELECT id FROM teams WHERE league_id = ${leagueId} ORDER BY draft_order ASC
+  `;
+  if (teamsRows.length === 0) return;
+
+  const stateMap = await loadNominationTurnStates(sql, draftId);
+
+  for (let i = 0; i < teamsRows.length; i++) {
+    const idx = (draft.nomination_cursor + i) % teamsRows.length;
+    const candidate = teamsRows[idx]!;
+    const state = stateMap.get(candidate.id);
+    if (state && state.required_remaining_spots <= 0) continue;
+    await dispatchNominationTurn(sql, draftId, leagueId, candidate.id, state?.control_mode ?? 'MANUAL');
+    return;
+  }
 }
 
 export async function processPassNomination(

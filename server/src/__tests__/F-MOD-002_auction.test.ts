@@ -116,7 +116,9 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     await sql.end();
   });
 
-  async function setupDraft(opts: { antiSnipeThresholdMs?: number } = {}): Promise<void> {
+  async function setupDraft(
+    opts: { antiSnipeThresholdMs?: number; nominationTimerMs?: number } = {},
+  ): Promise<void> {
     // League
     const leagueRes = await server.inject({
       method: 'POST',
@@ -177,7 +179,7 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
       headers: { authorization: `Bearer ${commToken}` },
       payload: {
         initial_budget_minor: 20000,
-        nomination_timer_ms: 60000,
+        nomination_timer_ms: opts.nominationTimerMs ?? 60000,
         second_bid_timer_ms: 60000,
         rebid_timer_ms: 60000,
         anti_snipe_threshold_ms: opts.antiSnipeThresholdMs ?? 500,
@@ -241,6 +243,8 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     await sql`DELETE FROM acquisitions WHERE draft_id = ${draftId}`;
     await sql`DELETE FROM bid_attempts WHERE draft_id = ${draftId}`;
     await sql`DELETE FROM draft_events WHERE draft_id = ${draftId}`;
+    await sql`DELETE FROM nomination_queue_items WHERE draft_id = ${draftId}`;
+    await sql`DELETE FROM do_not_draft_items WHERE draft_id = ${draftId}`;
     await sql`DELETE FROM draft_team_states WHERE draft_id = ${draftId}`;
     await sql`DELETE FROM player_auctions WHERE draft_id = ${draftId}`;
     await sql`DELETE FROM drafts WHERE id = ${draftId}`;
@@ -938,4 +942,179 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     ws1.close();
     ws2.close();
   });
+
+  // ── F-MOD-002-rework-01: Auto-nomination on turn advance / timer expiry ────
+
+  it('test_F_MOD_002_rework_01_manual_team_nomination_timer_expiry_auto_nominates_highest_aav', async () => {
+    // Short nomination timer so the test can observe expiry quickly.
+    await setupDraft({ nominationTimerMs: 300 });
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    // Neither team sends NOMINATE_COMMAND — wait for the nomination-turn timer
+    // to expire and the server to auto-nominate on team1's behalf (cursor starts at 0).
+    const [nom1, nom2] = await Promise.all([
+      waitForMessage(ws1, 3000),
+      waitForMessage(ws2, 3000),
+    ]);
+
+    expect(nom1.type).toBe('NOMINATION_STARTED');
+    expect(nom2.type).toBe('NOMINATION_STARTED');
+    expect(nom1.payload?.['system_nominated']).toBe(true);
+    expect(nom1.payload?.['nominator_team_id']).toBe(team1Id);
+    // Highest AAV among available players (player1 = 5000 > player2 = 4500), no queue entries.
+    expect(nom1.payload?.['player_name']).toBe('F002-Josh-Allen');
+    expect(nom1.payload?.['opening_bid_minor']).toBe(100); // min_bid_minor
+
+    ws1.close();
+    ws2.close();
+  }, 8000);
+
+  it('test_F_MOD_002_rework_01_auto_nomination_excludes_do_not_draft_players', async () => {
+    await setupDraft({ nominationTimerMs: 300 });
+
+    // Team1 blacklists the higher-AAV player (Josh Allen) — the fallback
+    // selection must skip it even though it's the argmax(aav_minor) candidate.
+    await server.inject({
+      method: 'POST',
+      url: `/drafts/${draftId}/teams/${team1Id}/do-not-draft`,
+      headers: { authorization: `Bearer ${team1Token}` },
+      payload: { player_id: player1EntryId },
+    });
+
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    const [nom1] = await Promise.all([
+      waitForMessage(ws1, 3000),
+      waitForMessage(ws2, 3000),
+    ]);
+
+    expect(nom1.type).toBe('NOMINATION_STARTED');
+    expect(nom1.payload?.['system_nominated']).toBe(true);
+    expect(nom1.payload?.['player_name']).toBe('F002-CMC');
+
+    ws1.close();
+    ws2.close();
+  }, 8000);
+
+  it('test_F_MOD_002_rework_01_auto_nomination_prefers_nomination_queue_top_entry_over_aav_fallback', async () => {
+    await setupDraft({ nominationTimerMs: 300 });
+
+    // Queue the lower-AAV player (CMC, 4500) for team1 — should win over the
+    // higher-AAV player (Josh Allen, 5000) once the nomination timer expires.
+    await server.inject({
+      method: 'POST',
+      url: `/drafts/${draftId}/teams/${team1Id}/nomination-queue`,
+      headers: { authorization: `Bearer ${team1Token}` },
+      payload: { dataset_player_id: playerIds[1] },
+    });
+
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    const [nom1] = await Promise.all([
+      waitForMessage(ws1, 3000),
+      waitForMessage(ws2, 3000),
+    ]);
+
+    expect(nom1.type).toBe('NOMINATION_STARTED');
+    expect(nom1.payload?.['system_nominated']).toBe(true);
+    expect(nom1.payload?.['player_name']).toBe('F002-CMC');
+
+    ws1.close();
+    ws2.close();
+  }, 8000);
+
+  it('test_F_MOD_002_rework_01_auto_agent_team_nominates_immediately_on_turn_advance_no_timer_wait', async () => {
+    // Deliberately long nomination timer — proves the AUTO_AGENT path does NOT wait for it.
+    await setupDraft({ nominationTimerMs: 60000 });
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    // team1 nominates (team2 is still MANUAL here, so it does NOT reactive-bid).
+    const [nom1] = await Promise.all([
+      waitForMessage(ws1, 4000),
+      waitForMessage(ws2, 4000),
+      Promise.resolve().then(() =>
+        ws1.send(JSON.stringify({
+          type: 'NOMINATE_COMMAND',
+          payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+        })),
+      ),
+    ]);
+    const auctionId = String(nom1.payload?.['player_auction_id'] ?? '');
+
+    // team2 becomes AUTO_AGENT only after the nomination — by the time the
+    // turn advances (post-award), team2's control_mode is AUTO_AGENT.
+    await server.inject({
+      method: 'PATCH',
+      url: `/drafts/${draftId}/teams/${team2Id}/control-mode`,
+      headers: { authorization: `Bearer ${commToken}` },
+      payload: { mode: 'AUTO_AGENT' },
+    });
+
+    await sql`UPDATE player_auctions SET rebid_deadline = NOW() - INTERVAL '1 second' WHERE id = ${auctionId}`;
+
+    // PLAYER_AWARDED, then NOMINATION_TURN_CHANGED, then — well within the 60s
+    // MANUAL timer — a system NOMINATION_STARTED for team2 (AUTO_AGENT, immediate).
+    const award1 = await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
+    expect(award1.type).toBe('PLAYER_AWARDED');
+
+    const turnChanged1 = await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
+    expect(turnChanged1.type).toBe('NOMINATION_TURN_CHANGED');
+    expect(turnChanged1.payload?.['current_nominator_team_id']).toBe(team2Id);
+
+    const nom2 = await waitForMessage(ws1, 3000);
+    await waitForMessage(ws2, 3000);
+    expect(nom2.type).toBe('NOMINATION_STARTED');
+    expect(nom2.payload?.['system_nominated']).toBe(true);
+    expect(nom2.payload?.['nominator_team_id']).toBe(team2Id);
+    expect(nom2.payload?.['player_name']).toBe('F002-CMC'); // only remaining player
+
+    ws1.close();
+    ws2.close();
+  }, 15000);
+
+  it('test_F_MOD_002_rework_01_completed_roster_team_skipped_in_nomination_turn_advance', async () => {
+    await setupDraft({ nominationTimerMs: 60000 });
+
+    // Add a third team so we can prove skip logic (not just normal round robin).
+    const t3 = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/teams`,
+      headers: { authorization: `Bearer ${commToken}` },
+      payload: { name: 'Gamma', team_password: 'gamma', draft_order: 3 },
+    });
+    const team3Id = t3.json<{ id: string }>().id;
+
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    // Simulate team2 already having a completed roster.
+    await sql`
+      UPDATE draft_team_states SET required_remaining_spots = 0
+      WHERE draft_id = ${draftId} AND team_id = ${team2Id}
+    `;
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+
+    // team1 (cursor 0) passes — advance should skip team2 (completed) and land on team3.
+    const turnChanged = await sendAndReceive(ws1, { type: 'PASS_NOMINATION', payload: {} });
+    expect(turnChanged.type).toBe('NOMINATION_TURN_CHANGED');
+    expect(turnChanged.payload?.['current_nominator_team_id']).toBe(team3Id);
+
+    ws1.close();
+
+    // team3 is cleaned up by afterEach's `DELETE FROM teams WHERE league_id = ...`.
+  }, 10000);
 });
