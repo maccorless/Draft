@@ -18,7 +18,7 @@ export const SiteAuthResponseSchema = z.object({
 export type SiteAuthResponse = z.infer<typeof SiteAuthResponseSchema>;
 
 export const LeagueAuthRequestSchema = z.object({
-  role: z.enum(['COMMISSIONER', 'OWNER']),
+  role: z.enum(['COMMISSIONER', 'OWNER', 'HOST']),
   team_id: z.string().uuid().optional(),
   password: z.string().min(1),
 });

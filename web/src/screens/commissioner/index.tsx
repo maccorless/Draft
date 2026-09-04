@@ -16,6 +16,7 @@ import type { AmbiguousRow } from './AmbiguityResolution.js';
 import { DevTools } from './DevTools.js';
 import { DraftControl } from './DraftControl.js';
 import { Corrections } from './Corrections.js';
+import { LeagueSetup } from './LeagueSetup.js';
 import './commissioner-console.css';
 
 export type DatasetStatus = 'DRAFT' | 'VALIDATED' | 'FROZEN';
@@ -151,7 +152,11 @@ export function CommissionerConsole({
         <div className="commissioner-console__panel" data-testid={`section-${activeSection}`}>
           {activeSection === 'league-setup' && (
             <>
-              <ComingSoon label="League Setup" />
+              {leagueId && token ? (
+                <LeagueSetup leagueId={leagueId} token={token} datasetId={datasetId} />
+              ) : (
+                <ComingSoon label="League Setup" />
+              )}
               <DevTools />
             </>
           )}

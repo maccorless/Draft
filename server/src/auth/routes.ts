@@ -115,6 +115,36 @@ export async function registerAuthRoutes(
         return reply.send({ token, expires_in: JWT_EXPIRES_IN });
       }
 
+      if (role === 'HOST') {
+        // No host_password_hash set → reject rather than compare against
+        // null/empty (F-MOD-010 behavioral expectation).
+        if (!league.host_password_hash) {
+          return reply.status(401).send({
+            code: 'INVALID_CREDENTIALS',
+            message: 'Host login is not configured for this league',
+          });
+        }
+        const ok = await verify(password, league.host_password_hash);
+        if (!ok) {
+          return reply.status(401).send({
+            code: 'INVALID_CREDENTIALS',
+            message: 'Invalid host password',
+          });
+        }
+
+        const payload = {
+          league_id,
+          role: 'HOST' as const,
+          auth_epoch: league.auth_epoch,
+        };
+
+        const token = server.jwt.sign(payload, {
+          expiresIn: JWT_EXPIRES_IN,
+        });
+
+        return reply.send({ token, expires_in: JWT_EXPIRES_IN });
+      }
+
       // OWNER role — requires team_id
       if (!team_id) {
         return reply.status(400).send({

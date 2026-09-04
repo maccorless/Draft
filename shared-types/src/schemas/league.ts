@@ -13,9 +13,76 @@ export type CreateLeagueRequest = z.infer<typeof CreateLeagueRequestSchema>;
 export const LeagueSummarySchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  logo_url: z.string().nullable().optional(),
+  name_lock: z.boolean().optional(),
+  scheduled_draft_start_at: z.string().datetime().nullable().optional(),
+  status_message: z.string().nullable().optional(),
 });
 
 export type LeagueSummary = z.infer<typeof LeagueSummarySchema>;
+
+// ─── League Setup (F-MOD-010) ──────────────────────────────────────────────────
+
+export const UpdateLeagueRequestSchema = z.object({
+  name: z.string().min(1).optional(),
+  logo_url: z.string().nullable().optional(),
+  name_lock: z.boolean().optional(),
+  scheduled_draft_start_at: z.string().datetime().nullable().optional(),
+  status_message: z.string().nullable().optional(),
+});
+
+export type UpdateLeagueRequest = z.infer<typeof UpdateLeagueRequestSchema>;
+
+export const UpdateTeamRequestSchema = z.object({
+  starting_budget_override_minor: z.number().int().nullable().optional(),
+  name_lock: z.boolean().optional(),
+  draft_order: z.number().int().min(1).optional(),
+});
+
+export type UpdateTeamRequest = z.infer<typeof UpdateTeamRequestSchema>;
+
+export const GeneratePasswordsRequestSchema = z.object({
+  scope: z.enum(['COMMISSIONER', 'HOST', 'TEAM']),
+  team_id: z.string().uuid().nullable().optional(),
+  custom_password: z.string().min(1).nullable().optional(),
+});
+
+export type GeneratePasswordsRequest = z.infer<typeof GeneratePasswordsRequestSchema>;
+
+export const GeneratePasswordsResponseSchema = z.object({
+  scope: z.enum(['COMMISSIONER', 'HOST', 'TEAM']),
+  team_id: z.string().uuid().nullable().optional(),
+  password: z.string(),
+});
+
+export type GeneratePasswordsResponse = z.infer<typeof GeneratePasswordsResponseSchema>;
+
+export const ReadinessItemSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  status: z.enum(['PASS', 'FAIL']),
+  detail: z.string().nullable().optional(),
+});
+
+export const ReadinessResponseSchema = z.object({
+  items: z.array(ReadinessItemSchema),
+  all_ready: z.boolean(),
+});
+
+export type ReadinessResponse = z.infer<typeof ReadinessResponseSchema>;
+
+export const WhammyConfigRequestSchema = z.object({
+  enabled: z.boolean(),
+  allow_positive: z.boolean().optional(),
+  allow_negative: z.boolean().optional(),
+  max_amount_minor: z.number().int().min(0).optional(),
+  max_per_team: z.number().int().min(0).nullable().optional(),
+  max_per_draft: z.number().int().min(0).nullable().optional(),
+  commissioner_approval_required: z.boolean().optional(),
+  allowed_event_types: z.array(z.string()).optional(),
+});
+
+export type WhammyConfigRequest = z.infer<typeof WhammyConfigRequestSchema>;
 
 // ─── Teams ────────────────────────────────────────────────────────────────────
 
@@ -31,6 +98,10 @@ export const TeamSummarySchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   draft_order: z.number().int(),
+  starting_budget_override_minor: z.number().int().nullable().optional(),
+  name_lock: z.boolean().optional(),
+  icon_url: z.string().nullable().optional(),
+  nomination_audio_url: z.string().nullable().optional(),
 });
 
 export type TeamSummary = z.infer<typeof TeamSummarySchema>;

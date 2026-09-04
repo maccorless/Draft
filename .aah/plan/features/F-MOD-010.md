@@ -113,6 +113,11 @@ produces:
 
 ## Test Config
 
+- command: DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! npx vitest run server/src/__tests__/F-MOD-010_league_setup.test.ts web/src/__tests__/F-MOD-010_league_setup.test.tsx
+- test_paths:
+  - server/src/__tests__/F-MOD-010_league_setup.test.ts
+  - web/src/__tests__/F-MOD-010_league_setup.test.tsx
+
 ## Constraints
 
 ## Status

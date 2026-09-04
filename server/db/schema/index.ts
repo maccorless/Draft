@@ -70,8 +70,13 @@ export const leagues = pgTable('leagues', {
   name: text('name').notNull(),
   site_password_hash: text('site_password_hash').notNull(),
   commissioner_password_hash: text('commissioner_password_hash').notNull(),
+  host_password_hash: text('host_password_hash'),
   commissioner_team_id: uuid('commissioner_team_id'),
   auth_epoch: integer('auth_epoch').notNull().default(0),
+  logo_url: text('logo_url'),
+  name_lock: boolean('name_lock').notNull().default(false),
+  scheduled_draft_start_at: timestamp('scheduled_draft_start_at', { withTimezone: true }),
+  status_message: text('status_message'),
   created_at: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -88,6 +93,8 @@ export const teams = pgTable('teams', {
   draft_order: integer('draft_order').notNull(),
   icon_url: text('icon_url'),
   nomination_audio_url: text('nomination_audio_url'),
+  starting_budget_override_minor: integer('starting_budget_override_minor'),
+  name_lock: boolean('name_lock').notNull().default(false),
 });
 
 export const memberships = pgTable('memberships', {

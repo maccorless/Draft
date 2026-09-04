@@ -60,6 +60,15 @@ Follow `BUILD_PLAN.md` phase by phase, in order: 0 Scaffold+Protocol → 1 Auth+
 
 Update this file with actual build, test, and lint commands once Phase 0 (scaffold) lands. None exist yet; do not assume any.
 
+### Auth hook convention (`server/src/league/auth-hook.ts`)
+
+`requireCommissioner` enforces COMMISSIONER role plus epoch-checked scope. For
+routes an OWNER must also read (not mutate), use `requireLeagueMember`
+instead — same league-scope/epoch checks, no role restriction. Both re-check
+the auth_epoch against the correct table for the token's own role
+(`leagues.auth_epoch` for COMMISSIONER/HOST, `teams.auth_epoch` for OWNER) —
+never compare an OWNER token's epoch against the league row.
+
 <!-- AAH:BEGIN -->
 # AAH Delivery Project — Draft
 

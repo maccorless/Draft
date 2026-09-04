@@ -1,0 +1,202 @@
+.league-setup {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-5);
+  padding: var(--space-2) 0;
+}
+
+.league-setup__panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.league-setup__team-roster,
+.league-setup__readiness {
+  grid-column: 1 / -1;
+}
+
+.league-setup__heading {
+  font-family: var(--font-heading);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-4);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.league-setup__idle-small {
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+.league-setup__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.league-setup__form label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.league-setup__form input,
+.league-setup__form select,
+.league-setup__form textarea {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.league-setup__form textarea {
+  min-height: 4.5em;
+  resize: vertical;
+}
+
+.league-setup__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.league-setup__form button {
+  align-self: flex-start;
+  min-height: 40px;
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-text-on-accent);
+  font-weight: var(--font-weight-semibold);
+}
+
+.league-setup__form button:disabled {
+  background: var(--color-neutral-bg);
+  color: var(--color-text-subtle);
+}
+
+.league-setup__generated-password {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-success);
+  font-size: var(--text-sm);
+}
+
+.league-setup__slot-table,
+.league-setup__team-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  margin-bottom: var(--space-3);
+}
+
+.league-setup__slot-table th,
+.league-setup__team-table th {
+  text-align: left;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.league-setup__slot-table td,
+.league-setup__team-table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.league-setup__slot-table input {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.league-setup__toast {
+  grid-column: 1 / -1;
+  background: var(--color-accent-bg);
+  color: var(--color-text-on-accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.league-setup__readiness-pill {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.06em;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+}
+
+.league-setup__readiness-pill--ready {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.league-setup__readiness-pill--not-ready {
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.league-setup__readiness-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.league-setup__readiness-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.league-setup__readiness-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.league-setup__readiness-item--pass .league-setup__readiness-dot {
+  background: var(--color-led-green);
+  box-shadow: 0 0 6px 1px var(--color-led-green);
+}
+
+.league-setup__readiness-item--fail .league-setup__readiness-dot {
+  background: var(--color-led-red);
+  box-shadow: 0 0 6px 1px var(--color-led-red);
+}
+
+.league-setup__readiness-status {
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-semibold);
+}
+
+.league-setup__readiness-detail {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}

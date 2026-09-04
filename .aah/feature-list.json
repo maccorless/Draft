@@ -1142,6 +1142,13 @@
         "F-MOD-016"
       ],
       "api_contracts": "```yaml\nconsumes:\n  - operation_id: setRosterConfig\n    schema_file: schema/MOD-001-api-schema.yaml\n    request_schema: RosterConfigRequest\n    response_schema: \"200 OK (no response body)\"\n  - operation_id: setAuctionConfig\n    schema_file: schema/MOD-001-api-schema.yaml\n    request_schema: AuctionConfigRequest\n    response_schema: \"200 OK (no response body)\"\n  - operation_id: uploadTeamMedia\n    schema_file: schema/MOD-015-api-schema.yaml\n    request_schema: \"multipart/form-data (icon, nomination_audio)\"\n    response_schema: TeamMediaResponse\n  - operation_id: deleteTeamMedia\n    schema_file: schema/MOD-015-api-schema.yaml\n    request_schema: DeleteTeamMediaRequest\n    response_schema: TeamMediaResponse\n  - operation_id: setAavSources\n    schema_file: schema/MOD-016-api-schema.yaml\n    request_schema: SetAavSourcesRequest\n    response_schema: AavSourceSelectionResponse\nproduces:\n  - operation_id: updateLeague\n    schema_file: schema/MOD-010-api-schema.yaml\n    request_schema: UpdateLeagueRequest\n    response_schema: LeagueSummary\n  - operation_id: updateTeam\n    schema_file: schema/MOD-010-api-schema.yaml\n    request_schema: UpdateTeamRequest\n    response_schema: TeamSummary\n  - operation_id: generatePasswords\n    schema_file: schema/MOD-010-api-schema.yaml\n    request_schema: GeneratePasswordsRequest\n    response_schema: GeneratePasswordsResponse\n  - operation_id: getDraftReadiness\n    schema_file: schema/MOD-010-api-schema.yaml\n    request_schema: \"(none)\"\n    response_schema: ReadinessResponse\n  - operation_id: setWhammyConfig\n    schema_file: schema/MOD-010-api-schema.yaml\n    request_schema: WhammyConfigRequest\n    response_schema: \"200 OK (no response body)\"\n```",
+      "test_config": {
+        "command": "DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! npx vitest run server/src/__tests__/F-MOD-010_league_setup.test.ts web/src/__tests__/F-MOD-010_league_setup.test.tsx",
+        "test_paths": [
+          "server/src/__tests__/F-MOD-010_league_setup.test.ts",
+          "web/src/__tests__/F-MOD-010_league_setup.test.tsx"
+        ]
+      },
       "passes": false
     },
     {

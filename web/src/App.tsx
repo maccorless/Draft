@@ -314,6 +314,7 @@ function DraftGateway({ auth }: { auth: AuthState }) {
   const [drafts, setDrafts] = useState<DraftSummary[] | null>(null);
   const [error, setError] = useState('');
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
 
   React.useEffect(() => {
     fetch(`${API}/leagues/${auth.leagueId}/drafts`, {
@@ -327,9 +328,9 @@ function DraftGateway({ auth }: { auth: AuthState }) {
       .catch(() => setError('Cannot reach server'));
   }, [auth.leagueId, auth.token]);
 
-  // leagues.status_message (MOD-010) doesn't exist in this endpoint's response
-  // yet — reads undefined and this simply never sets a message until MOD-010
-  // ships, with no Lobby-side change needed once it does.
+  // GET /leagues/:id (MOD-010) — status_message and scheduled_draft_start_at
+  // for the Lobby header; accepts this OWNER token since MOD-010 widened the
+  // route's auth from commissioner-only to any valid league member.
   React.useEffect(() => {
     fetch(`${API}/leagues/${auth.leagueId}`, {
       headers: { Authorization: `Bearer ${auth.token}` },
@@ -338,6 +339,7 @@ function DraftGateway({ auth }: { auth: AuthState }) {
         if (!res.ok) return;
         const data = await res.json();
         setStatusMessage(data.status_message ?? null);
+        setScheduledAt(data.scheduled_draft_start_at ?? null);
       })
       .catch(() => {});
   }, [auth.leagueId, auth.token]);
@@ -363,7 +365,7 @@ function DraftGateway({ auth }: { auth: AuthState }) {
       <Lobby
         leagueName={auth.leagueName}
         teamName={auth.teamName ?? 'My Team'}
-        scheduledAt={null}
+        scheduledAt={scheduledAt}
         draftStatus={active?.status ?? 'CREATED'}
         leagueId={auth.leagueId}
         teamId={auth.teamId ?? null}
