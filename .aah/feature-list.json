@@ -1190,7 +1190,7 @@
       "passes": false
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-013",
       "title": "Draft Summary Report Routing and Metrics",
       "module_ref": "MOD-013",
@@ -1219,7 +1219,7 @@
       "passes": false
     },
     {
-      "status": "pending",
+      "status": "implementing",
       "id": "F-MOD-014",
       "title": "Pre-Draft Lobby Restyle and Prep Tools",
       "module_ref": "MOD-014",
