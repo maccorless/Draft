@@ -23,3 +23,12 @@ Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 11:18:49 AM [vite] (client) page reload src/App.tsx
 11:36:42 AM [vite] (client) [console.warn] No routes matched location "/owner" 
 11:36:42 AM [vite] (client) [console.warn] No routes matched location "/owner" 
+12:20:18 PM [vite] (client) hmr update /src/App.tsx
+12:20:27 PM [vite] (client) hmr update /src/App.tsx
+12:20:34 PM [vite] (client) hmr update /src/App.tsx
+12:21:00 PM [vite] (client) hmr update /src/App.tsx
+12:21:00 PM [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh (new export)
+12:21:00 PM [vite] (client) page reload src/App.tsx
+12:21:06 PM [vite] (client) hmr update /src/App.tsx
+12:21:06 PM [vite] (client) hmr invalidate /src/App.tsx Could not Fast Refresh (new export)
+12:21:06 PM [vite] (client) page reload src/App.tsx
