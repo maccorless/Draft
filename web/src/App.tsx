@@ -8,6 +8,7 @@ const styles = {
   btn: { padding: '10px 0', fontSize: 16, background: '#1a73e8', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' },
   error: { color: '#c00', margin: 0, fontSize: 14 },
 };
+import './screens/auth/auth.css';
 import { Lobby } from './screens/lobby/index.js';
 import { CommissionerConsole } from './screens/commissioner/index.js';
 import { DraftRoom } from './screens/draft-room/index.js';
@@ -58,7 +59,7 @@ function storeAuth(auth: AuthState | null): void {
 
 // ── Site password screen ──────────────────────────────────────────────────────
 
-function SiteLogin({ onLeagues }: { onLeagues: (leagues: League[], sitePass: string) => void }) {
+export function SiteLogin({ onLeagues }: { onLeagues: (leagues: League[], sitePass: string) => void }) {
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -85,14 +86,20 @@ function SiteLogin({ onLeagues }: { onLeagues: (leagues: League[], sitePass: str
   }
 
   return (
-    <div style={styles.center}>
-      <h1>Draft Platform</h1>
-      <form onSubmit={submit} style={styles.form}>
-        <label>Site password</label>
-        <input type="password" value={pass} onChange={e => setPass(e.target.value)}
-          style={styles.input} autoFocus />
-        {error && <p style={styles.error}>{error}</p>}
-        <button type="submit" disabled={loading} style={styles.btn}>
+    <div className="auth-screen">
+      <h1 className="auth-screen__title">Draft Platform</h1>
+      <form onSubmit={submit} className="auth-screen__form">
+        <label className="auth-screen__label" htmlFor="site-password">Site password</label>
+        <input
+          id="site-password"
+          type="password"
+          value={pass}
+          onChange={e => setPass(e.target.value)}
+          className="auth-screen__input"
+          autoFocus
+        />
+        {error && <p className="auth-screen__error">{error}</p>}
+        <button type="submit" disabled={loading} className="auth-screen__button">
           {loading ? 'Checking…' : 'Enter'}
         </button>
       </form>
@@ -102,7 +109,7 @@ function SiteLogin({ onLeagues }: { onLeagues: (leagues: League[], sitePass: str
 
 // ── League + role selection ───────────────────────────────────────────────────
 
-function LeagueLogin({
+export function LeagueLogin({
   leagues, sitePass, onAuth
 }: {
   leagues: League[];
@@ -172,34 +179,59 @@ function LeagueLogin({
   }
 
   return (
-    <div style={styles.center}>
-      <h1>Select League</h1>
-      <form onSubmit={submit} style={styles.form}>
-        <label>League</label>
-        <select value={leagueId} onChange={e => setLeagueId(e.target.value)} style={styles.input}>
+    <div className="auth-screen">
+      <h1 className="auth-screen__title">Select League</h1>
+      <form onSubmit={submit} className="auth-screen__form">
+        <label className="auth-screen__label" htmlFor="league-select">League</label>
+        <select
+          id="league-select"
+          value={leagueId}
+          onChange={e => setLeagueId(e.target.value)}
+          className="auth-screen__input"
+        >
           {leagues.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
         </select>
-        <label>Role</label>
-        <select value={role} onChange={e => setRole(e.target.value as 'COMMISSIONER' | 'OWNER')} style={styles.input}>
+        <label className="auth-screen__label" htmlFor="role-select">Role</label>
+        <select
+          id="role-select"
+          value={role}
+          onChange={e => setRole(e.target.value as 'COMMISSIONER' | 'OWNER')}
+          className="auth-screen__input"
+        >
           <option value="COMMISSIONER">Commissioner</option>
           <option value="OWNER">Owner</option>
         </select>
         {role === 'OWNER' && (
           <>
-            <label>Team</label>
+            <label className="auth-screen__label" htmlFor="team-select">Team</label>
             {teamsError ? (
-              <p style={styles.error}>{teamsError}</p>
+              <p className="auth-screen__error">{teamsError}</p>
             ) : (
-              <select value={teamId} onChange={e => setTeamId(e.target.value)} style={styles.input}>
+              <select
+                id="team-select"
+                value={teamId}
+                onChange={e => setTeamId(e.target.value)}
+                className="auth-screen__input"
+              >
                 {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             )}
           </>
         )}
-        <label>Password</label>
-        <input type="password" value={pass} onChange={e => setPass(e.target.value)} style={styles.input} />
-        {error && <p style={styles.error}>{error}</p>}
-        <button type="submit" disabled={loading || (role === 'OWNER' && !teamId)} style={styles.btn}>
+        <label className="auth-screen__label" htmlFor="league-password">Password</label>
+        <input
+          id="league-password"
+          type="password"
+          value={pass}
+          onChange={e => setPass(e.target.value)}
+          className="auth-screen__input"
+        />
+        {error && <p className="auth-screen__error">{error}</p>}
+        <button
+          type="submit"
+          disabled={loading || (role === 'OWNER' && !teamId)}
+          className="auth-screen__button"
+        >
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
@@ -281,6 +313,7 @@ function pickActiveDraft(drafts: DraftSummary[]): DraftSummary | null {
 function DraftGateway({ auth }: { auth: AuthState }) {
   const [drafts, setDrafts] = useState<DraftSummary[] | null>(null);
   const [error, setError] = useState('');
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   React.useEffect(() => {
     fetch(`${API}/leagues/${auth.leagueId}/drafts`, {
@@ -292,6 +325,21 @@ function DraftGateway({ auth }: { auth: AuthState }) {
         setDrafts(data.drafts ?? []);
       })
       .catch(() => setError('Cannot reach server'));
+  }, [auth.leagueId, auth.token]);
+
+  // leagues.status_message (MOD-010) doesn't exist in this endpoint's response
+  // yet — reads undefined and this simply never sets a message until MOD-010
+  // ships, with no Lobby-side change needed once it does.
+  React.useEffect(() => {
+    fetch(`${API}/leagues/${auth.leagueId}`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+      .then(async res => {
+        if (!res.ok) return;
+        const data = await res.json();
+        setStatusMessage(data.status_message ?? null);
+      })
+      .catch(() => {});
   }, [auth.leagueId, auth.token]);
 
   if (error) return <div style={styles.center}><p style={styles.error}>{error}</p></div>;
@@ -317,6 +365,11 @@ function DraftGateway({ auth }: { auth: AuthState }) {
         teamName={auth.teamName ?? 'My Team'}
         scheduledAt={null}
         draftStatus={active?.status ?? 'CREATED'}
+        leagueId={auth.leagueId}
+        teamId={auth.teamId ?? null}
+        token={auth.token}
+        draftId={active?.id ?? null}
+        statusMessage={statusMessage}
       />
       {active && (
         <div style={{ ...styles.center, minHeight: 'auto', paddingBottom: 32 }}>

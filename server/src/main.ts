@@ -24,6 +24,7 @@ import { registerCorrectionRoutes } from './draft/corrections.js';
 import { registerDraftControlRoutes } from './draft/draft-control.js';
 import { registerReportRoutes } from './draft/reports.js';
 import { registerStrategyRoutes } from './draft/strategy.js';
+import { registerDoNotDraftRoutes } from './draft/do-not-draft.js';
 import { registerWhammyRoutes } from './draft/whammy.js';
 import { registerWarRoomRoutes } from './draft/war-room.js';
 import { registerTeamMediaRoutes } from './team-media/routes.js';
@@ -133,6 +134,7 @@ export async function buildServer() {
   await registerDraftControlRoutes(server, sql);
   await registerReportRoutes(server, sql);
   await registerStrategyRoutes(server, sql);
+  await registerDoNotDraftRoutes(server, sql);
   await registerWhammyRoutes(server, sql);
   await registerWarRoomRoutes(server, sql);
   // Registered after registerPlayerRoutes, which already registers

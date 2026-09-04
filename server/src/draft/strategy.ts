@@ -48,7 +48,7 @@ type NominationQueueItemParams = WatchlistItemParams;
  * and checks draft.league_id === token.league_id.
  * Returns null and sends the error reply on failure.
  */
-async function requireTeamOwner(
+export async function requireTeamOwner(
   server: FastifyInstance,
   sql: postgres.Sql,
   req: FastifyRequest<{ Params: StrategyParams }>,

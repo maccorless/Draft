@@ -36,6 +36,13 @@
       "when": 1788800000000,
       "tag": "0004_commissioner_adjustment",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788900000000,
+      "tag": "0005_do_not_draft_items",
+      "breakpoints": true
     }
   ]
 }

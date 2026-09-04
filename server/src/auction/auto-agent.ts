@@ -200,11 +200,18 @@ export async function triggerAutoAgentBidsOnNomination(
   sql: postgres.Sql,
 ): Promise<void> {
   const teams = await sql<AutoAgentTeamState[]>`
-    SELECT team_id, remaining_budget_minor, required_remaining_spots
-    FROM draft_team_states
-    WHERE draft_id = ${draftId}
-      AND control_mode = 'AUTO_AGENT'
-      AND team_id != ${nominatorTeamId}
+    SELECT dts.team_id, dts.remaining_budget_minor, dts.required_remaining_spots
+    FROM draft_team_states dts
+    JOIN player_auctions pa ON pa.id = ${playerAuctionId}
+    WHERE dts.draft_id = ${draftId}
+      AND dts.control_mode = 'AUTO_AGENT'
+      AND dts.team_id != ${nominatorTeamId}
+      AND NOT EXISTS (
+        SELECT 1 FROM do_not_draft_items ddi
+        WHERE ddi.draft_id = dts.draft_id
+          AND ddi.team_id = dts.team_id
+          AND ddi.dataset_player_id = pa.dataset_player_id
+      )
   `;
 
   for (const team of teams) {
@@ -237,11 +244,18 @@ export async function triggerAutoAgentBidsOnLeaderChange(
   sql: postgres.Sql,
 ): Promise<void> {
   const teams = await sql<AutoAgentTeamState[]>`
-    SELECT team_id, remaining_budget_minor, required_remaining_spots
-    FROM draft_team_states
-    WHERE draft_id = ${draftId}
-      AND control_mode = 'AUTO_AGENT'
-      AND team_id != ${newLeaderTeamId}
+    SELECT dts.team_id, dts.remaining_budget_minor, dts.required_remaining_spots
+    FROM draft_team_states dts
+    JOIN player_auctions pa ON pa.id = ${playerAuctionId}
+    WHERE dts.draft_id = ${draftId}
+      AND dts.control_mode = 'AUTO_AGENT'
+      AND dts.team_id != ${newLeaderTeamId}
+      AND NOT EXISTS (
+        SELECT 1 FROM do_not_draft_items ddi
+        WHERE ddi.draft_id = dts.draft_id
+          AND ddi.team_id = dts.team_id
+          AND ddi.dataset_player_id = pa.dataset_player_id
+      )
   `;
 
   for (const team of teams) {

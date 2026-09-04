@@ -445,6 +445,25 @@ export const nominationQueueItems = pgTable('nomination_queue_items', {
   queue_position: integer('queue_position').notNull(),
 });
 
+export const doNotDraftItems = pgTable('do_not_draft_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  draft_id: uuid('draft_id')
+    .notNull()
+    .references(() => drafts.id),
+  team_id: uuid('team_id')
+    .notNull()
+    .references(() => teams.id),
+  dataset_player_id: uuid('dataset_player_id')
+    .notNull()
+    .references(() => players.id),
+}, (table) => [
+  unique('do_not_draft_items_draft_team_player_unique').on(
+    table.draft_id,
+    table.team_id,
+    table.dataset_player_id,
+  ),
+]);
+
 export const ownerTargetValues = pgTable('owner_target_values', {
   id: uuid('id').primaryKey().defaultRandom(),
   draft_id: uuid('draft_id')
