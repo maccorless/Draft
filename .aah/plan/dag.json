@@ -37,6 +37,18 @@
       ]
     },
     {
+      "id": "F-MOD-002-rework-01",
+      "module_ref": "MOD-002",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-001"
+      ]
+    },
+    {
       "id": "F-MOD-003",
       "module_ref": "MOD-003",
       "layers": [
@@ -232,6 +244,10 @@
     {
       "from": "F-MOD-001",
       "to": "F-MOD-002"
+    },
+    {
+      "from": "F-MOD-001",
+      "to": "F-MOD-002-rework-01"
     },
     {
       "from": "F-MOD-001",

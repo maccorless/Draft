@@ -1,0 +1,463 @@
+checkpoint_configuration:
+  project_name: Draft
+  checkpoint_config_version: 5.1.1
+  total_waves: 18
+  complexity_score: 218
+  system_checkpoint_level: wave_plus_feature
+  upgrade_reasons:
+  - complexity_score=218 > 60
+  - total_features=19 > 12
+  generated_at: '2026-09-04T20:34:38.027144+00:00'
+  verification_profiles:
+    F-MOD-000:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - high_fanout
+      - keyword_auth_scope
+      - keyword_credential_scope
+      - keyword_migration
+      override: null
+    F-MOD-001:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - high_fanout
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-002:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - high_fanout
+      - keyword_auth_scope
+      - keyword_concurrency
+      - keyword_credential_scope
+      - keyword_payment_scope
+      override: null
+    F-MOD-002-rework-01:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_concurrency
+      - keyword_credential_scope
+      - keyword_payment_scope
+      override: null
+    F-MOD-003:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - high_fanout
+      - keyword_auth_scope
+      - keyword_concurrency
+      - keyword_credential_scope
+      override: null
+    F-MOD-004:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-005:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-006:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_concurrency
+      override: null
+    F-MOD-007:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_concurrency
+      override: null
+    F-MOD-008:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-009:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_concurrency
+      - keyword_credential_scope
+      override: null
+    F-MOD-010:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      - keyword_migration
+      - keyword_regulated_data
+      override: null
+    F-MOD-011:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-012:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-013:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      override: null
+    F-MOD-014:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-015:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-016:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_migration
+      override: null
+    F-MOD-017:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_payment_scope
+      override: null
+  system_checkpoints:
+    per_wave_checks:
+      enabled: true
+      checks:
+      - id: startup_validation
+        name: System Startup Check
+        automated: true
+      - id: smoke_tests
+        name: Integration Smoke Tests
+        automated: true
+      - id: code_quality
+        name: Code Quality & Standards Check
+        automated: true
+    per_feature_checks:
+      enabled: true
+      checks_by_feature:
+        F-MOD-000:
+        - quality_gate
+        F-MOD-001:
+        - quality_gate
+        F-MOD-002:
+        - quality_gate
+        F-MOD-002-rework-01:
+        - quality_gate
+        F-MOD-003:
+        - quality_gate
+        F-MOD-004:
+        - quality_gate
+        F-MOD-005:
+        - quality_gate
+        F-MOD-006:
+        - quality_gate
+        F-MOD-007:
+        - quality_gate
+        F-MOD-008:
+        - quality_gate
+        F-MOD-009:
+        - quality_gate
+        F-MOD-010:
+        - quality_gate
+        F-MOD-011:
+        - quality_gate
+        F-MOD-012:
+        - quality_gate
+        F-MOD-013:
+        - quality_gate
+        F-MOD-014:
+        - quality_gate
+        F-MOD-015:
+        - quality_gate
+        F-MOD-016:
+        - quality_gate
+        F-MOD-017:
+        - quality_gate
+  user_review_checkpoints:
+  - id: UCR-001
+    after_wave: 1
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-001
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
+  - id: UCR-002
+    after_wave: 3
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-001
+    - F-MOD-002
+    - F-MOD-007
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
+  - id: UCR-003
+    after_wave: 5
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-001
+    - F-MOD-002
+    - F-MOD-007
+    - F-MOD-003
+    - F-MOD-008
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
+  - id: UCR-004
+    after_wave: 7
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-001
+    - F-MOD-002
+    - F-MOD-007
+    - F-MOD-003
+    - F-MOD-008
+    - F-MOD-009
+    - F-MOD-015
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
+  - id: UCR-005
+    after_wave: 9
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-001
+    - F-MOD-002
+    - F-MOD-007
+    - F-MOD-003
+    - F-MOD-008
+    - F-MOD-009
+    - F-MOD-015
+    - F-MOD-017
+    - F-MOD-016
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
+  - id: UCR-006
+    after_wave: 11
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-001
+    - F-MOD-002
+    - F-MOD-007
+    - F-MOD-003
+    - F-MOD-008
+    - F-MOD-009
+    - F-MOD-015
+    - F-MOD-017
+    - F-MOD-016
+    - F-MOD-004
+    - F-MOD-005
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
+  - id: UCR-007
+    after_wave: 13
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-001
+    - F-MOD-002
+    - F-MOD-007
+    - F-MOD-003
+    - F-MOD-008
+    - F-MOD-009
+    - F-MOD-015
+    - F-MOD-017
+    - F-MOD-016
+    - F-MOD-004
+    - F-MOD-005
+    - F-MOD-006
+    - F-MOD-010
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
+  - id: UCR-008
+    after_wave: 15
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-001
+    - F-MOD-002
+    - F-MOD-007
+    - F-MOD-003
+    - F-MOD-008
+    - F-MOD-009
+    - F-MOD-015
+    - F-MOD-017
+    - F-MOD-016
+    - F-MOD-004
+    - F-MOD-005
+    - F-MOD-006
+    - F-MOD-010
+    - F-MOD-011
+    - F-MOD-014
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
+  - id: UCR-009
+    after_wave: 17
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-001
+    - F-MOD-002
+    - F-MOD-007
+    - F-MOD-003
+    - F-MOD-008
+    - F-MOD-009
+    - F-MOD-015
+    - F-MOD-017
+    - F-MOD-016
+    - F-MOD-004
+    - F-MOD-005
+    - F-MOD-006
+    - F-MOD-010
+    - F-MOD-011
+    - F-MOD-014
+    - F-MOD-012
+    - F-MOD-013
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
+  standards:
+    loaded: false
+    sources: []
+    per_feature_coverage_floors:
+      F-MOD-000: 80.0
+      F-MOD-001: 80.0
+      F-MOD-002: 80.0
+      F-MOD-003: 80.0
+  user_notification:
+    always_notify:
+    - critical_violations
+    - security_issues
+    - system_checkpoint_failures
+    summary_only:
+    - medium_violations
+    - quality_warnings
+    never_notify:
+    - low_priority_linting
+    - documentation_warnings
