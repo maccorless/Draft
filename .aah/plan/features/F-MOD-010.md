@@ -16,7 +16,7 @@ Builds the Commissioner Console "League Setup" section, replacing the `ComingSoo
 
 **API layer.** Extends `server/src/league/routes.ts` with the endpoints module-map lists for this module: `PUT /leagues/:id`, `PUT /leagues/:id/teams/:teamId`, `POST /leagues/:id/passwords/generate`, `GET /leagues/:id/readiness`. It also adds `PUT /leagues/:id/config/whammy`, following the `/leagues/:id/config/*` naming convention MOD-001 already established for `PUT /leagues/:id/config/roster` and `PUT /leagues/:id/config/auction` — module-map's description explicitly calls for a "Whammy configuration form... over MOD-009's WhammyConfig" but MOD-009 (`server/src/draft/whammy.ts`) only ever reads `WhammyConfig` for trigger validation and never added a write path, so this module supplies it. The existing roster/auction config PUT endpoints and MOD-016's `PUT /leagues/:id/datasets/:id/aav-sources` and MOD-015's `POST`/`DELETE /leagues/:id/teams/:teamId/media` are called by this UI unchanged, per module-map's MOD-016 and MOD-015 entries respectively.
 
-Note for the API Contracts section below: no `schema/MOD-010-api-schema.yaml` exists yet in `.aah/architecture/schema/` (only MOD-000 through MOD-009 have one). This module's implementer must author it in the same OpenAPI 3.1 shape as `schema/MOD-001-api-schema.yaml` / `schema/MOD-009-api-schema.yaml`, expressing exactly the operations named below.
+`schema/MOD-010-api-schema.yaml` already exists in `.aah/architecture/schema/`, with `produces` operationIds matching exactly the operations named below (`updateLeague`, `updateTeam`, `generatePasswords`, `getDraftReadiness`, `setWhammyConfig`) — no schema-authoring action is needed for those. This module also calls three operations owned by other already-shipped/already-specced modules unchanged: MOD-001's `setRosterConfig`/`setAuctionConfig` (`PUT /leagues/:id/config/roster`, `PUT /leagues/:id/config/auction`), MOD-015's `uploadTeamMedia`/`deleteTeamMedia`, and MOD-016's `setAavSources` — see `## API Contracts`' `consumes` list below.
 
 **UI layer.** All work happens in `web/src/screens/commissioner/`, following the existing folder layout (`architecture-overview.md §7`) and reusing the bespoke CSS custom-property design-token system already established in `commissioner-console.css` (`--color-bg`, `--color-chrome`, `--space-*`, `--font-display`, etc.) — this project has no `design-spec.yaml` or wireframe set; the existing CSS token system across `commissioner-console.css`/`draft-room.css`/`war-room.css` is the authoritative visual source. New components: league identity form (name, logo, name-lock toggle), password generation panel (commissioner/host/team, shown-once values, manual override), roster/scoring/auction configuration forms wrapping the existing MOD-001 config endpoints, a team roster table (per-team starting-budget override, name-lock display, media upload trigger from MOD-015), scheduled-start-time picker, AAV Primary/Secondary source dropdowns (from MOD-016), a Whammy configuration form, and the pre-draft readiness checklist (PRD §41). The scheduled start time this module writes must also be surfaced (read-only) in the existing Pre-Draft Lobby, Draft Room, and War Room headers, showing "Not yet scheduled" when unset, per PRD §5.2.
 
@@ -32,6 +32,7 @@ Note for the API Contracts section below: no `schema/MOD-010-api-schema.yaml` ex
 - Given the commissioner submits the roster and auction configuration forms, when they call the existing `PUT /leagues/:id/config/roster` and `PUT /leagues/:id/config/auction` endpoints unchanged, then a success state renders on 200, and a server-side invariant violation (e.g. `total_roster_size != sum(slot_count) + bench_slots`) is surfaced as a form-level validation message rather than failing silently.
 - Given the commissioner enters a starting-budget override for a team in the team roster table, when `PUT /leagues/:id/teams/:teamId` is called with `starting_budget_override_minor` as an integer-cents value (or null to clear it), then the server persists it on that team row, and the UI displays the effective per-team budget as the override when set or `AuctionConfiguration.initial_budget_minor` otherwise.
 - Given the commissioner toggles a team's name-lock, when `PUT /leagues/:id/teams/:teamId` is submitted with `name_lock`, then the flag is persisted and shown in the team roster table so other modules (e.g. owner-side rename in the Lobby) can honor it.
+- Given the commissioner reorders a team's draft position in the team roster table (e.g. drag/reorder or up/down controls), when `PUT /leagues/:id/teams/:teamId` is called with the team's new `draft_order`, then the value is persisted and the team roster table reflects the new order; the nomination-turn rotation (MOD-002) reads `draft_order` from the same `teams` row, so this is the single source of truth for nomination sequence, not a display-only value.
 - Given the commissioner uses the media upload control for a team in this section, when an icon and/or nomination MP3 is submitted, then it calls MOD-015's existing `POST /leagues/:id/teams/:teamId/media` (and `DELETE` to remove), and the resulting `icon_url` renders in the team roster table.
 - Given at least one AAV source has been imported into the league's active dataset (MOD-016), when the commissioner opens the Primary/Secondary AAV source dropdowns, then they are populated from the dataset's currently-loaded sources and a selection calls MOD-016's existing `PUT /leagues/:id/datasets/:id/aav-sources`; when no sources are loaded yet, the dropdowns render disabled rather than erroring.
 - Given the commissioner submits the Whammy configuration form (enabled, max_amount_minor, allowed_event_types, allow_positive, allow_negative, max_per_team, max_per_draft, commissioner_approval_required), when `PUT /leagues/:id/config/whammy` is called, then the server upserts the league's single `WhammyConfig` row, and a subsequent `POST /drafts/:id/whammy` (MOD-009) immediately validates against the newly saved constraints (e.g. an amount exceeding the updated `max_amount_minor` is rejected).
@@ -52,6 +53,32 @@ Note for the API Contracts section below: no `schema/MOD-010-api-schema.yaml` ex
 
 ## API Contracts
 ```yaml
+consumes:
+  - operation_id: setRosterConfig
+    schema_file: schema/MOD-001-api-schema.yaml
+    request_schema: RosterConfigRequest
+    response_schema: "200 OK (no response body)"
+
+  - operation_id: setAuctionConfig
+    schema_file: schema/MOD-001-api-schema.yaml
+    request_schema: AuctionConfigRequest
+    response_schema: "200 OK (no response body)"
+
+  - operation_id: uploadTeamMedia
+    schema_file: schema/MOD-015-api-schema.yaml
+    request_schema: "multipart/form-data (icon, nomination_audio)"
+    response_schema: TeamMediaResponse
+
+  - operation_id: deleteTeamMedia
+    schema_file: schema/MOD-015-api-schema.yaml
+    request_schema: DeleteTeamMediaRequest
+    response_schema: TeamMediaResponse
+
+  - operation_id: setAavSources
+    schema_file: schema/MOD-016-api-schema.yaml
+    request_schema: SetAavSourcesRequest
+    response_schema: AavSourceSelectionResponse
+
 produces:
   - operation_id: updateLeague
     schema_file: schema/MOD-010-api-schema.yaml
