@@ -1,15 +1,9 @@
-feedback_id: "UF-01-02"
+feedback_id: UF-01-02
 wave: 1
-source: "user"
-started_at: "2026-09-04T20:26:17Z"
-feedback_details: >
-  Implement the missing auto-nomination behavior specified in
-  knowledge/state-machine-flows.md §2 (Nomination Turn Flow), tracked as a
-  known issue against F-MOD-002: "auto-nomination on expired turn not yet
-  implemented (requires nomination cursor timer)". Two related gaps, both in
-  the nomination-turn path (server/src/auction/engine.ts advanceNominationTurn
-  and server/src/auction/auto-agent.ts):
-
+source: user
+started_at: '2026-09-04T20:26:17Z'
+feedback_details: |
+  Implement the missing auto-nomination behavior specified in knowledge/state-machine-flows.md §2 (Nomination Turn Flow), tracked as a known issue against F-MOD-002: "auto-nomination on expired turn not yet implemented (requires nomination cursor timer)". Two related gaps, both in the nomination-turn path (server/src/auction/engine.ts advanceNominationTurn and server/src/auction/auto-agent.ts):
   1. AUTO_AGENT team's turn: per the flowchart, when the next eligible
      nominating team's control_mode is AUTO_AGENT, Auto-Agent must
      immediately choose a legal nomination — no timer wait. Currently
@@ -24,27 +18,134 @@ feedback_details: >
      configured opening amount if one exists, else (b) fall back to a default
      nomination policy.
 
-  Default nomination policy (resolved with user via AskUserQuestion): the
-  highest remaining-AAV undrafted player at a position where the nominating
-  team still has an open roster slot (starter or bench), excluding any player
-  on that team's Do Not Draft list. This same fallback also applies to case 1
-  (AUTO_AGENT team, no Nomination Queue entry). Opening bid for both auto-
-  nomination paths (queue fallback and default-policy fallback) uses the
-  auction configuration's min_bid_minor unless the Nomination Queue entry
-  specifies its own opening amount.
-
-  Both auto-nominations must create the PlayerAuction through the same path
-  as a manual NOMINATE_COMMAND (processNominateCommand with
-  systemNominated: true — this flag already exists and is threaded into the
-  NOMINATION_STARTED payload as system_nominated), so second-bid timer start,
-  DraftEvent append, and triggerAutoAgentBidsOnNomination for other AUTO_AGENT
-  teams all fire identically to a manual nomination. Existing behavior that
-  must be preserved: teams with a completed roster are skipped in nomination
-  order (state-machine-flows.md §2 "A team with a complete roster is skipped
-  in future nomination order").
-
-  Context: surfaced while trying to run a full 12-team mock draft with every
-  team set to AUTO_AGENT control mode — the draft currently stalls forever
-  after DRAFT_STARTED because nothing ever nominates the first player.
-steps: []
+  Default nomination policy (resolved with user via AskUserQuestion): the highest remaining-AAV undrafted player at a position where the nominating team still has an open roster slot (starter or bench), excluding any player on that team's Do Not Draft list. This same fallback also applies to case 1 (AUTO_AGENT team, no Nomination Queue entry). Opening bid for both auto- nomination paths (queue fallback and default-policy fallback) uses the auction configuration's min_bid_minor unless the Nomination Queue entry specifies its own opening amount.
+  Both auto-nominations must create the PlayerAuction through the same path as a manual NOMINATE_COMMAND (processNominateCommand with systemNominated: true — this flag already exists and is threaded into the NOMINATION_STARTED payload as system_nominated), so second-bid timer start, DraftEvent append, and triggerAutoAgentBidsOnNomination for other AUTO_AGENT teams all fire identically to a manual nomination. Existing behavior that must be preserved: teams with a completed roster are skipped in nomination order (state-machine-flows.md §2 "A team with a complete roster is skipped in future nomination order").
+  Context: surfaced while trying to run a full 12-team mock draft with every team set to AUTO_AGENT control mode — the draft currently stalls forever after DRAFT_STARTED because nothing ever nominates the first player.
+steps:
+- phase: plan
+  input: >
+    Extend F-MOD-002 (Live Auction Engine with Bid Pipeline) to close the
+    auto-nomination gap: (1) when advanceNominationTurn (server/src/auction/engine.ts)
+    selects a next nominating team whose draft_team_states.control_mode is
+    AUTO_AGENT, immediately auto-nominate on that team's behalf instead of
+    waiting on any timer; (2) when the next team is MANUAL, start/track a
+    nomination-turn deadline using the auction configuration's
+    nomination_timer_ms and, if it expires with no NOMINATE_COMMAND received,
+    auto-nominate on that team's behalf. Both auto-nomination paths pick a
+    player via: first legal entry in the team's Nomination Queue
+    (server/src/draft/strategy.ts getTopNominationQueueEntry) at its
+    configured opening amount if present; otherwise the highest remaining-AAV
+    undrafted player at a position where the team has an open roster slot
+    (starter or bench), excluding that team's Do Not Draft list
+    (server/src/draft/do-not-draft.ts), opened at min_bid_minor. Route the
+    resulting nomination through the existing processNominateCommand path
+    with systemNominated: true so second-bid timer start, DraftEvent append,
+    and triggerAutoAgentBidsOnNomination (server/src/auction/auto-agent.ts)
+    all fire exactly as they do for a manual nomination, and enqueue the
+    auto-nomination onto that draft's existing AsyncQueue
+    (server/src/auction/queue.ts) rather than a new code path. Preserve
+    existing behavior: teams with a completed roster remain skipped in
+    nomination order. This is F-MOD-004 (Auto-Agent Mode)'s natural extension
+    point for the "proactively nominate" half of Auto-Agent behavior, and
+    touches F-MOD-008's Nomination Queue (server/src/draft/strategy.ts) as a
+    read dependency only (no change to Watch List/Nomination Queue CRUD
+    itself). Classify as a rework of F-MOD-002 (and update F-MOD-004's spec
+    if the auto-nomination trigger is better owned there) — F-MOD-002 and
+    F-MOD-004 are both already built and passing; this is Case 1 or Case 2
+    per aah-fix's rework classification depending on whether they're already
+    promoted. The remaining blast_radius_features (F-MOD-003, 005, 006,
+    009-015, 017) are downstream DAG dependents only — do not pre-rework them
+    unless their own spec's acceptance criteria are actually violated by this
+    change; leave collateral-damage detection to the regression/runtime gates
+    per aah-fix's reactive-handling rule.
+  output: >
+    F-MOD-002 was already implemented (passes: true), so this is Case A
+    (forward rework, superseding entry). Updated F-MOD-002.md in place: its
+    "Auto-nomination" paragraph and behavioral expectations now cover both
+    the AUTO_AGENT-team-immediate-nomination path and the MANUAL-team-
+    timer-expiry path, both selecting via Nomination Queue first, then
+    highest-remaining-AAV at a position of open roster need excluding Do Not
+    Draft, opened at min_bid_minor, routed through the existing
+    processNominateCommand/systemNominated/AsyncQueue path. Kept
+    F-MOD-002.md's Dependencies unchanged (F-MOD-001 only) — no new
+    cross-module code dependency edges were added, since the referenced
+    Nomination Queue / Do Not Draft / Auto-Agent control-mode data and
+    functions already exist in the built codebase and the implementer reads
+    them directly rather than requiring DAG reordering. Created the
+    superseding entry via core.plan.create_rework_entry (feature-id
+    F-MOD-002): F-MOD-002-rework-01, prerequisites [F-MOD-001] (already
+    built), dag.json rebuilt and validated acyclic. Note: waves.json did not
+    exist for this lean sequential build (create_rework_entry's checkpoint-
+    profile regeneration requires it) — generated it via compute_waves from
+    the existing dag.json before retrying; this is bookkeeping the rework
+    tool needs, not a return to wave-gated building. F-MOD-002 (original)
+    keeps passes: true and is untouched. F-MOD-004 and F-MOD-008 specs were
+    NOT reworked — their existing code (control_mode column,
+    getTopNominationQueueEntry) is consumed read-only by the F-MOD-002
+    rework's implementation. Downstream blast-radius features (F-MOD-003,
+    005, 006, 009-015, 017) were left alone per the reactive-handling rule.
+  affected_features:
+  - F-MOD-002-rework-01
+  completed_at: '2026-09-04T20:40:00Z'
+  affected_modules:
+  - MOD-002
+  - MOD-004
+  - MOD-008
+  blast_radius_features:
+  - F-MOD-002
+  - F-MOD-003
+  - F-MOD-004
+  - F-MOD-005
+  - F-MOD-006
+  - F-MOD-008
+  - F-MOD-009
+  - F-MOD-010
+  - F-MOD-011
+  - F-MOD-012
+  - F-MOD-013
+  - F-MOD-014
+  - F-MOD-015
+  - F-MOD-017
+- phase: direct_repair
+  input: >
+    Pre-existing, unrelated build-state damage discovered while inspecting
+    evidence before dispatching aah-build for F-MOD-002-rework-01: (1)
+    regression-latest.json (205/383 failing, infra_warning citing a failed
+    npm ci) — suspected broken node_modules from a stale lockfile, not real
+    logic regressions; (2) F-MOD-012/015/016 test evidence marked no_signal
+    with "Subject is dirty or does not match the expected branch and SHA" —
+    suspected stale evidence, not real failures; (3) F-MOD-010/011/013/014/017
+    passes:false despite each having its own 100%-passing test-results —
+    suspected bookkeeping gap from a previous session ending before promote.
+    User confirmed (fix backlog first, then the rework): verify before
+    assuming code defects, direct-repair if confirmed environment/bookkeeping,
+    escalate anything found to be a real code regression.
+  output: >
+    All three were confirmed environment/bookkeeping, not code defects — no
+    application logic changed. (1) `npm ci` was failing because
+    package-lock.json was missing @esbuild/* optional-platform entries for
+    esbuild 0.25.12 (regenerated via `npm install`, committed); after that,
+    vitest itself crashed post-test-run on "Cannot find module
+    '@rolldown/binding-wasm32-wasi'" — the platform-matching
+    @rolldown/binding-darwin-arm64 optional dependency was being dropped by
+    npm's optional-dep resolution on every install despite matching this
+    host's platform (a known class of npm bug); pinned it as an explicit
+    devDependency so `npm ci` always installs it (committed). Whole-codebase
+    regression suite now genuinely passes: 405/405, exit 0 (up from
+    178/383 real passes hidden under the broken install). (2) F-MOD-012 and
+    F-MOD-015 re-ran clean against current HEAD: 19/19 and 18/18 passing —
+    confirmed stale evidence, no code issue. (3) F-MOD-016 was NOT stale —
+    it genuinely failed 10/10 with "password authentication failed for user
+    ken": its own test_config.command (in F-MOD-016.md and feature-list.json)
+    was missing the `DATABASE_URL=...  JWT_SECRET=...` prefix every sibling
+    feature's command carries, so it fell back to a default Postgres
+    connection instead of the test database. Added the same prefix pattern
+    used by F-MOD-015; re-ran and confirmed 10/10 passing. Reconciled
+    feature-list.json: all of F-MOD-010, 011, 012, 013, 014, 015, 016, 017
+    now correctly show passes:true, each backed by a fresh, real test run
+    against current HEAD. Four commits landed on main: lockfile
+    regeneration, rolldown binding pin, F-MOD-016 test-config fix +
+    feature-list.json reconciliation. No spec or interface changes; no
+    blast radius beyond the fixed files themselves.
+  completed_at: '2026-09-04T20:50:00Z'
 status: in_progress
