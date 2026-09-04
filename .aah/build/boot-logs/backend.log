@@ -802,3 +802,5 @@ Node.js v24.8.0
 {"level":30,"time":1788558467196,"pid":92999,"hostname":"Mac.localdomain","msg":"Server listening at http://127.0.0.1:3000"}
 {"level":30,"time":1788558467197,"pid":92999,"hostname":"Mac.localdomain","msg":"Server listening at http://192.168.2.101:3000"}
 {"level":30,"time":1788558468617,"pid":92999,"hostname":"Mac.localdomain","reqId":"req-1","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":52053},"msg":"incoming request"}
+{"level":30,"time":1788558484608,"pid":92999,"hostname":"Mac.localdomain","reqId":"req-2","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":52074},"msg":"incoming request"}
+{"level":30,"time":1788558500611,"pid":92999,"hostname":"Mac.localdomain","reqId":"req-3","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":52078},"msg":"incoming request"}
