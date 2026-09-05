@@ -2209,7 +2209,7 @@
       "passes": true
     },
     {
-      "status": "pending",
+      "status": "in_progress",
       "id": "F-MOD-002-rework-05",
       "title": "Live Auction Engine with Bid Pipeline",
       "module_ref": "MOD-002",

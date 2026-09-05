@@ -1,0 +1,91 @@
+feedback_id: UF-17-07
+wave: 17
+source: user
+started_at: '2026-09-05T19:05:00Z'
+feedback_details: |
+  Two related Draft Room UX additions, both prompted by reference screenshots the user
+  shared of another auction-draft product:
+
+  1. Persistent, filterable, sortable player list for nomination. Current state
+  (web/src/screens/draft-room/index.tsx): `availablePlayers` (~lines 307-313) only
+  returns matches when `nominateSearch` has text, rendered as a small results list
+  (~lines 552-566) only during the owner's own nomination turn. There is no persistent
+  full list, no position filter, and no default sort. Required: (1) a persistent list of
+  all undrafted players from the DatasetPlayer set already loaded client-side (fields
+  confirmed present: position, aav_minor, projected_points), filterable by position
+  (tabs: All / QB / RB / WR / TE / FLEX-eligible / K / DEF per the league's
+  roster_slot_definitions), default-sorted by aav_minor descending then
+  projected_points descending as a tiebreak; (2) selecting a player from that list when
+  it's the owner's nomination turn nominates them, reusing the existing
+  handleNominate(entryId, aavMinor) flow (line 357) and min-bid default (line 358) —
+  same behavior as the current search-result click, just sourced from the persistent
+  list instead of only from search results. Reference UI: a FantasyPros-style
+  "Rankings" panel with position tabs and a one-click draft action per row.
+
+  2. Compact team-by-team strip across the top of the Draft Room: all teams in
+  nomination order, each showing team icon/name and remaining budget, and — whenever a
+  Player Auction is open — that team's current bid amount highlighted if they are the
+  leader. Data already available: /drafts/:draftId/roster-grid already returns each
+  team's remaining_budget_minor and control_mode, and the live auction WS state already
+  carries current_leader_id and the current bid amount for the open PlayerAuction —
+  this is a new rendering surface in Draft Room, not new backend data. Scoping note:
+  PRD §25 (Draft View) lists only the owner's own remaining budget as prominent Draft
+  Room content; all-teams budgets are normally a War Room (§26) concern per the
+  Draft-Room-is-for-acting/War-Room-is-for-thinking split (§2.2). The user explicitly
+  asked for this compact all-teams strip in the Draft Room itself, so it is scoped as a
+  deliberate small addition to the Draft Room's own surface, not a duplicate of the War
+  Room's fuller team/budget tables.
+
+  Explicitly NOT part of this feedback item (investigated and resolved outside aah-fix,
+  reported directly to the user): a report that Auto-Agent bidding was producing $1
+  wins for every player in a currently-running mock draft was root-caused as a
+  per-draft configuration state (all 12 teams stuck in MANUAL control mode with nobody
+  bidding), not a code defect — the AAV-anchored willingness-ceiling algorithm itself
+  was independently verified correct and unchanged.
+steps:
+- phase: plan
+  input: >
+    Case 2 rework of F-MOD-002 (already built, promoted) to add two Draft Room UX
+    capabilities: (1) a persistent, position-filterable player list default-sorted by
+    aav_minor desc then projected_points desc, click-to-nominate; (2) a compact
+    team-by-team budget/current-bid strip across the top of the Draft Room. Both are
+    pure UI additions over data already returned by /roster-grid and the existing WS
+    auction state — no backend contract changes.
+  affected_modules:
+  - MOD-002
+  blast_radius_features:
+  - F-MOD-002
+  - F-MOD-002-rework-01
+  - F-MOD-002-rework-02
+  - F-MOD-002-rework-03
+  - F-MOD-002-rework-04
+  - F-MOD-003
+  - F-MOD-004
+  - F-MOD-004-rework-01
+  - F-MOD-004-rework-02
+  - F-MOD-004-rework-03
+  - F-MOD-005
+  - F-MOD-006
+  - F-MOD-008
+  - F-MOD-009
+  - F-MOD-010
+  - F-MOD-011
+  - F-MOD-011-rework-01
+  - F-MOD-011-rework-02
+  - F-MOD-012
+  - F-MOD-013
+  - F-MOD-014
+  - F-MOD-015
+  - F-MOD-017
+  output: >
+    Case A rework. Updated F-MOD-002.md's UI-layer Description (added items (d) and
+    (e) for the persistent filtered/sorted player list and the top team-by-team
+    budget/current-bid strip) and added 3 new behavioral expectations covering
+    default sort/filter behavior, nomination-from-list parity with search results,
+    and the team strip's live-update/highlight behavior. Created superseding entry
+    F-MOD-002-rework-05 via core.plan.create_rework_entry, placed in the current
+    (last) wave. feature-list.json and dag.json regenerated. Committed as 1a73353.
+  affected_features:
+  - F-MOD-002-rework-05
+  completed_at: "2026-09-05T19:25:00Z"
+status: in_progress

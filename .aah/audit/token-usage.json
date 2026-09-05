@@ -1,13 +1,13 @@
 {
-  "total_all_tokens": 2216379300,
-  "total_io_tokens": 3618660,
-  "total_cache_tokens": 2212760640,
-  "total_input_tokens": 15291,
-  "total_output_tokens": 3603369,
-  "total_cache_read_tokens": 2161497929,
-  "total_cache_creation_tokens": 51262711,
+  "total_all_tokens": 2276754617,
+  "total_io_tokens": 3777444,
+  "total_cache_tokens": 2272977173,
+  "total_input_tokens": 15711,
+  "total_output_tokens": 3761733,
+  "total_cache_read_tokens": 2218464721,
+  "total_cache_creation_tokens": 54512452,
   "session_count": 7,
-  "updated_at": "2026-09-05T18:15:09.735686+00:00",
+  "updated_at": "2026-09-05T21:24:25.783544+00:00",
   "sessions": [
     {
       "session_id": "dc397d7e-8283-48fd-8eaa-dfc2dad9e4a1",
@@ -209,34 +209,34 @@
     },
     {
       "session_id": "56c28c79-b020-42f5-a544-b26e8f781c2f",
-      "timestamp": "2026-09-05T18:15:09.735686+00:00",
-      "input_tokens": 4259,
-      "output_tokens": 580010,
-      "cache_read_input_tokens": 621540111,
-      "cache_creation_input_tokens": 12357670,
-      "total_io_tokens": 584269,
-      "total_cache_tokens": 633897781,
-      "total_all_tokens": 634482050,
-      "main_thread_tokens": 377435232,
-      "subagent_tokens": 257046818,
+      "timestamp": "2026-09-05T21:24:25.783544+00:00",
+      "input_tokens": 4679,
+      "output_tokens": 738374,
+      "cache_read_input_tokens": 678506903,
+      "cache_creation_input_tokens": 15607411,
+      "total_io_tokens": 743053,
+      "total_cache_tokens": 694114314,
+      "total_all_tokens": 694857367,
+      "main_thread_tokens": 416568707,
+      "subagent_tokens": 278288660,
       "by_phase": {
         "plan": {
-          "input_tokens": 268,
-          "output_tokens": 51739,
-          "cache_read_input_tokens": 56497447,
-          "cache_creation_input_tokens": 294727,
-          "total_io_tokens": 52007,
-          "total_cache_tokens": 56792174,
-          "total_all_tokens": 56844181
+          "input_tokens": 318,
+          "output_tokens": 66418,
+          "cache_read_input_tokens": 64183194,
+          "cache_creation_input_tokens": 361578,
+          "total_io_tokens": 66736,
+          "total_cache_tokens": 64544772,
+          "total_all_tokens": 64611508
         },
         "build": {
-          "input_tokens": 3991,
-          "output_tokens": 528271,
-          "cache_read_input_tokens": 565042664,
-          "cache_creation_input_tokens": 12062943,
-          "total_io_tokens": 532262,
-          "total_cache_tokens": 577105607,
-          "total_all_tokens": 577637869
+          "input_tokens": 4361,
+          "output_tokens": 671956,
+          "cache_read_input_tokens": 614323709,
+          "cache_creation_input_tokens": 15245833,
+          "total_io_tokens": 676317,
+          "total_cache_tokens": 629569542,
+          "total_all_tokens": 630245859
         }
       }
     }
@@ -245,13 +245,13 @@
     {
       "model": "claude-sonnet-5",
       "sessions": 6,
-      "input_tokens": 10762,
-      "output_tokens": 2559480,
-      "cache_read_input_tokens": 1778521380,
-      "cache_creation_input_tokens": 36667977,
-      "total_io_tokens": 2570242,
-      "total_cache_tokens": 1815189357,
-      "total_all_tokens": 1817759599
+      "input_tokens": 11182,
+      "output_tokens": 2717844,
+      "cache_read_input_tokens": 1835488172,
+      "cache_creation_input_tokens": 39917718,
+      "total_io_tokens": 2729026,
+      "total_cache_tokens": 1875405890,
+      "total_all_tokens": 1878134916
     }
   ]
 }
