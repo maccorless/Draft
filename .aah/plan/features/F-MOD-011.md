@@ -33,7 +33,12 @@ for the new endpoints (added alongside `server/src/auction/routes.ts`), reusing 
    This module adds a "Start Now" button to the Draft Controls panel, visible/enabled only while
    `health.status === 'CREATED'`, wired to that endpoint. Pause/resume reuse the existing
    `POST /drafts/:draftId/pause` and `POST /drafts/:draftId/resume` endpoints
-   (`server/src/auction/routes.ts`) — this module wires buttons to them. Timer extension is new:
+   (`server/src/auction/routes.ts`) — this module wires buttons to them. All three of these are
+   bodyless POST calls: the shared `authedJson()` request helper in `DraftControl.tsx` must only
+   set the `content-type: application/json` header when an actual JSON body (`init.body`) is being
+   sent — never unconditionally — because Fastify's default JSON body parser rejects a
+   JSON-content-typed request that carries zero bytes (`FST_ERR_CTP_EMPTY_JSON_BODY`, HTTP 400).
+   Timer extension is new:
    `POST /drafts/:id/timers/extend` (body: `{ seconds }`),
    commissioner-only, valid only while a `PlayerAuction` is in a non-terminal state
    (`SECOND_BID_OPEN` or `REBID_OPEN` per `data-model.md` §PlayerAuction) — extends that auction's
@@ -93,6 +98,12 @@ for the new endpoints (added alongside `server/src/auction/routes.ts`), reusing 
 - Given a draft that is not `CREATED` (already `RUNNING`, `PAUSED`, or `COMPLETE`), when the
   commissioner views the Draft Control section, then the "Start Now" control is not shown or is
   disabled, and clicking it (if somehow triggered) is a no-op that makes no request.
+- Given a `CREATED` draft, when the commissioner clicks "Start Now" against the real running
+  server (not a mocked fetch), then the request succeeds with no `content-type` header and no
+  request body sent, the server responds 200 (not `FST_ERR_CTP_EMPTY_JSON_BODY`/400), and the
+  draft transitions to `RUNNING`. The same holds for Pause and Resume: each bodyless POST through
+  `authedJson()` succeeds against the real server with no `content-type: application/json` header
+  attached to a bodyless request.
 - Given a `RUNNING` draft, when the commissioner clicks Pause in the Draft Control section, then
   `POST /drafts/:id/pause` fires, the draft transitions to `PAUSED`, a `DRAFT_STATUS_CHANGED`
   broadcast is received, and the UI reflects `PAUSED` without a page reload.
