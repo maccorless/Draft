@@ -54,10 +54,22 @@ function formatMoney(minor: number): string {
   return `$${Math.round(minor / 100)}`;
 }
 
-async function authedJson<T>(url: string, token: string, init?: RequestInit): Promise<T> {
+/**
+ * Shared authenticated fetch helper. Only attaches `content-type:
+ * application/json` when an actual JSON body (`init.body`) is being sent —
+ * never unconditionally. Fastify's default JSON body parser rejects a
+ * request that declares a JSON content-type but carries zero bytes
+ * (`FST_ERR_CTP_EMPTY_JSON_BODY`, HTTP 400), so a bodyless POST (Start Now,
+ * Pause, Resume) must omit the header entirely (UF-17-03).
+ */
+export async function authedJson<T>(url: string, token: string, init?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { authorization: `Bearer ${token}` };
+  if (init?.body !== undefined) {
+    headers['content-type'] = 'application/json';
+  }
   const res = await fetch(url, {
     ...init,
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json', ...(init?.headers ?? {}) },
+    headers: { ...headers, ...(init?.headers ?? {}) },
   });
   if (!res.ok) throw new Error(`${res.status}`);
   const text = await res.text();
