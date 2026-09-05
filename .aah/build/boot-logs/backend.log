@@ -234,7 +234,9 @@
 {"level":30,"time":1788621650128,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-3e","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/audit-log","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":50766},"msg":"incoming request"}
 {"level":30,"time":1788621650130,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-3e","res":{"statusCode":200},"responseTime":2.63300000000163,"msg":"request completed"}
 {"level":30,"time":1788621650133,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-3d","res":{"statusCode":200},"responseTime":6.022333999993862,"msg":"request completed"}
-{"level":30,"time":1788621650141,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-3f","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":50770},"msg":"incoming request"}
+{"level":30,"time":1788621650141,"pid":59862,"hostna10:35:06 AM [tsx] change in ./src/draft/war-room.ts Process hasn't exited. Killing process...
+10:35:10 AM [tsx] change in ./src/draft/war-room.ts Process hasn't exited. Killing process...
+ePort":50770},"msg":"incoming request"}
 {"level":30,"time":1788621650142,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-3g","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/audit-log","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":50771},"msg":"incoming request"}
 {"level":30,"time":1788621650144,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-3c","res":{"statusCode":200},"responseTime":16.91379200000665,"msg":"request completed"}
 {"level":30,"time":1788621650144,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-3g","res":{"statusCode":200},"responseTime":2.244749999998021,"msg":"request completed"}
@@ -435,8 +437,9 @@
 {"level":30,"time":1788621747796,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-6a","res":{"statusCode":200},"responseTime":3.7111670000012964,"msg":"request completed"}
 {"level":30,"time":1788621754287,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-6c","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":50983},"msg":"incoming request"}
 {"level":30,"time":1788621754288,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-6d","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":50984},"msg":"incoming request"}
-{"level":30,"time":1788621754288,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-6e","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/audit-log","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":50985},"msg":"incoming request"}
-{"level":30,"time":1788621754289,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-6c","res":{"statusCode":200},"responseTime":1.9352080000098795,"msg":"request completed"}
+{"level":30,"time":1788621754288,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-6e","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c10:35:06 AM [tsx] change in ./src/draft/war-room.ts Process hasn't exited. Killing process...
+10:35:10 AM [tsx] change in ./src/draft/war-room.ts Process hasn't exited. Killing process...
+cal","reqId":"req-6c","res":{"statusCode":200},"responseTime":1.9352080000098795,"msg":"request completed"}
 {"level":30,"time":1788621754290,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-6e","res":{"statusCode":200},"responseTime":2.3027079999737907,"msg":"request completed"}
 {"level":30,"time":1788621754292,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-6d","res":{"statusCode":200},"responseTime":4.062292000016896,"msg":"request completed"}
 {"level":30,"time":1788621754303,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-6f","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":50989},"msg":"incoming request"}
@@ -1572,3 +1575,6 @@
 {"level":30,"time":1788622093098,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-mq","res":{"statusCode":200},"responseTime":1.0053330000373535,"msg":"request completed"}
 {"level":30,"time":1788622093099,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-ms","res":{"statusCode":200},"responseTime":1.9381670000148006,"msg":"request completed"}
 {"level":30,"time":1788622093100,"pid":59862,"hostname":"Kens-Mac-mini.local","reqId":"req-mr","res":{"statusCode":200},"responseTime":2.6314170000259764,"msg":"request completed"}
+10:35:06 AM [tsx] change in ./src/draft/war-room.ts Restarting...
+10:35:10 AM [tsx] change in ./src/draft/war-room.ts Process hasn't exited. Killing process...
+10:35:11 AM [tsx] Process didn't exit in 5s. Force killing...
