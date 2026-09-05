@@ -43,6 +43,16 @@
       "status": "completed",
       "triggered_at": "2026-09-05T14:44:13.582609+00:00",
       "completed_at": "2026-09-05T15:09:06.077911+00:00"
+    },
+    {
+      "feedback_id": "UF-17-03",
+      "iteration": 6,
+      "affected_features": [
+        "F-MOD-011-rework-02"
+      ],
+      "attempts": 1,
+      "status": "in_progress",
+      "triggered_at": "2026-09-05T15:11:09.885754+00:00"
     }
   ]
 }

@@ -6,8 +6,23 @@ feedback_details: |
   Bug found live in the browser while running the manual mock draft: clicking the Start Now button (F-MOD-011-rework-01) does nothing — POST /drafts/:draftId/start returns HTTP 400 {"code":"FST_ERR_CTP_EMPTY_JSON_BODY","message":"Body cannot be empty when content-type is set to 'application/json'"}. Root cause: the shared authedJson() helper in web/src/screens/commissioner/DraftControl.tsx unconditionally sets the `content-type: application/json` request header even when no `body` is passed (e.g. startDraft(), pauseDraft(), and resumeDraft() all call `authedJson(url, token, { method: 'POST' })` with no body). Fastify's default JSON body parser rejects a request that declares a JSON content-type but sends zero bytes, so every bodyless POST through this helper 400s. This is a pre-existing bug in F-MOD-011 (not introduced by the F-MOD-011-rework-01 Start Now work — Pause and Resume share the same helper and the same bug, they were just never exercised live before now; the module's tests use a mocked fetch that doesn't reproduce Fastify's real body-parsing behavior). Reproduced live: network inspection of the actual POST /drafts/:draftId/start request confirmed the FST_ERR_CTP_EMPTY_JSON_BODY response body verbatim. Expected fix: authedJson() must only send the content-type: application/json header when an actual JSON body is being sent (i.e. when `init.body` is present) — Start Now, Pause, and Resume should all successfully call their endpoints with no request body and no content-type header, exactly like a plain authenticated POST with no payload.
 steps:
 - phase: plan
-  completed_at: null
+  input: >
+    Fix authedJson() to only set content-type: application/json when
+    init.body is present, so bodyless POSTs (Start Now, Pause, Resume)
+    stop 400ing with FST_ERR_CTP_EMPTY_JSON_BODY (F-MOD-011, built and
+    promoted, previously reworked as F-MOD-011-rework-01 which is done).
   affected_modules:
   - commissioner-draft-control-ui
   blast_radius_features: []
+  output: >
+    Case A (implemented feature) rework. Edited F-MOD-011.md in place: added
+    the content-type requirement to item 1 of the Description and a new
+    behavioral expectation (Start Now/Pause/Resume succeed against the real
+    server with no request body and no content-type header). Created
+    superseding entry F-MOD-011-rework-02.md via core.plan.create_rework_entry,
+    placed in wave 17. feature-list.json and dag.json regenerated. Committed
+    as 7597836.
+  affected_features:
+  - F-MOD-011-rework-02
+  completed_at: "2026-09-05T15:20:00Z"
 status: in_progress
