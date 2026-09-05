@@ -6,8 +6,8 @@ checkpoint_configuration:
   system_checkpoint_level: wave_plus_feature
   upgrade_reasons:
   - complexity_score=218 > 60
-  - total_features=21 > 12
-  generated_at: '2026-09-05T14:03:13.760402+00:00'
+  - total_features=22 > 12
+  generated_at: '2026-09-05T14:43:30.749639+00:00'
   verification_profiles:
     F-MOD-000:
       level: deep
@@ -64,6 +64,13 @@ checkpoint_configuration:
       - keyword_credential_scope
       override: null
     F-MOD-004:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-004-rework-01:
       level: deep
       rule_version: '1'
       reasons:
@@ -198,6 +205,8 @@ checkpoint_configuration:
         F-MOD-003:
         - quality_gate
         F-MOD-004:
+        - quality_gate
+        F-MOD-004-rework-01:
         - quality_gate
         F-MOD-005:
         - quality_gate
@@ -460,6 +469,7 @@ checkpoint_configuration:
     - F-MOD-012
     - F-MOD-013
     - F-MOD-011-rework-01
+    - F-MOD-004-rework-01
     demo_checklist:
     - System starts successfully
     - All covered features are functional
