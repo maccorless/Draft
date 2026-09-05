@@ -1,0 +1,1445 @@
+(!) Your Vite config uses features that are unsupported by `configLoader: 'native'`, which is planned to become the default in a future major version of Vite:
+  - ESM syntax in a file loaded as CommonJS (vitest.config.ts:1:1). Use a `.mjs` extension or set `"type": "module"` in the closest package.json
+Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
+[globalSetup] Skipping truncate: DATABASE_URL is not draft_test
+[90mstderr[2m | server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22m[2mF-MOD-002 auction engine[2m > [22m[2mtest_F_MOD_002_rework_04_award_throws_and_does_not_charge_when_no_roster_slot_available
+[22m[39m[engine] Award failed for auction b39aa6e5-c6f0-4fd5-9df4-8c16f45779ff: Error: assignRosterSlot returned no eligible slot for team da1960ce-b599-48cb-b636-25127bde4afb (auction b39aa6e5-c6f0-4fd5-9df4-8c16f45779ff, position RB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22m[2mF-MOD-002 auction engine[2m > [22m[2mtest_F_MOD_002_rework_04_award_throws_and_does_not_charge_when_no_roster_slot_available
+[22m[39m[engine] Award failed for auction b39aa6e5-c6f0-4fd5-9df4-8c16f45779ff: Error: assignRosterSlot returned no eligible slot for team da1960ce-b599-48cb-b636-25127bde4afb (auction b39aa6e5-c6f0-4fd5-9df4-8c16f45779ff, position RB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22m[2mF-MOD-002 auction engine[2m > [22m[2mtest_F_MOD_002_rework_04_award_throws_and_does_not_charge_when_no_roster_slot_available
+[22m[39m[engine] Award failed for auction b39aa6e5-c6f0-4fd5-9df4-8c16f45779ff: Error: assignRosterSlot returned no eligible slot for team da1960ce-b599-48cb-b636-25127bde4afb (auction b39aa6e5-c6f0-4fd5-9df4-8c16f45779ff, position RB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22m[2mF-MOD-002 auction engine[2m > [22m[2mtest_F_MOD_002_rework_04_award_throws_and_does_not_charge_when_no_roster_slot_available
+[22m[39m[engine] Award failed for auction b39aa6e5-c6f0-4fd5-9df4-8c16f45779ff: Error: assignRosterSlot returned no eligible slot for team da1960ce-b599-48cb-b636-25127bde4afb (auction b39aa6e5-c6f0-4fd5-9df4-8c16f45779ff, position RB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_projected_starter_points_roster_depth_and_aav_efficiency
+[22m[39m[engine] Award failed for auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151: Error: assignRosterSlot returned no eligible slot for team 1ea56023-1711-4899-9532-502fa73d85f1 (auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_projected_starter_points_roster_depth_and_aav_efficiency
+[22m[39m[engine] Award failed for auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151: Error: assignRosterSlot returned no eligible slot for team 1ea56023-1711-4899-9532-502fa73d85f1 (auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_projected_starter_points_roster_depth_and_aav_efficiency
+[22m[39m[engine] Award failed for auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151: Error: assignRosterSlot returned no eligible slot for team 1ea56023-1711-4899-9532-502fa73d85f1 (auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_projected_starter_points_roster_depth_and_aav_efficiency
+[22m[39m[engine] Award failed for auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151: Error: assignRosterSlot returned no eligible slot for team 1ea56023-1711-4899-9532-502fa73d85f1 (auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_projected_starter_points_roster_depth_and_aav_efficiency
+[22m[39m[engine] Award failed for auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151: Error: assignRosterSlot returned no eligible slot for team 1ea56023-1711-4899-9532-502fa73d85f1 (auction 30f3a80f-6ec7-4c65-900e-6efb1e42b151, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_bench_player_points_excluded_from_starter_sum
+[22m[39m[engine] Award failed for auction 7438edd7-be4b-464a-851f-7858ff2c6458: Error: assignRosterSlot returned no eligible slot for team 55979ffe-a67d-4099-a6de-5eefba74bba6 (auction 7438edd7-be4b-464a-851f-7858ff2c6458, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_bench_player_points_excluded_from_starter_sum
+[22m[39m[engine] Award failed for auction 7438edd7-be4b-464a-851f-7858ff2c6458: Error: assignRosterSlot returned no eligible slot for team 55979ffe-a67d-4099-a6de-5eefba74bba6 (auction 7438edd7-be4b-464a-851f-7858ff2c6458, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_bench_player_points_excluded_from_starter_sum
+[22m[39m[engine] Award failed for auction 7438edd7-be4b-464a-851f-7858ff2c6458: Error: assignRosterSlot returned no eligible slot for team 55979ffe-a67d-4099-a6de-5eefba74bba6 (auction 7438edd7-be4b-464a-851f-7858ff2c6458, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_bench_player_points_excluded_from_starter_sum
+[22m[39m[engine] Award failed for auction 7438edd7-be4b-464a-851f-7858ff2c6458: Error: assignRosterSlot returned no eligible slot for team 55979ffe-a67d-4099-a6de-5eefba74bba6 (auction 7438edd7-be4b-464a-851f-7858ff2c6458, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_bench_player_points_excluded_from_starter_sum
+[22m[39m[engine] Award failed for auction 7438edd7-be4b-464a-851f-7858ff2c6458: Error: assignRosterSlot returned no eligible slot for team 55979ffe-a67d-4099-a6de-5eefba74bba6 (auction 7438edd7-be4b-464a-851f-7858ff2c6458, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_bench_player_points_excluded_from_starter_sum
+[22m[39m[engine] Award failed for auction 7438edd7-be4b-464a-851f-7858ff2c6458: Error: assignRosterSlot returned no eligible slot for team 55979ffe-a67d-4099-a6de-5eefba74bba6 (auction 7438edd7-be4b-464a-851f-7858ff2c6458, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_bench_player_points_excluded_from_starter_sum
+[22m[39m[engine] Award failed for auction 7438edd7-be4b-464a-851f-7858ff2c6458: Error: assignRosterSlot returned no eligible slot for team 55979ffe-a67d-4099-a6de-5eefba74bba6 (auction 7438edd7-be4b-464a-851f-7858ff2c6458, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_bench_player_points_excluded_from_starter_sum
+[22m[39m[engine] Award failed for auction 7438edd7-be4b-464a-851f-7858ff2c6458: Error: assignRosterSlot returned no eligible slot for team 55979ffe-a67d-4099-a6de-5eefba74bba6 (auction 7438edd7-be4b-464a-851f-7858ff2c6458, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_bench_player_points_excluded_from_starter_sum
+[22m[39m[engine] Award failed for auction 7438edd7-be4b-464a-851f-7858ff2c6458: Error: assignRosterSlot returned no eligible slot for team 55979ffe-a67d-4099-a6de-5eefba74bba6 (auction 7438edd7-be4b-464a-851f-7858ff2c6458, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22m[2mF-MOD-013 draft summary report metrics[2m > [22m[2mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[22m[39m[engine] Award failed for auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3: Error: assignRosterSlot returned no eligible slot for team e092365f-a354-4d90-b8e1-41b3de8fe9bb (auction faefcdf6-8bdf-4075-a8e2-1681c61b73e3, position QB) — refusing to award
+    at awardAuction [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1265:11[90m)[39m
+[90m    at processTicksAndRejections (node:internal/process/task_queues:105:5)[39m
+    at processAwardCycle [90m(/Users/ken/projects/Draft/[39mserver/src/auction/engine.ts:1237:7[90m)[39m
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22m[2mtest_F_MOD_002_rework_02_plus_one_disables_immediately_on_click
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22m[2mtest_F_MOD_002_rework_02_plus_one_disables_immediately_on_click
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22m[2mtest_F_MOD_002_rework_02_plus_one_reenables_after_BID_ACCEPTED_applied
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22m[2mtest_F_MOD_002_rework_02_plus_one_reenables_after_BID_ACCEPTED_applied
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22m[2mtest_F_MOD_002_rework_02_plus_one_reenables_after_BID_ACCEPTED_applied
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22m[2mtest_F_MOD_002_rework_02_plus_one_reenables_after_BID_REJECTED_and_shows_dollar_formatted_reason
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22m[2mtest_F_MOD_002_rework_02_plus_one_reenables_after_BID_REJECTED_and_shows_dollar_formatted_reason
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22m[2mtest_F_MOD_002_rework_02_plus_one_reenables_after_BID_REJECTED_and_shows_dollar_formatted_reason
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 in-room Pause action (UF-01-03 item 3)[2m > [22m[2mtest_F_MOD_002_rework_02_pause_action_visible_for_commissioner_role
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 in-room Pause action (UF-01-03 item 3)[2m > [22m[2mtest_F_MOD_002_rework_02_pause_action_hidden_for_owner_role
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 in-room Pause action (UF-01-03 item 3)[2m > [22m[2mtest_F_MOD_002_rework_02_pause_action_calls_pause_endpoint_and_opens_commissioner_console
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 Draft Room <-> War Room cross-navigation (UF-01-03 item 4)[2m > [22m[2mtest_F_MOD_002_rework_02_draft_room_links_to_war_room
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22m[2mtest_F_MOD_002_rework_02_shows_filled_and_open_starter_slots_and_bench_count
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22m[2mtest_F_MOD_002_rework_02_roster_status_updates_on_PLAYER_AWARDED_via_grid_refresh
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22m[2mtest_F_MOD_002_rework_02_roster_status_updates_on_PLAYER_AWARDED_via_grid_refresh
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22m[2mtest_F_MOD_002_rework_02_roster_status_updates_on_PLAYER_AWARDED_via_grid_refresh
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22m[2mtest_F_MOD_002_rework_03_filled_slot_shows_player_name_and_price_paid
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22m[2mtest_F_MOD_002_rework_03_open_slot_shows_no_player_or_price
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22m[2mtest_F_MOD_002_rework_03_newly_filled_slot_shows_player_and_price_on_PLAYER_AWARDED_without_reload
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22m[2mtest_F_MOD_002_rework_03_newly_filled_slot_shows_player_and_price_on_PLAYER_AWARDED_without_reload
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22m[2mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22m[2mtest_F_MOD_002_rework_03_newly_filled_slot_shows_player_and_price_on_PLAYER_AWARDED_without_reload
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom close card wiring[2m > [22m[2mtest_F_MOD_017_close_card_renders_on_player_awarded_with_required_fields
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom close card wiring[2m > [22m[2mtest_F_MOD_017_close_card_renders_on_player_awarded_with_required_fields
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom close card wiring[2m > [22m[2mtest_F_MOD_017_close_card_renders_on_player_awarded_with_required_fields
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom close card wiring[2m > [22m[2mtest_F_MOD_017_close_card_does_not_block_nomination_ui_underneath
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom close card wiring[2m > [22m[2mtest_F_MOD_017_close_card_does_not_block_nomination_ui_underneath
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom close card wiring[2m > [22m[2mtest_F_MOD_017_close_card_does_not_block_nomination_ui_underneath
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom close card wiring[2m > [22m[2mtest_F_MOD_017_close_card_dismiss_is_a_semantic_button_and_removes_card
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom close card wiring[2m > [22m[2mtest_F_MOD_017_close_card_dismiss_is_a_semantic_button_and_removes_card
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom close card wiring[2m > [22m[2mtest_F_MOD_017_close_card_dismiss_is_a_semantic_button_and_removes_card
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom player detail popover wiring[2m > [22m[2mtest_F_MOD_017_popover_opens_on_name_click_and_shows_available_fields
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom player detail popover wiring[2m > [22m[2mtest_F_MOD_017_popover_opens_on_name_click_and_shows_available_fields
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom player detail popover wiring[2m > [22m[2mtest_F_MOD_017_popover_shows_target_only_when_set
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom player detail popover wiring[2m > [22m[2mtest_F_MOD_017_popover_shows_target_only_when_set
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom player detail popover wiring[2m > [22m[2mtest_F_MOD_017_popover_dismiss_is_semantic_button_and_preserves_bid_controls_and_custom_amount
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-017_close_card_and_popover.test.tsx[2m > [22m[2mF-MOD-017 DraftRoom player detail popover wiring[2m > [22m[2mtest_F_MOD_017_popover_dismiss_is_semantic_button_and_preserves_bid_controls_and_custom_amount
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-014_lobby.test.tsx[2m > [22m[2mF-MOD-014 Lobby[2m > [22m[2mtest_F_MOD_014_lobby_status_message_renders_nothing_when_absent
+[22m[39mWarning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-014_lobby.test.tsx[2m > [22m[2mF-MOD-014 Lobby[2m > [22m[2mtest_F_MOD_014_lobby_status_message_renders_nothing_when_undefined
+[22m[39mWarning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-014_lobby.test.tsx[2m > [22m[2mF-MOD-014 Lobby[2m > [22m[2mtest_F_MOD_014_lobby_omits_prep_tools_when_no_draft_created
+[22m[39mWarning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-014_lobby.test.tsx[2m > [22m[2mF-MOD-014 Lobby[2m > [22m[2mtest_F_MOD_014_lobby_mounts_team_media_upload_control
+[22m[39mWarning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+Warning: An update to Lobby inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at Lobby (/Users/ken/projects/Draft/web/src/screens/lobby/index.tsx:77:18)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-013_draft_complete_routing.test.tsx[2m > [22m[2mF-MOD-013 draft-complete navigation and routing[2m > [22m[2mF_MOD_013_draft_room_navigates_to_draft_complete_on_broadcast
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-013_draft_complete_routing.test.tsx[2m > [22m[2mF-MOD-013 draft-complete navigation and routing[2m > [22m[2mF_MOD_013_war_room_navigates_to_draft_complete_on_broadcast
+[22m[39mWarning: An update to WarRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at WarRoom (/Users/ken/projects/Draft/web/src/screens/war-room/index.tsx:55:20)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to WarRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at WarRoom (/Users/ken/projects/Draft/web/src/screens/war-room/index.tsx:55:20)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to WarRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at WarRoom (/Users/ken/projects/Draft/web/src/screens/war-room/index.tsx:55:20)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+[90mstderr[2m | web/src/__tests__/F-MOD-013_draft_complete_routing.test.tsx[2m > [22m[2mF-MOD-013 draft-complete navigation and routing[2m > [22m[2mF_MOD_013_draft_room_reconnect_snapshot_already_complete_routes_away
+[22m[39mWarning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+Warning: An update to DraftRoom inside a test was not wrapped in act(...).
+
+When testing, code that causes React state updates should be wrapped into act(...):
+
+act(() => {
+  /* fire events that update state */
+});
+/* assert on the output */
+
+This ensures that you're testing the behavior the user would see in the browser. Learn more at https://reactjs.org/link/wrap-tests-with-act
+    at DraftRoom (/Users/ken/projects/Draft/web/src/screens/draft-room/index.tsx:62:22)
+    at RenderedRoute (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:6309:26)
+    at Routes (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7195:3)
+    at Router (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7134:13)
+    at MemoryRouter (file:///Users/ken/projects/Draft/node_modules/react-router/dist/***REDACTED***/chunk-BV7QT456.mjs:7044:3)
+
+Error: Not implemented: navigation (except hash changes)
+    at module.exports (/Users/ken/projects/Draft/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at navigateFetch (/Users/ken/projects/Draft/node_modules/jsdom/lib/jsdom/living/window/navigation.js:77:3)
+    at exports.navigate (/Users/ken/projects/Draft/node_modules/jsdom/lib/jsdom/living/window/navigation.js:55:3)
+    at Timeout._onTimeout (/Users/ken/projects/Draft/node_modules/jsdom/lib/jsdom/living/nodes/HTMLHyperlinkElementUtils-impl.js:81:7)
+    at listOnTimeout (node:internal/timers:608:17)
+    at processTimers (node:internal/timers:543:7) undefined
+Error: Not implemented: navigation (except hash changes)
+    at module.exports (/Users/ken/projects/Draft/node_modules/jsdom/lib/jsdom/browser/not-implemented.js:9:17)
+    at navigateFetch (/Users/ken/projects/Draft/node_modules/jsdom/lib/jsdom/living/window/navigation.js:77:3)
+    at exports.navigate (/Users/ken/projects/Draft/node_modules/jsdom/lib/jsdom/living/window/navigation.js:55:3)
+    at Timeout._onTimeout (/Users/ken/projects/Draft/node_modules/jsdom/lib/jsdom/living/nodes/HTMLHyperlinkElementUtils-impl.js:81:7)
+    at listOnTimeout (node:internal/timers:608:17)
+    at processTimers (node:internal/timers:543:7) undefined
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 2 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22mF-MOD-013 draft summary report metrics[2m > [22mF_MOD_013_report_includes_projected_starter_points_roster_depth_and_aav_efficiency
+[31m[1mAssertionError[22m: expected +0 to be close to 8, received difference is 8, but expected 0.000005[39m
+[36m [2m❯[22m server/src/__tests__/F-MOD-013_report_metrics.test.ts:[2m225:44[22m[39m
+    [90m223|[39m     // Team1: P1 (starter, 20 pts) + P2 (bench, 8 pts). Starter points…
+    [90m224|[39m     expect(team1.projected_starter_points).toBeCloseTo(20, 5);
+    [90m225|[39m     expect(team1.roster_depth_score.value).toBeCloseTo(8, 5);
+    [90m   |[39m                                            [31m^[39m
+    [90m226|[39m     expect(team1.roster_depth_score.calculation_version).toBeTruthy();
+    [90m227|[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯[22m[39m
+
+[41m[1m FAIL [22m[49m [30m[43m node [49m[39m server/src/__tests__/F-MOD-013_report_metrics.test.ts[2m > [22mF-MOD-013 draft summary report metrics[2m > [22mF_MOD_013_report_includes_league_wide_spend_vs_aav_totals
+[31m[1mAssertionError[22m: expected 3500 to be 4000 // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- 4000[39m
+[31m+ 3500[39m
+
+[36m [2m❯[22m server/src/__tests__/F-MOD-013_report_metrics.test.ts:[2m265:44[22m[39m
+    [90m263|[39m
+    [90m264|[39m     // spend: 2000 + 500 + 1500 = 4000; aav: 2500 + 1000 + 1400 = 4900
+    [90m265|[39m     expect(body.league_totals.spend_minor).toBe(4000);
+    [90m   |[39m                                            [31m^[39m
+    [90m266|[39m     expect(body.league_totals.aav_minor).toBe(4900);
+    [90m267|[39m   }, 20000);
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯[22m[39m
+

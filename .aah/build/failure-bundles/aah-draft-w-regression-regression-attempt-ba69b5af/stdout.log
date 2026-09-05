@@ -1,0 +1,248 @@
+
+> draft@0.1.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[90m/Users/ken/projects/Draft[39m
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[33m[39m[31mx[39m[33m[39m[32m·[39m[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "auction_configurations"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "drafts"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "memberships"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "player_aav_sources"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "roster_configurations"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "teams"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whammy_configs"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "acquisitions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "auto_agent_configs"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "bid_attempts"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "budget_ledger_entries"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "draft_events"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "draft_team_states"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "nomination_queue_items"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "nominator_matches"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "owner_target_values"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "player_auctions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "roster_entries"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "roster_slot_definitions"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "watch_list_items"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[90mstdout[2m | server/src/__tests__/F-MOD-000_auth.test.ts
+[22m[39m{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "whammy_events"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+{
+  severity_local: [32m'NOTICE'[39m,
+  severity: [32m'NOTICE'[39m,
+  code: [32m'00000'[39m,
+  message: [32m'truncate cascades to table "do_not_draft_items"'[39m,
+  file: [32m'tablecmds.c'[39m,
+  line: [32m'1857'[39m,
+  routine: [32m'ExecuteTruncateGuts'[39m
+}
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[90mstdout[2m | server/src/__tests__/F-MOD-000_crash-recovery.test.ts[2m > [22m[2mF-MOD-000 crash recovery[2m > [22m[2mtest_F_MOD_000_running_drafts_paused_on_startup
+[22m[39mCrash recovery: 1 RUNNING draft(s) set to PAUSED
+
+[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m[33m[39m[32m·[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m43 passed[39m[22m[90m (44)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m442 passed[39m[22m[90m (444)[39m
+[2m   Start at [22m 12:23:54
+[2m   Duration [22m 209.44s[2m (tests 95%, import 4%, environment 1%)[22m
+
+JUNIT report written to /Users/ken/projects/Draft/test-results/junit.xml

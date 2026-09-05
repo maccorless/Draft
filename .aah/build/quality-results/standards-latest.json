@@ -30,8 +30,8 @@
     "status": "not_applicable"
   },
   "findings": {
-    "linting": "[{\"filePath\":\"/Users/ken/Development/projects/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/ken/Development/projects/Draft/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n",
-    "static_analysis": "[{\"filePath\":\"/Users/ken/Development/projects/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/ken/Development/projects/Draft/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n"
+    "linting": "[{\"filePath\":\"/Users/ken/projects/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/ken/projects/Draft/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n",
+    "static_analysis": "[{\"filePath\":\"/Users/ken/projects/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/ken/projects/Draft/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n"
   },
   "commands": {
     "linting": "npx eslint . --format=json",
@@ -41,8 +41,8 @@
     "schema_version": 2,
     "rel_path": ".",
     "branch": "main",
-    "commit_sha": "e7f9e5d1451a3cc96d55dd1783b6a03f0616fb6380ca4d764aca47e2a3cbca02",
-    "head_sha": "0ef91f67eb13078694e1aedb25431c21e6722b62",
+    "commit_sha": "ff03074ad98249b283f481b2404bc59278fd57f2294787b8972f7ebc66c9c533",
+    "head_sha": "69cd670c386e7dd23b7fc42f091ecf62ac063406",
     "clean": true
   },
   "schema_version": 1,
@@ -54,18 +54,18 @@
       "core.build.quality_checks",
       "run-project",
       "--project-path",
-      "/Users/ken/Development/projects/Draft",
+      "/Users/ken/projects/Draft",
       "--subject-branch",
       "main"
     ],
     "exit_code": 0,
-    "stdout_sha256": "02a124a8d75a6178bd34bb0338e9e2500e17c89fa5e13f7fc7f27c01bea5db8b",
+    "stdout_sha256": "aa23ff37c6ef6481b26652acfeca4aafcd832a10092624130a9aed97fba9af18",
     "stderr_sha256": "ff32ec3a23f166bdb07394c8081890b535cde4ee85661ab34b6ea75c00ee821c",
-    "duration_ms": 1247,
-    "host_pid": 26031,
-    "timestamp": "2026-09-05T12:27:21.569349+00:00",
+    "duration_ms": 563,
+    "host_pid": 90622,
+    "timestamp": "2026-09-05T17:33:36.911392+00:00",
     "session_secret_sha256": "eee7cb01daa080a785e232ce38366fecd5ad00f59f78a65c8acfc85fe195a36b",
     "schema_version": 1,
-    "signature": "5bb8cc1f8c6f0a376a2e9e45072b5965bdd8824c3aab443b8323117f6eaf5544"
+    "signature": "ae6b74dea76c36fe7b4c656f4565d39b68b9af98f5f4198e979f30aaa482a594"
   }
 }
