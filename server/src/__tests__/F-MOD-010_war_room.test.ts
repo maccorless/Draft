@@ -246,7 +246,7 @@ describe.skipIf(SKIP_DB)('F-MOD-010 War Room read endpoints', () => {
     expect(alpha.remaining_budget_minor).toBe(20000);
     expect(alpha.control_mode).toBe('MANUAL');
     const qbSlot = alpha.slots.find((s) => s.position === 'QB')!;
-    expect(qbSlot).toEqual({ position: 'QB', is_starter: true, filled: 0, total: 1 });
+    expect(qbSlot).toEqual({ position: 'QB', is_starter: true, filled: 0, total: 1, players: [] });
     // required_remaining_spots at draft start = total roster spots (QB 1 + RB 2 + BN 6 = 9)
     // -> max legal bid = budget - (9-1)*100
     expect(alpha.max_legal_bid_minor).toBe(20000 - 800);

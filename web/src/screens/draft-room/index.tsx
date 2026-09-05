@@ -38,11 +38,17 @@ interface DraftConfig {
   auction: { initial_budget_minor: number; min_bid_minor: number } | null;
 }
 
+interface GridSlotPlayer {
+  name: string;
+  price_minor: number;
+}
+
 interface GridSlot {
   position: string;
   is_starter: boolean;
   filled: number;
   total: number;
+  players: GridSlotPlayer[];
 }
 
 interface GridTeam {
@@ -222,6 +228,12 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
       total: bench.reduce((sum, s) => sum + s.total, 0),
     };
   }, [myGridTeam]);
+  // UF-17-04: bench player identity/price is aggregated across every bench
+  // slot definition the same way myBenchSummary aggregates counts.
+  const myBenchPlayers = useMemo(
+    () => (myGridTeam?.slots ?? []).filter((s) => !s.is_starter).flatMap((s) => s.players),
+    [myGridTeam],
+  );
 
   const auction = ws.currentAuction;
   // Neither leading_team_id (the nominator leads at the opening price from
@@ -478,11 +490,39 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   >
                     <span className="draft-room__roster-slot-position">{slot.position}</span>
                     <span className="draft-room__roster-slot-count">{slot.filled}/{slot.total}</span>
+                    {slot.players.length > 0 && (
+                      <ul className="draft-room__roster-slot-players">
+                        {slot.players.map((player, i) => (
+                          <li
+                            key={`${slot.position}-${i}`}
+                            className="draft-room__roster-slot-player"
+                            data-testid={`roster-slot-${slot.position}-player-${i}`}
+                          >
+                            <span className="draft-room__roster-slot-player-name">{player.name}</span>
+                            <span className="draft-room__roster-slot-player-price">{formatMoney(player.price_minor)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 ))}
                 <li className="draft-room__roster-slot" data-testid="roster-slot-bench">
                   <span className="draft-room__roster-slot-position">Bench</span>
                   <span className="draft-room__roster-slot-count">{myBenchSummary.filled}/{myBenchSummary.total}</span>
+                  {myBenchPlayers.length > 0 && (
+                    <ul className="draft-room__roster-slot-players">
+                      {myBenchPlayers.map((player, i) => (
+                        <li
+                          key={`bench-${i}`}
+                          className="draft-room__roster-slot-player"
+                          data-testid={`roster-slot-bench-player-${i}`}
+                        >
+                          <span className="draft-room__roster-slot-player-name">{player.name}</span>
+                          <span className="draft-room__roster-slot-player-price">{formatMoney(player.price_minor)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </li>
               </ul>
             </div>

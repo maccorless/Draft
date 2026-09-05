@@ -135,6 +135,35 @@ export async function registerWarRoomRoutes(
         filledByTeamSlot.set(`${r.team_id}:${r.roster_slot_id}`, r.n);
       }
 
+      // UF-17-04: per-slot player identity + price paid, reusing the same
+      // acquisitions/players join reports.ts already computes for the
+      // post-draft summary — now exposed live for the roster sidebar.
+      const filledPlayerRows = await sql<Array<{
+        team_id: string;
+        roster_slot_id: string;
+        player_name: string;
+        price_minor: number;
+      }>>`
+        SELECT
+          re.team_id,
+          re.roster_slot_id,
+          p.name AS player_name,
+          a.price_minor
+        FROM roster_entries re
+        JOIN acquisitions a ON a.id = re.acquisition_id
+        JOIN player_auctions pa ON pa.id = a.player_auction_id
+        JOIN players p ON p.id = pa.dataset_player_id
+        WHERE re.draft_id = ${draft.id} AND re.active = true
+        ORDER BY a.resolution_sequence ASC
+      `;
+      const playersByTeamSlot = new Map<string, Array<{ name: string; price_minor: number }>>();
+      for (const r of filledPlayerRows) {
+        const key = `${r.team_id}:${r.roster_slot_id}`;
+        const list = playersByTeamSlot.get(key) ?? [];
+        list.push({ name: r.player_name, price_minor: r.price_minor });
+        playersByTeamSlot.set(key, list);
+      }
+
       const teams = teamRows.map((team) => {
         const state = stateByTeam.get(team.id);
         const remainingBudgetMinor = state?.remaining_budget_minor ?? 0;
@@ -145,6 +174,7 @@ export async function registerWarRoomRoutes(
           is_starter: slot.is_starter,
           filled: filledByTeamSlot.get(`${team.id}:${slot.id}`) ?? 0,
           total: slot.slot_count,
+          players: playersByTeamSlot.get(`${team.id}:${slot.id}`) ?? [],
         }));
 
         return {

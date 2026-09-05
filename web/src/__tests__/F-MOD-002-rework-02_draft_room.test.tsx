@@ -41,10 +41,10 @@ const rosterGridFixture = [
     roster_filled_count: 1,
     control_mode: 'MANUAL',
     slots: [
-      { position: 'QB', is_starter: true, filled: 1, total: 1 },
-      { position: 'RB', is_starter: true, filled: 0, total: 2 },
-      { position: 'WR', is_starter: true, filled: 0, total: 2 },
-      { position: 'BN', is_starter: false, filled: 0, total: 6 },
+      { position: 'QB', is_starter: true, filled: 1, total: 1, players: [{ name: 'Josh Allen', price_minor: 4200 }] },
+      { position: 'RB', is_starter: true, filled: 0, total: 2, players: [] },
+      { position: 'WR', is_starter: true, filled: 0, total: 2, players: [] },
+      { position: 'BN', is_starter: false, filled: 0, total: 6, players: [] },
     ],
   },
   { team_id: 't2', team_name: 'Beta', icon_url: null, remaining_budget_minor: 20000, max_legal_bid_minor: 20000, roster_filled_count: 0, control_mode: 'MANUAL', slots: [] },
@@ -319,5 +319,66 @@ describe('F-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5
     });
 
     await waitFor(() => expect(screen.getByTestId('roster-slot-RB').textContent).toContain('1/2'));
+  });
+
+  // ── F-MOD-002-rework-03: My Roster shows player name + price paid ──
+  // UF-17-04: fill counts alone ("QB 1/1") don't say WHO was drafted or WHAT
+  // they cost — the roster-grid now carries that per slot; the panel must
+  // render it.
+
+  it('test_F_MOD_002_rework_03_filled_slot_shows_player_name_and_price_paid', async () => {
+    await renderDraftRoom();
+    await waitFor(() => expect(screen.getByTestId('my-roster')).toBeTruthy());
+
+    const qbSlot = screen.getByTestId('roster-slot-QB');
+    expect(qbSlot.textContent).toContain('Josh Allen');
+    expect(qbSlot.textContent).toContain('$42');
+  });
+
+  it('test_F_MOD_002_rework_03_open_slot_shows_no_player_or_price', async () => {
+    await renderDraftRoom();
+    await waitFor(() => expect(screen.getByTestId('my-roster')).toBeTruthy());
+
+    // RB is 0/2 in the fixture — an unfilled slot must render no player identity.
+    const rbSlot = screen.getByTestId('roster-slot-RB');
+    expect(rbSlot.textContent).not.toContain('$');
+  });
+
+  it('test_F_MOD_002_rework_03_newly_filled_slot_shows_player_and_price_on_PLAYER_AWARDED_without_reload', async () => {
+    const ws = await renderDraftRoom();
+    nominateJustinJefferson(ws);
+    await waitFor(() => expect(screen.getByTestId('active-player-name')).toBeTruthy());
+
+    const updatedGrid = rosterGridFixture.map((t) =>
+      t.team_id === 't1'
+        ? {
+            ...t,
+            slots: t.slots.map((s) =>
+              s.position === 'RB'
+                ? { ...s, filled: 1, players: [{ name: 'Justin Jefferson', price_minor: 1200 }] }
+                : s,
+            ),
+          }
+        : t,
+    );
+    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation((url: string) => {
+      if (url.endsWith('/roster-grid')) return jsonResponse(200, { teams: updatedGrid });
+      if (url.endsWith('/config')) return jsonResponse(200, { roster: null, roster_slots: [], auction: { initial_budget_minor: 20000, min_bid_minor: 100 } });
+      if (url.endsWith('/players')) return jsonResponse(200, { players: playersFixture });
+      if (url.endsWith('/target-values')) return jsonResponse(200, { targets: [] });
+      return jsonResponse(404, {});
+    });
+
+    ws.push({
+      type: 'PLAYER_AWARDED',
+      payload: {
+        player_auction_id: 'pa-1', player_name: 'Justin Jefferson', winning_team_id: 't2',
+        price_minor: 1200, roster_slot: 'WR', resolution_sequence: 1,
+        accepted_bid_count: 1, unique_bidder_count: 1, aav_minor: 5000, remaining_budget_minor: 18800,
+      },
+    });
+
+    await waitFor(() => expect(screen.getByTestId('roster-slot-RB').textContent).toContain('Justin Jefferson'));
+    expect(screen.getByTestId('roster-slot-RB').textContent).toContain('$12');
   });
 });

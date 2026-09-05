@@ -1282,4 +1282,73 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     ws1.close();
     ws2.close();
   }, 15000);
+
+  // ── F-MOD-002-rework-03: roster-grid exposes player identity + price per slot ──
+  // UF-17-04: My Roster only showed fill counts (e.g. "QB 1/1") — the grid must
+  // also carry, per filled slot, the acquired player's name and price paid,
+  // reusing the same acquisitions/players join reports.ts already does.
+
+  it('test_F_MOD_002_rework_03_roster_grid_exposes_player_name_and_price_for_filled_slot', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    const [nom1] = await Promise.all([
+      waitForMessage(ws1, 4000),
+      waitForMessage(ws2, 4000),
+      Promise.resolve().then(() =>
+        ws1.send(JSON.stringify({
+          type: 'NOMINATE_COMMAND',
+          payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+        })),
+      ),
+    ]);
+    const auctionId = String(nom1.payload?.['player_auction_id'] ?? '');
+
+    await sql`
+      UPDATE player_auctions
+      SET rebid_deadline = NOW() - INTERVAL '2 seconds'
+      WHERE id = ${auctionId}
+    `;
+
+    const [award1, award2] = await Promise.all([
+      waitForMessage(ws1, 4000),
+      waitForMessage(ws2, 4000),
+    ]);
+    expect(award1.type).toBe('PLAYER_AWARDED');
+    expect(award2.type).toBe('PLAYER_AWARDED');
+
+    // An award always advances the nomination turn (own transaction, right after
+    // the PLAYER_AWARDED broadcast) — drain it immediately so a later `await`
+    // (the roster-grid GET below) doesn't leave the message unregistered and lost.
+    await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
+
+    const gridRes = await server.inject({
+      method: 'GET',
+      url: `/drafts/${draftId}/roster-grid`,
+      headers: { authorization: `Bearer ${team1Token}` },
+    });
+    expect(gridRes.statusCode).toBe(200);
+    const grid = gridRes.json<{
+      teams: Array<{
+        team_id: string;
+        slots: Array<{ position: string; filled: number; total: number; players: Array<{ name: string; price_minor: number }> }>;
+      }>;
+    }>();
+    const alpha = grid.teams.find((t) => t.team_id === team1Id)!;
+    const qbSlot = alpha.slots.find((s) => s.position === 'QB')!;
+    expect(qbSlot.filled).toBe(1);
+    expect(qbSlot.players).toEqual([{ name: 'F002-Josh-Allen', price_minor: 100 }]);
+
+    // Unfilled slots carry no player/price.
+    const rbSlot = alpha.slots.find((s) => s.position === 'RB')!;
+    expect(rbSlot.filled).toBe(0);
+    expect(rbSlot.players).toEqual([]);
+
+    ws1.close();
+    ws2.close();
+  }, 10000);
 });
