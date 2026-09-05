@@ -18,3 +18,5 @@ Error: connect ECONNREFUSED 127.0.0.1:3000
     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
 11:11:38 AM [vite] (client) hmr update /src/screens/lobby/index.tsx
 11:11:41 AM [vite] (client) hmr update /src/screens/lobby/index.tsx
+11:11:49 AM [vite] (client) hmr update /src/screens/lobby/index.tsx
+11:12:00 AM [vite] (client) hmr update /src/screens/lobby/index.tsx
