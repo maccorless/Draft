@@ -6,8 +6,20 @@ feedback_details: |
   Bug found during hands-on browser review of F-MOD-011-rework-01 (Start Now control) while running a manual mock draft: the commissioner cannot set a team's control mode (MANUAL/AUTO_AGENT) before the draft is started. Root cause: PATCH /drafts/:draftId/teams/:teamId/control-mode calls setControlMode() (server/src/auction/auto-agent.ts, ~lines 34-65), which does `UPDATE draft_team_states SET control_mode = ... WHERE draft_id = ... AND team_id = ...` and silently returns if zero rows match ("no state row — draft may not be started"). draft_team_states rows are only created inside POST /drafts/:draftId/start (server/src/auction/routes.ts). So toggling a team to AUTO_AGENT while the draft is still CREATED is a complete no-op server-side — but the PATCH endpoint still replies 200 with {team_id, control_mode: mode} as if it succeeded, and GET /drafts/:draftId/roster-grid (server/src/draft/war-room.ts, control_mode: state?.control_mode ?? 'MANUAL') always falls back to displaying 'MANUAL' when no state row exists, so the commissioner UI (web/src/screens/commissioner/DraftControl.tsx Team Control Mode grid) silently shows the toggle reverting with no error. Expected: the commissioner should be able to set each team's control mode (MANUAL/AUTO_AGENT) at any time before or after the draft starts, and that choice should be honored when DraftTeamState rows are created at start (POST /drafts/:draftId/start already reads existing state only if present — it should seed control_mode from any pre-start choice rather than hardcoding 'MANUAL'). The PATCH endpoint must never return a 200 success response for a write that didn't actually happen. Reproduced live: 12 PATCH /control-mode calls all returned HTTP 200, but the DB had zero draft_team_states rows (draft was still CREATED) so nothing persisted.
 steps:
 - phase: plan
-  completed_at: null
+  input: >
+    Fix setControlMode() to upsert DraftTeamState instead of a bare UPDATE
+    that silently no-ops pre-start (F-MOD-004, built and promoted, wave 10).
   affected_modules:
   - auto-agent
   blast_radius_features: []
+  output: >
+    Case A (implemented feature) rework. Edited F-MOD-004.md in place: added
+    a "Pre-start control-mode setting" paragraph to the Description and a new
+    behavioral expectation (control-mode set before draft start creates a
+    DraftTeamState row and persists through /start). Created superseding
+    entry F-MOD-004-rework-01.md via core.plan.create_rework_entry, placed in
+    wave 17. feature-list.json and dag.json regenerated. Committed as 7054623.
+  affected_features:
+  - F-MOD-004-rework-01
+  completed_at: "2026-09-05T14:50:00Z"
 status: in_progress
