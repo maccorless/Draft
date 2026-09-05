@@ -1562,7 +1562,7 @@
       "passes": true
     },
     {
-      "status": "pending",
+      "status": "in_progress",
       "id": "F-MOD-011-rework-01",
       "title": "Commissioner Draft Control Live-Operation UI",
       "module_ref": "MOD-011",

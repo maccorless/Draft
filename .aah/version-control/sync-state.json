@@ -491,6 +491,14 @@
       },
       "last_seen_comment_id": 0,
       "remote_updated_at": "2026-09-05T12:26:43Z"
+    },
+    "F-MOD-011-rework-01": {
+      "remote_ref": {
+        "number": 13,
+        "node_id": "I_kwDOUI9K_M8AAAABPr8ITQ",
+        "url": "https://github.com/maccorless/Draft/issues/13"
+      },
+      "base": {}
     }
   }
 }
