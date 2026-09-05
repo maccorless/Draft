@@ -472,7 +472,7 @@
       "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-002-rework-03",
       "title": "Live Auction Engine with Bid Pipeline",
       "module_ref": "MOD-002",
@@ -587,10 +587,10 @@
         "F-MOD-002"
       ],
       "spec_file": "F-MOD-002.md",
-      "passes": false
+      "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-002-rework-04",
       "title": "Live Auction Engine with Bid Pipeline",
       "module_ref": "MOD-002",
@@ -705,7 +705,7 @@
         "F-MOD-002"
       ],
       "spec_file": "F-MOD-002.md",
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -1044,10 +1044,10 @@
         "F-MOD-004"
       ],
       "spec_file": "F-MOD-004.md",
-      "passes": false
+      "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-004-rework-02",
       "title": "Auto-Agent Mode for Disconnected Teams",
       "module_ref": "MOD-004",
@@ -1161,10 +1161,10 @@
         "F-MOD-004"
       ],
       "spec_file": "F-MOD-004.md",
-      "passes": false
+      "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-004-rework-03",
       "title": "Auto-Agent Mode for Disconnected Teams",
       "module_ref": "MOD-004",
@@ -1278,7 +1278,7 @@
         "F-MOD-004"
       ],
       "spec_file": "F-MOD-004.md",
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
@@ -2005,7 +2005,7 @@
       "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-011-rework-02",
       "title": "Commissioner Draft Control Live-Operation UI",
       "module_ref": "MOD-011",
@@ -2031,7 +2031,7 @@
         "F-MOD-011"
       ],
       "spec_file": "F-MOD-011.md",
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
