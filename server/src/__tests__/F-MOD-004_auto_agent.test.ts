@@ -1085,4 +1085,46 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
     expect(ceiling!).toBeGreaterThan(0);
     expect(ceiling!).toBeLessThan(20000); // nowhere near the flat-budget-fraction magnitude
   }, 10000);
+
+  // ─── Test: full-roster AUTO_AGENT team excluded from bid-trigger (rework-03) ──
+  // UF-17-06 / F-MOD-004-rework-03: a full-roster team must be excluded from
+  // the bid-trigger query entirely — no BID_ABSOLUTE enqueued, regardless of
+  // remaining budget or willingness ceiling. Budget is left untouched (20000)
+  // and required_remaining_spots forced to 0 to isolate this from the
+  // willingness-ceiling check already covered by test 7 above.
+
+  it('test_F_MOD_004_rework_03_full_roster_team_excluded_from_bid_trigger', async () => {
+    const { draftId, team2Id, team1Token, playerEntryId } = await setupDraft();
+
+    await setControlMode(draftId, team2Id, 'AUTO_AGENT', 'test', sql);
+    // Simulate a completed roster: every starter + bench slot already filled.
+    // Budget is left at its full initial value so a would-be bid would
+    // otherwise clear both the willingness ceiling and max_legal_bid checks —
+    // only the roster-full exclusion should be what stops it.
+    await sql`
+      UPDATE draft_team_states SET required_remaining_spots = 0
+      WHERE draft_id = ${draftId} AND team_id = ${team2Id}
+    `;
+
+    const { ws: ws1 } = await connectAndAuth(port, draftId, team1Token);
+
+    const nominationPromise = waitForMessage(ws1, (m) => m.type === 'NOMINATION_STARTED', 5000);
+    ws1.send(JSON.stringify({
+      type: 'NOMINATE_COMMAND',
+      payload: { player_dataset_entry_id: playerEntryId, opening_bid_minor: 100 },
+    }));
+    await nominationPromise;
+
+    // Give the auto-agent trigger path time to run (it would otherwise have
+    // enqueued a bid quickly, per test 5's timing).
+    await sleep(500);
+
+    const bidAttempts = await sql<[{ accepted: boolean; team_id: string }]>`
+      SELECT accepted, team_id FROM bid_attempts
+      WHERE draft_id = ${draftId} AND team_id = ${team2Id}
+    `;
+    expect(bidAttempts.length).toBe(0);
+
+    ws1.close();
+  }, 15000);
 });

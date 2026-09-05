@@ -469,6 +469,7 @@ export async function triggerAutoAgentBidsOnNomination(
     WHERE dts.draft_id = ${draftId}
       AND dts.control_mode = 'AUTO_AGENT'
       AND dts.team_id != ${nominatorTeamId}
+      AND dts.required_remaining_spots > 0
       AND NOT EXISTS (
         SELECT 1 FROM do_not_draft_items ddi
         WHERE ddi.draft_id = dts.draft_id
@@ -525,6 +526,7 @@ export async function triggerAutoAgentBidsOnLeaderChange(
     WHERE dts.draft_id = ${draftId}
       AND dts.control_mode = 'AUTO_AGENT'
       AND dts.team_id != ${newLeaderTeamId}
+      AND dts.required_remaining_spots > 0
       AND NOT EXISTS (
         SELECT 1 FROM do_not_draft_items ddi
         WHERE ddi.draft_id = dts.draft_id
