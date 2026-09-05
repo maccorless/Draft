@@ -4,14 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project State
 
-Pre-implementation. This repo currently contains only design documents; there is no code, build system, or test suite yet. Read the design docs before proposing or writing any code:
+Built and promoted to `develop` (server/web/shared-types monorepo, Postgres schema via Drizzle, 9 migrations applied). Read the design docs before proposing or writing any auction/draft behavior — they remain the authoritative spec even though the code now exists:
 
-- `PRD.md` — full product requirements (the authoritative spec)
-- `data-model.md` — full domain/data model: entity schemas by bounded context, Mermaid ERD, and a critical-invariants checklist (section 21) that any implementation must satisfy
-- `state-machine-flows.md` — agent-consumable behavioral spec: state machines, bid decision flow, event types, and a recommended implementation order (section 20)
-- `screen-information-architecture.md` — UX/IA spec for each screen
-- `DataModel.png` — data model diagram (rendered image of the model in `data-model.md`)
-- `BUILD_PLAN.md` — chosen stack, phased build sequence, and which phases are core/sequential vs. safe to parallelize across agents
+- `knowledge/PRD.md` — full product requirements (the authoritative spec)
+- `knowledge/data-model.md` — full domain/data model: entity schemas by bounded context, Mermaid ERD, and a critical-invariants checklist (section 21) that any implementation must satisfy
+- `knowledge/state-machine-flows.md` — agent-consumable behavioral spec: state machines, bid decision flow, event types, and a recommended implementation order (section 20)
+- `knowledge/screen-information-architecture.md` — UX/IA spec for each screen
+- `knowledge/BUILD_PLAN.md` — chosen stack, phased build sequence, and which phases are core/sequential vs. safe to parallelize across agents
 
 ## What This Is
 
@@ -56,9 +55,31 @@ Node + TypeScript (Fastify) backend, plain `ws` WebSockets with a sequence-numbe
 
 Follow `BUILD_PLAN.md` phase by phase, in order: 0 Scaffold+Protocol → 1 Auth+Config → 2a Dataset+CSV adapter → 3 Auction Core (nomination + PlayerAuction FSM + bid atomicity + resolution/ledger/roster + command serialization + crash recovery, kept as one phase deliberately) → 4 Session/Reconnect+Multi-Draft → 5 Auto-Agent → 7 Corrections/Rollback. These share one authoritative state machine and one command-serialization model and must be built as one continuous effort, not fanned out to parallel agents. Phases 2b, 6, 8, 9, and the frontend screens are **parallelizable** once the core API/schema is frozen and tested. Each core phase should pass its relevant `PRD.md` §44 acceptance scenarios and `data-model.md` §21 invariants before starting the next.
 
-## When Code Exists
+## Commands
 
-Update this file with actual build, test, and lint commands once Phase 0 (scaffold) lands. None exist yet; do not assume any.
+```bash
+npm install                      # root workspace install (server, web, shared-types)
+cp .env.example .env             # then fill in DATABASE_URL, JWT_SECRET, NODE_ENV
+
+# Backend — bare `npm run dev` will NOT load .env; env-check.cjs only validates
+# process.env, it never populates it. Launch with Node's --env-file flag:
+( cd server && node --env-file=../.env ../node_modules/.bin/tsx watch src/main.ts )
+
+# Frontend (reads the same repo-root .env via vite.config.ts's envDir/loadEnv)
+( cd web && npm run dev )        # http://localhost:5173, proxies /api,/ws,etc. to PORT (default 3000)
+
+npm run db:migrate --workspace server   # apply drizzle migrations
+npm run db:seed --workspace server      # seed a dev league (see server/db/seed-data.ts for credentials)
+
+npm test                          # vitest run, whole workspace
+npm run typecheck                 # tsc --noEmit, whole workspace
+npm run build                     # tsc + vite build, whole workspace
+```
+
+## Local Dev Gotchas
+
+- **`web/src/App.tsx`'s `DevIdentityPicker`** (dev-only one-click sign-in as Commissioner or any team) has hardcoded passwords that must exactly match `server/db/seed-data.ts`'s constants (`SITE_PASSWORD`, `COMMISSIONER_PASSWORD`, `TEAM_PASSWORD`). If either changes independently, dev login breaks silently with no obvious error.
+- **On restart, a `RUNNING` draft always comes back `PAUSED`** (see constraint 4 above) — don't mistake this for a bug during manual/dogfood testing.
 
 ### Auth hook convention (`server/src/league/auth-hook.ts`)
 
