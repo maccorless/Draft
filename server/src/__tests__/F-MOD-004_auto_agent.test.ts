@@ -176,7 +176,8 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
 
   // ─── Draft setup helper (same pattern as F-MOD-003) ────────────────────────
 
-  async function setupDraft(): Promise<DraftSetup> {
+  async function setupDraft(opts: { start?: boolean } = {}): Promise<DraftSetup> {
+    const start = opts.start ?? true;
     const tag = Date.now();
 
     const leagueRes = await server.inject({
@@ -258,10 +259,12 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
     });
     const draftId = draftRes.json<{ id: string }>().id;
 
-    await server.inject({
-      method: 'POST', url: `/drafts/${draftId}/start`,
-      headers: { authorization: `Bearer ${commToken}` },
-    });
+    if (start) {
+      await server.inject({
+        method: 'POST', url: `/drafts/${draftId}/start`,
+        headers: { authorization: `Bearer ${commToken}` },
+      });
+    }
 
     return { leagueId, team1Id, team2Id, draftId, commToken, team1Token, team2Token, playerEntryId };
   }
@@ -844,4 +847,67 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
     // bid count should not have increased after PLAYER_AWARDED
     expect(Number(bidsAfter[0]?.count ?? 0)).toBe(countBefore);
   }, 25000);
+
+  // ─── Test 16 (F-MOD-004-rework-01): control mode set before draft start persists ─
+
+  it('test_F_MOD_004_rework_01_control_mode_set_before_draft_start_persists', async () => {
+    const { draftId, team1Id, team1Token, commToken } = await setupDraft({ start: false });
+
+    // Draft is still CREATED — no DraftTeamState row exists for team1 yet.
+    const before = await sql<[{ control_mode: string } | undefined]>`
+      SELECT control_mode FROM draft_team_states
+      WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+    expect(before[0]).toBeUndefined();
+
+    // Owner sets AUTO_AGENT before the draft has started.
+    const patchRes = await server.inject({
+      method: 'PATCH',
+      url: `/drafts/${draftId}/teams/${team1Id}/control-mode`,
+      headers: { authorization: `Bearer ${team1Token}` },
+      payload: { mode: 'AUTO_AGENT' },
+    });
+    expect(patchRes.statusCode).toBe(200);
+    expect(patchRes.json<{ control_mode: string }>().control_mode).toBe('AUTO_AGENT');
+
+    // A DraftTeamState row must now exist, seeded from auction/roster config, with
+    // control_mode = AUTO_AGENT — not a silent no-op.
+    const afterPatch = await sql<[{ control_mode: string; remaining_budget_minor: number }]>`
+      SELECT control_mode, remaining_budget_minor FROM draft_team_states
+      WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+    expect(afterPatch[0]?.control_mode).toBe('AUTO_AGENT');
+    expect(afterPatch[0]?.remaining_budget_minor).toBe(20000);
+
+    // A TEAM_AUTO_AGENT_ENABLED DraftEvent was appended.
+    const evRows = await sql<[{ event_type: string }]>`
+      SELECT event_type FROM draft_events
+      WHERE draft_id = ${draftId} AND event_type = 'TEAM_AUTO_AGENT_ENABLED' AND team_id = ${team1Id}
+    `;
+    expect(evRows.length).toBeGreaterThan(0);
+
+    // GET /roster-grid reflects AUTO_AGENT, not the no-row MANUAL default.
+    const gridRes = await server.inject({
+      method: 'GET',
+      url: `/drafts/${draftId}/roster-grid`,
+      headers: { authorization: `Bearer ${commToken}` },
+    });
+    expect(gridRes.statusCode).toBe(200);
+    const grid = gridRes.json<{ teams: Array<{ team_id: string; control_mode: string }> }>();
+    const team1Grid = grid.teams.find((t) => t.team_id === team1Id);
+    expect(team1Grid?.control_mode).toBe('AUTO_AGENT');
+
+    // Starting the draft afterward must NOT reset control_mode back to MANUAL.
+    const startRes = await server.inject({
+      method: 'POST', url: `/drafts/${draftId}/start`,
+      headers: { authorization: `Bearer ${commToken}` },
+    });
+    expect(startRes.statusCode).toBe(200);
+
+    const afterStart = await sql<[{ control_mode: string }]>`
+      SELECT control_mode FROM draft_team_states
+      WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+    expect(afterStart[0]?.control_mode).toBe('AUTO_AGENT');
+  }, 15000);
 });

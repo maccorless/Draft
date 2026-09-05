@@ -28,8 +28,10 @@ async function nextDraftEventSequence(
 
 /**
  * Transition a team's control_mode.
- * Atomically updates draft_team_states, appends a DraftEvent, then broadcasts.
- * If the team's draft state doesn't exist, does nothing (graceful no-op).
+ * Atomically upserts draft_team_states (creating a pre-start row, seeded from the
+ * draft's auction/roster configuration, if none exists yet — a bare UPDATE would
+ * silently match zero rows and no-op for a draft that hasn't started), appends a
+ * DraftEvent, then broadcasts. Never returns success without persisting a change.
  */
 export async function setControlMode(
   draftId: string,
@@ -40,29 +42,54 @@ export async function setControlMode(
 ): Promise<void> {
   const eventType = mode === 'AUTO_AGENT' ? 'TEAM_AUTO_AGENT_ENABLED' : 'TEAM_AUTO_AGENT_DISABLED';
 
-  try {
-    await sql.begin(async (tx) => {
-      const updated = await tx<Array<{ id: string }>>`
-        UPDATE draft_team_states
-        SET control_mode = ${mode}
-        WHERE draft_id = ${draftId} AND team_id = ${teamId}
-        RETURNING id
-      `;
-      if (updated.length === 0) return; // no state row — draft may not be started
+  await sql.begin(async (tx) => {
+    const updated = await tx<Array<{ id: string }>>`
+      UPDATE draft_team_states
+      SET control_mode = ${mode}
+      WHERE draft_id = ${draftId} AND team_id = ${teamId}
+      RETURNING id
+    `;
 
-      const seq = await nextDraftEventSequence(tx, draftId);
-      await tx`
-        INSERT INTO draft_events
-          (draft_id, sequence, event_type, team_id, payload, created_at)
-        VALUES
-          (${draftId}, ${seq}, ${eventType}, ${teamId},
-           ${JSON.stringify({ triggered_by: triggeredBy })}::jsonb, NOW())
+    if (updated.length === 0) {
+      // No DraftTeamState row yet — the draft hasn't started (POST /start normally
+      // creates one per team). Upsert one now, seeded the same way /start does, so
+      // the control-mode choice isn't lost and /start won't reset it later.
+      const [draftRow] = await tx<[{ league_id: string } | undefined]>`
+        SELECT league_id FROM drafts WHERE id = ${draftId} LIMIT 1
       `;
-    });
-  } catch (err) {
-    console.error(`[auto-agent] setControlMode failed (${mode}, ${triggeredBy}):`, err);
-    return;
-  }
+      if (!draftRow) throw new Error(`setControlMode: draft ${draftId} not found`);
+
+      const [cfg] = await tx<[{ initial_budget_minor: number } | undefined]>`
+        SELECT initial_budget_minor FROM auction_configurations
+        WHERE league_id = ${draftRow.league_id} LIMIT 1
+      `;
+      const [rosterCfg] = await tx<[{ total_roster_size: number } | undefined]>`
+        SELECT total_roster_size FROM roster_configurations
+        WHERE league_id = ${draftRow.league_id} LIMIT 1
+      `;
+      const initialBudgetMinor = cfg?.initial_budget_minor ?? 0;
+      const totalRosterSize = rosterCfg?.total_roster_size ?? 0;
+
+      // No unique constraint on (draft_id, team_id) — mirror the same select-then-insert
+      // pattern POST /start already uses, inside this transaction for atomicity.
+      await tx`
+        INSERT INTO draft_team_states
+          (draft_id, team_id, remaining_budget_minor, roster_filled_count,
+           required_remaining_spots, control_mode)
+        VALUES
+          (${draftId}, ${teamId}, ${initialBudgetMinor}, 0, ${totalRosterSize}, ${mode})
+      `;
+    }
+
+    const seq = await nextDraftEventSequence(tx, draftId);
+    await tx`
+      INSERT INTO draft_events
+        (draft_id, sequence, event_type, team_id, payload, created_at)
+      VALUES
+        (${draftId}, ${seq}, ${eventType}, ${teamId},
+         ${JSON.stringify({ triggered_by: triggeredBy })}::jsonb, NOW())
+    `;
+  });
 
   broadcast(draftId, {
     type: eventType,
