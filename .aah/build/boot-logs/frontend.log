@@ -6,7 +6,7 @@
   - `__dirname` (vite.config.ts:11:33). Use `import.meta.dirname` instead
 Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
-  VITE v8.2.2  ready in 152 ms
+  VITE v8.2.2  ready in 89 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: http://192.168.2.101:5173/  en1
