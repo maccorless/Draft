@@ -40,8 +40,9 @@
         "F-MOD-004-rework-01"
       ],
       "attempts": 1,
-      "status": "in_progress",
-      "triggered_at": "2026-09-05T14:44:13.582609+00:00"
+      "status": "completed",
+      "triggered_at": "2026-09-05T14:44:13.582609+00:00",
+      "completed_at": "2026-09-05T15:09:06.077911+00:00"
     }
   ]
 }
