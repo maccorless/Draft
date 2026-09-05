@@ -516,8 +516,8 @@
       },
       "last_seen_comment_id": 0,
       "remote_updated_at": "2026-09-05T14:08:03Z",
-      "lifecycle": "implementing",
-      "status_label": "aah:implementing"
+      "lifecycle": "done",
+      "status_label": "aah:done"
     }
   }
 }

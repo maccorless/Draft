@@ -229,7 +229,7 @@
       "feature_id": "F-MOD-011-rework-01",
       "field": "status",
       "field_class": "status",
-      "base": null,
+      "base": "implementing",
       "local": "implementing",
       "remote": "done",
       "remote_ref": {
@@ -238,7 +238,7 @@
         "url": "https://github.com/maccorless/Draft/issues/13"
       },
       "detected_at": "sync",
-      "status": "resolved"
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-011-status",

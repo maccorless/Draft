@@ -1389,7 +1389,7 @@
       "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-011-rework-01",
       "title": "Commissioner Draft Control Live-Operation UI",
       "module_ref": "MOD-011",
@@ -1413,7 +1413,7 @@
         "F-MOD-011"
       ],
       "spec_file": "F-MOD-011.md",
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
