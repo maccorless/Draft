@@ -134,6 +134,18 @@ export function DraftControl({ draftId, leagueId, token }: DraftControlProps): R
     setTimeout(() => setMessage((m) => (m === text ? null : m)), 4000);
   }
 
+  function startDraft(): void {
+    // Guard even though the button is only rendered while CREATED — keeps
+    // this a true no-op if somehow invoked outside that state (per spec).
+    if (health?.status !== 'CREATED') return;
+    authedJson(`/drafts/${draftId}/start`, token, { method: 'POST' })
+      .then(() => {
+        report('Draft started');
+        refreshHealth();
+      })
+      .catch(() => report('Failed to start draft'));
+  }
+
   function pauseDraft(): void {
     authedJson(`/drafts/${draftId}/pause`, token, { method: 'POST' })
       .then(() => report('Draft paused'))
@@ -268,6 +280,9 @@ export function DraftControl({ draftId, leagueId, token }: DraftControlProps): R
       <section className="draft-control__panel" aria-label="Draft Controls">
         <h2 className="draft-control__heading">Controls</h2>
         <div className="draft-control__buttons">
+          {health?.status === 'CREATED' && (
+            <button onClick={startDraft} data-testid="start-now-button">Start Now</button>
+          )}
           <button onClick={pauseDraft} disabled={health?.status !== 'RUNNING'}>Pause</button>
           <button onClick={resumeDraft} disabled={health?.status !== 'PAUSED'}>Resume</button>
         </div>
