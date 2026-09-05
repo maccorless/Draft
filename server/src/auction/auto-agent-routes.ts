@@ -1,6 +1,6 @@
 /**
- * Auto-Agent REST routes (F-MOD-004):
- *   PUT  /drafts/:draftId/teams/:teamId/auto-agent     — set willingness_pct
+ * Auto-Agent REST routes (F-MOD-004, per-player ceiling: F-MOD-004-rework-02):
+ *   PUT  /drafts/:draftId/teams/:teamId/auto-agent     — set AutoAgentConfiguration
  *   PATCH /drafts/:draftId/teams/:teamId/control-mode  — set MANUAL | AUTO_AGENT
  *
  * Both require a valid bearer JWT. auth_epoch is re-read from DB on every request.
@@ -9,7 +9,7 @@
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
-import { setControlMode, upsertAutoAgentConfig } from './auto-agent.js';
+import { setControlMode, upsertAutoAgentConfig, type AutoAgentConfigFields } from './auto-agent.js';
 
 interface TokenClaims {
   league_id: string;
@@ -100,34 +100,61 @@ export async function registerAutoAgentRoutes(
 ): Promise<void> {
   /**
    * PUT /drafts/:draftId/teams/:teamId/auto-agent
-   * Configure Auto-Agent willingness ceiling for a team.
-   * Body: { willingness_pct: number (0–1) }
+   * Configure the per-player AutoAgentConfiguration (F-MOD-004-rework-02):
+   * base-value source preferences, variance/over-base ceiling, bench discount,
+   * and starter prioritization. Partial update — omitted fields keep their
+   * current (or default) value. Body fields are all optional:
+   *   use_owner_target_when_customized?: boolean
+   *   fallback_to_primary_aav?: boolean
+   *   max_over_base_pct?: number        (>= 0)
+   *   random_variance_pct?: number      ([0, 1])
+   *   bench_value_pct?: number          ([0, 1])
+   *   prioritize_starters?: boolean
    */
   server.put<{
     Params: DraftTeamParams;
-    Body: { willingness_pct: number };
+    Body: Partial<AutoAgentConfigFields>;
   }>(
     '/drafts/:draftId/teams/:teamId/auto-agent',
     async (req, reply) => {
       const ctx = await requireTeamOrCommissioner(server, sql, req, reply);
       if (!ctx) return;
 
-      const { willingness_pct } = req.body;
-      if (
-        typeof willingness_pct !== 'number' ||
-        willingness_pct < 0 ||
-        willingness_pct > 1
-      ) {
-        return reply.status(400).send({
-          code: 'INVALID_PARAM',
-          message: 'willingness_pct must be a number in [0, 1]',
-        });
+      const body = req.body ?? {};
+      const numericChecks: Array<[keyof AutoAgentConfigFields, number, number]> = [
+        ['max_over_base_pct', 0, 10],
+        ['random_variance_pct', 0, 1],
+        ['bench_value_pct', 0, 1],
+      ];
+      for (const [field, min, max] of numericChecks) {
+        const value = body[field];
+        if (value === undefined) continue;
+        if (typeof value !== 'number' || Number.isNaN(value) || value < min || value > max) {
+          return reply.status(400).send({
+            code: 'INVALID_PARAM',
+            message: `${field} must be a number in [${min}, ${max}]`,
+          });
+        }
+      }
+      const booleanChecks: Array<keyof AutoAgentConfigFields> = [
+        'use_owner_target_when_customized',
+        'fallback_to_primary_aav',
+        'prioritize_starters',
+      ];
+      for (const field of booleanChecks) {
+        const value = body[field];
+        if (value !== undefined && typeof value !== 'boolean') {
+          return reply.status(400).send({
+            code: 'INVALID_PARAM',
+            message: `${field} must be a boolean`,
+          });
+        }
       }
 
       const result = await upsertAutoAgentConfig(
         req.params.draftId,
         req.params.teamId,
-        willingness_pct,
+        body,
         sql,
       );
 

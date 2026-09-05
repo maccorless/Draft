@@ -7,9 +7,16 @@
  * 3. Auto-agent bids route through the per-draft AsyncQueue (same atomicity as manual bids).
  * 4. Willingness ceiling uses live remaining_budget_minor, never a stale snapshot.
  * 5. Multi-draft isolation: every command checks draft.league_id == token.league_id.
+ *
+ * Willingness ceiling (F-MOD-004-rework-02, UF-17-05; state-machine-flows.md §11,
+ * data-model.md §10.5): computed PER PLAYER, not as a flat percentage of the team's
+ * total remaining budget. See computeAutoAgentWillingnessCeiling for the 5-step
+ * algorithm: base value (Owner Target or Primary AAV) -> stable variance -> max-
+ * over-base ceiling -> starter/bench discount -> clamp to max_legal_bid.
  */
 import postgres from 'postgres';
 import { broadcast, getOrCreateRuntime, computeMaxLegalBid, processBidCommand } from './engine.js';
+import { resolvePlayerPrimaryAav } from '../player/aav-resolution.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -116,50 +123,262 @@ export async function handleGraceExpiry(
 
 // ─── Auto-agent config ────────────────────────────────────────────────────────
 
+export interface AutoAgentConfigFields {
+  use_owner_target_when_customized: boolean;
+  fallback_to_primary_aav: boolean;
+  max_over_base_pct: number;
+  random_variance_pct: number;
+  bench_value_pct: number;
+  prioritize_starters: boolean;
+}
+
 /**
- * Upsert willingness_pct for a team's auto-agent config.
- * Returns the stored value.
+ * Sane out-of-box defaults (data-model.md §10.5) for a team that has never had
+ * its AutoAgentConfiguration explicitly set — AAV-anchored, not a flat
+ * percentage of total budget.
+ */
+export const DEFAULT_AUTO_AGENT_CONFIG: AutoAgentConfigFields = {
+  use_owner_target_when_customized: true,
+  fallback_to_primary_aav: true,
+  max_over_base_pct: 0.25,
+  random_variance_pct: 0.25,
+  bench_value_pct: 0.5,
+  prioritize_starters: true,
+};
+
+/** Fetch a team's AutoAgentConfiguration fields, defaulting when no row exists. */
+export async function getAutoAgentConfig(
+  draftId: string,
+  teamId: string,
+  sql: postgres.Sql,
+): Promise<AutoAgentConfigFields> {
+  const rows = await sql<Array<{
+    use_owner_target_when_customized: boolean;
+    fallback_to_primary_aav: boolean;
+    max_over_base_pct: string;
+    random_variance_pct: string;
+    bench_value_pct: string;
+    prioritize_starters: boolean;
+  }>>`
+    SELECT use_owner_target_when_customized, fallback_to_primary_aav,
+           max_over_base_pct, random_variance_pct, bench_value_pct, prioritize_starters
+    FROM auto_agent_configs
+    WHERE draft_id = ${draftId} AND team_id = ${teamId}
+    LIMIT 1
+  `;
+  const row = rows[0];
+  if (!row) return { ...DEFAULT_AUTO_AGENT_CONFIG };
+  return {
+    use_owner_target_when_customized: row.use_owner_target_when_customized,
+    fallback_to_primary_aav: row.fallback_to_primary_aav,
+    max_over_base_pct: parseFloat(row.max_over_base_pct),
+    random_variance_pct: parseFloat(row.random_variance_pct),
+    bench_value_pct: parseFloat(row.bench_value_pct),
+    prioritize_starters: row.prioritize_starters,
+  };
+}
+
+/**
+ * Upsert a team's AutoAgentConfiguration. Accepts a partial update (only the
+ * fields the owner sent) — merges onto the team's current stored values (or
+ * the documented defaults, for a first-time row), so `PUT` never resets fields
+ * the caller didn't mention.
  */
 export async function upsertAutoAgentConfig(
   draftId: string,
   teamId: string,
-  willingness_pct: number,
+  fields: Partial<AutoAgentConfigFields>,
   sql: postgres.Sql,
-): Promise<{ team_id: string; willingness_pct: number }> {
-  const existing = await sql<[{ id: string }]>`
+): Promise<{ team_id: string } & AutoAgentConfigFields> {
+  const existing = await sql<[{ id: string } | undefined]>`
     SELECT id FROM auto_agent_configs
     WHERE draft_id = ${draftId} AND team_id = ${teamId}
     LIMIT 1
   `;
 
-  if (existing.length > 0) {
+  const current = existing[0]
+    ? await getAutoAgentConfig(draftId, teamId, sql)
+    : DEFAULT_AUTO_AGENT_CONFIG;
+  const merged: AutoAgentConfigFields = { ...current, ...fields };
+
+  if (existing[0]) {
     await sql`
       UPDATE auto_agent_configs
-      SET willingness_pct = ${willingness_pct}
-      WHERE id = ${existing[0]!.id}
+      SET use_owner_target_when_customized = ${merged.use_owner_target_when_customized},
+          fallback_to_primary_aav = ${merged.fallback_to_primary_aav},
+          max_over_base_pct = ${merged.max_over_base_pct},
+          random_variance_pct = ${merged.random_variance_pct},
+          bench_value_pct = ${merged.bench_value_pct},
+          prioritize_starters = ${merged.prioritize_starters}
+      WHERE id = ${existing[0].id}
     `;
   } else {
     await sql`
-      INSERT INTO auto_agent_configs (draft_id, team_id, willingness_pct)
-      VALUES (${draftId}, ${teamId}, ${willingness_pct})
+      INSERT INTO auto_agent_configs
+        (draft_id, team_id, use_owner_target_when_customized, fallback_to_primary_aav,
+         max_over_base_pct, random_variance_pct, bench_value_pct, prioritize_starters)
+      VALUES
+        (${draftId}, ${teamId}, ${merged.use_owner_target_when_customized},
+         ${merged.fallback_to_primary_aav}, ${merged.max_over_base_pct},
+         ${merged.random_variance_pct}, ${merged.bench_value_pct}, ${merged.prioritize_starters})
     `;
   }
 
-  return { team_id: teamId, willingness_pct };
+  return { team_id: teamId, ...merged };
 }
 
-/** Fetch willingness_pct for a team, defaulting to 0.8 (80%). */
-async function getWillingnessPct(
+// ─── Per-player willingness ceiling ────────────────────────────────────────────
+
+/**
+ * Deterministic pseudo-random value in [0, 1) derived from a seed string.
+ * FNV-1a hash — stable across calls (no Math.random), so the variance applied
+ * to a given team+player combination doesn't change between triggers within
+ * the same draft (state-machine-flows.md §11 step 2).
+ */
+function stableUnitRandom(seed: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0) / 4294967296;
+}
+
+/** Stable variance in [-pct, +pct] for a given (draft, team, player) triple. */
+function stableVariance(draftId: string, teamId: string, playerDatasetId: string, pct: number): number {
+  const u = stableUnitRandom(`${draftId}:${teamId}:${playerDatasetId}`);
+  return (u * 2 - 1) * pct;
+}
+
+/**
+ * Whether `playerDatasetId` (a players.id) would fill one of the team's
+ * currently-unfilled starter slots, mirroring the starter-fill-state /
+ * position-matching logic in server/src/draft/war-room.ts and the
+ * assignRosterSlot starter-first assignment in engine.ts.
+ */
+async function wouldFillStarterSlot(
   draftId: string,
   teamId: string,
+  leagueId: string,
+  playerDatasetId: string,
   sql: postgres.Sql,
-): Promise<number> {
-  const rows = await sql<[{ willingness_pct: string }]>`
-    SELECT willingness_pct FROM auto_agent_configs
-    WHERE draft_id = ${draftId} AND team_id = ${teamId}
-    LIMIT 1
+): Promise<boolean> {
+  const [player] = await sql<[{ position: string } | undefined]>`
+    SELECT position FROM players WHERE id = ${playerDatasetId} LIMIT 1
   `;
-  return rows[0] ? parseFloat(rows[0].willingness_pct) : 0.8;
+  if (!player) return false;
+
+  const starterSlots = await sql<Array<{ id: string; position: string; slot_count: number }>>`
+    SELECT rsd.id, rsd.position, rsd.slot_count
+    FROM roster_slot_definitions rsd
+    JOIN roster_configurations rc ON rc.id = rsd.config_id
+    WHERE rc.league_id = ${leagueId} AND rsd.is_starter = true
+    ORDER BY rsd.priority ASC
+  `;
+  if (starterSlots.length === 0) return false;
+
+  const filledRows = await sql<Array<{ roster_slot_id: string; n: number }>>`
+    SELECT roster_slot_id, COUNT(*)::int AS n
+    FROM roster_entries
+    WHERE draft_id = ${draftId} AND team_id = ${teamId} AND active = true
+    GROUP BY roster_slot_id
+  `;
+  const filledMap = new Map<string, number>(filledRows.map((r) => [r.roster_slot_id, r.n]));
+
+  const playerPos = player.position.toUpperCase();
+  for (const slot of starterSlots) {
+    const filled = filledMap.get(slot.id) ?? 0;
+    if (filled >= slot.slot_count) continue; // slot already full
+
+    const pos = slot.position.toUpperCase();
+    if (
+      pos === playerPos ||
+      pos === 'SUPERFLEX' ||
+      (pos === 'FLEX' && ['RB', 'WR', 'TE', 'RB/WR/TE'].includes(playerPos))
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Resolve the base value for a player per state-machine-flows.md §11 step 1:
+ * the team's customized Owner Target if one exists and configured to be used,
+ * else the dataset's Primary AAV. Returns null if neither source is available
+ * (the agent does not bid on this player).
+ */
+async function resolveBaseValueMinor(
+  draftId: string,
+  teamId: string,
+  playerDatasetId: string,
+  cfg: AutoAgentConfigFields,
+  sql: postgres.Sql,
+): Promise<number | null> {
+  if (cfg.use_owner_target_when_customized) {
+    const [target] = await sql<[{ target_value_minor: number } | undefined]>`
+      SELECT target_value_minor FROM owner_target_values
+      WHERE draft_id = ${draftId} AND team_id = ${teamId} AND dataset_player_id = ${playerDatasetId}
+      LIMIT 1
+    `;
+    if (target) return target.target_value_minor;
+  }
+
+  if (cfg.fallback_to_primary_aav) {
+    const [draftRow] = await sql<[{ dataset_id: string } | undefined]>`
+      SELECT dataset_id FROM drafts WHERE id = ${draftId} LIMIT 1
+    `;
+    if (!draftRow) return null;
+
+    // Reuse the same "effective primary source" resolution the rest of the app
+    // uses (F-MOD-016): the commissioner's explicit Primary AAV selection, or
+    // — until one is made — the sole source loaded so far.
+    const resolved = await resolvePlayerPrimaryAav(sql, draftRow.dataset_id, playerDatasetId);
+    if (resolved) return resolved.aav_minor;
+  }
+
+  return null;
+}
+
+/**
+ * Compute a team's willingness ceiling for a specific player — the 5-step
+ * algorithm from state-machine-flows.md §11 / this module's spec:
+ *   1. Base value (Owner Target if customized, else Primary AAV)
+ *   2. Stable variance within ± random_variance_pct
+ *   3. Cap at base * (1 + max_over_base_pct)
+ *   4. Starter willingness as-is, else discount by bench_value_pct
+ *   5. Clamp to max_legal_bid (live remaining_budget_minor, never stale)
+ * Returns null if no base value is available — the agent does not bid.
+ */
+export async function computeAutoAgentWillingnessCeiling(
+  draftId: string,
+  teamId: string,
+  leagueId: string,
+  playerDatasetId: string,
+  remainingBudgetMinor: number,
+  requiredRemainingSpots: number,
+  sql: postgres.Sql,
+): Promise<number | null> {
+  const cfg = await getAutoAgentConfig(draftId, teamId, sql);
+
+  const baseValueMinor = await resolveBaseValueMinor(draftId, teamId, playerDatasetId, cfg, sql);
+  if (baseValueMinor === null) return null;
+
+  const variance = stableVariance(draftId, teamId, playerDatasetId, cfg.random_variance_pct);
+  let value = baseValueMinor * (1 + variance);
+
+  const maxOverBase = baseValueMinor * (1 + cfg.max_over_base_pct);
+  value = Math.min(value, maxOverBase);
+
+  const fillsStarter = await wouldFillStarterSlot(draftId, teamId, leagueId, playerDatasetId, sql);
+  if (!(fillsStarter && cfg.prioritize_starters)) {
+    value = value * cfg.bench_value_pct;
+  }
+
+  const maxLegalBid = computeMaxLegalBid(remainingBudgetMinor, requiredRemainingSpots);
+  value = Math.min(value, maxLegalBid);
+
+  return Math.floor(Math.max(0, value));
 }
 
 // ─── Bidding cadence ──────────────────────────────────────────────────────────
@@ -168,6 +387,20 @@ interface AutoAgentTeamState {
   team_id: string;
   remaining_budget_minor: number;
   required_remaining_spots: number;
+}
+
+interface PlayerAuctionIdentity {
+  dataset_player_id: string;
+}
+
+async function loadPlayerAuctionIdentity(
+  playerAuctionId: string,
+  sql: postgres.Sql,
+): Promise<PlayerAuctionIdentity | undefined> {
+  const [row] = await sql<[PlayerAuctionIdentity | undefined]>`
+    SELECT dataset_player_id FROM player_auctions WHERE id = ${playerAuctionId} LIMIT 1
+  `;
+  return row;
 }
 
 /**
@@ -226,6 +459,9 @@ export async function triggerAutoAgentBidsOnNomination(
   nominatorTeamId: string,
   sql: postgres.Sql,
 ): Promise<void> {
+  const identity = await loadPlayerAuctionIdentity(playerAuctionId, sql);
+  if (!identity) return;
+
   const teams = await sql<AutoAgentTeamState[]>`
     SELECT dts.team_id, dts.remaining_budget_minor, dts.required_remaining_spots
     FROM draft_team_states dts
@@ -242,8 +478,17 @@ export async function triggerAutoAgentBidsOnNomination(
   `;
 
   for (const team of teams) {
-    const willingnessPct = await getWillingnessPct(draftId, team.team_id, sql);
-    const willingnessCeiling = Math.floor(team.remaining_budget_minor * willingnessPct);
+    const willingnessCeiling = await computeAutoAgentWillingnessCeiling(
+      draftId,
+      team.team_id,
+      leagueId,
+      identity.dataset_player_id,
+      team.remaining_budget_minor,
+      team.required_remaining_spots,
+      sql,
+    );
+    if (willingnessCeiling === null) continue; // no base value — agent does not bid
+
     const maxLegalBid = computeMaxLegalBid(
       team.remaining_budget_minor,
       team.required_remaining_spots,
@@ -270,6 +515,9 @@ export async function triggerAutoAgentBidsOnLeaderChange(
   newLeaderTeamId: string,
   sql: postgres.Sql,
 ): Promise<void> {
+  const identity = await loadPlayerAuctionIdentity(playerAuctionId, sql);
+  if (!identity) return;
+
   const teams = await sql<AutoAgentTeamState[]>`
     SELECT dts.team_id, dts.remaining_budget_minor, dts.required_remaining_spots
     FROM draft_team_states dts
@@ -286,8 +534,17 @@ export async function triggerAutoAgentBidsOnLeaderChange(
   `;
 
   for (const team of teams) {
-    const willingnessPct = await getWillingnessPct(draftId, team.team_id, sql);
-    const willingnessCeiling = Math.floor(team.remaining_budget_minor * willingnessPct);
+    const willingnessCeiling = await computeAutoAgentWillingnessCeiling(
+      draftId,
+      team.team_id,
+      leagueId,
+      identity.dataset_player_id,
+      team.remaining_budget_minor,
+      team.required_remaining_spots,
+      sql,
+    );
+    if (willingnessCeiling === null) continue; // no base value — agent does not bid
+
     const maxLegalBid = computeMaxLegalBid(
       team.remaining_budget_minor,
       team.required_remaining_spots,

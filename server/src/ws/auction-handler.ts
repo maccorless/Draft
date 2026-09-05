@@ -36,6 +36,7 @@ import {
   upsertAutoAgentConfig,
   triggerAutoAgentBidsOnNomination,
   triggerAutoAgentBidsOnLeaderChange,
+  type AutoAgentConfigFields,
 } from '../auction/auto-agent.js';
 
 interface DraftParams {
@@ -381,7 +382,10 @@ export async function registerAuctionWsHandler(
               await processPassNomination(draftId, teamId, claims.league_id, sql);
             }
           } else if (type === 'SET_AUTO_AGENT_CONFIG') {
-            // Owner sets willingness_pct
+            // Owner sets AutoAgentConfiguration fields (F-MOD-004-rework-02:
+            // per-player ceiling — max_over_base_pct, random_variance_pct,
+            // bench_value_pct, and the two source-preference toggles, plus
+            // prioritize_starters). Partial update — only provided fields change.
             const teamId = claims.team_id;
             if (!teamId) {
               socket.send(JSON.stringify({
@@ -390,15 +394,46 @@ export async function registerAuctionWsHandler(
               }));
               return;
             }
-            const willingnessPct = Number(commandPayload['willingness_pct'] ?? -1);
-            if (willingnessPct < 0 || willingnessPct > 1) {
+            const fields: Partial<AutoAgentConfigFields> = {};
+            const numericChecks: Array<[keyof AutoAgentConfigFields, number, number]> = [
+              ['max_over_base_pct', 0, 10],
+              ['random_variance_pct', 0, 1],
+              ['bench_value_pct', 0, 1],
+            ];
+            let invalid: string | null = null;
+            for (const [field, min, max] of numericChecks) {
+              if (!(field in commandPayload)) continue;
+              const value = Number(commandPayload[field]);
+              if (Number.isNaN(value) || value < min || value > max) {
+                invalid = `${field} must be a number in [${min}, ${max}]`;
+                break;
+              }
+              (fields as Record<string, unknown>)[field] = value;
+            }
+            const booleanFields: Array<keyof AutoAgentConfigFields> = [
+              'use_owner_target_when_customized',
+              'fallback_to_primary_aav',
+              'prioritize_starters',
+            ];
+            if (!invalid) {
+              for (const field of booleanFields) {
+                if (!(field in commandPayload)) continue;
+                const value = commandPayload[field];
+                if (typeof value !== 'boolean') {
+                  invalid = `${field} must be a boolean`;
+                  break;
+                }
+                (fields as Record<string, unknown>)[field] = value;
+              }
+            }
+            if (invalid) {
               socket.send(JSON.stringify({
                 type: 'ERROR',
-                payload: { code: 'INVALID_PARAM', reason: 'willingness_pct must be in [0, 1]' },
+                payload: { code: 'INVALID_PARAM', reason: invalid },
               }));
               return;
             }
-            const cfgResult = await upsertAutoAgentConfig(draftId, teamId, willingnessPct, sql);
+            const cfgResult = await upsertAutoAgentConfig(draftId, teamId, fields, sql);
             socket.send(JSON.stringify({
               type: 'AUTO_AGENT_CONFIG_UPDATED',
               payload: cfgResult,

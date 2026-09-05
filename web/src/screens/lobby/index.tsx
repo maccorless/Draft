@@ -84,6 +84,28 @@ interface DoNotDraftEntry {
   player_name?: string;
 }
 
+// Per-player willingness ceiling configuration (F-MOD-004-rework-02;
+// state-machine-flows.md §11 / data-model.md §10.5). Defaults mirror the
+// server's DEFAULT_AUTO_AGENT_CONFIG so the panel starts AAV-anchored, not a
+// flat percentage of total budget.
+interface AutoAgentConfigState {
+  use_owner_target_when_customized: boolean;
+  fallback_to_primary_aav: boolean;
+  max_over_base_pct: number;
+  random_variance_pct: number;
+  bench_value_pct: number;
+  prioritize_starters: boolean;
+}
+
+const DEFAULT_AUTO_AGENT_CONFIG: AutoAgentConfigState = {
+  use_owner_target_when_customized: true,
+  fallback_to_primary_aav: true,
+  max_over_base_pct: 0.25,
+  random_variance_pct: 0.25,
+  bench_value_pct: 0.5,
+  prioritize_starters: true,
+};
+
 interface DatasetPlayer {
   player_id: string;
   dataset_entry_id: string;
@@ -121,7 +143,7 @@ export function Lobby({
   const [targets, setTargets] = useState<TargetItem[]>([]);
   const [doNotDraft, setDoNotDraft] = useState<DoNotDraftEntry[]>([]);
   const [players, setPlayers] = useState<DatasetPlayer[]>([]);
-  const [willingnessPct, setWillingnessPct] = useState(0.8);
+  const [autoAgentConfig, setAutoAgentConfig] = useState<AutoAgentConfigState>(DEFAULT_AUTO_AGENT_CONFIG);
   const [media, setMedia] = useState<TeamMedia>({ icon_url: null, nomination_audio_url: null });
 
   const refreshWatchlist = useMemo(
@@ -265,21 +287,28 @@ export function Lobby({
       .catch(() => {});
   }
 
-  function submitWillingness(e: React.FormEvent): void {
+  function submitAutoAgentConfig(e: React.FormEvent): void {
     e.preventDefault();
     if (!canUseDraftTools) return;
-    authedJson<{ team_id: string; willingness_pct: number }>(
+    authedJson<{ team_id: string } & AutoAgentConfigState>(
       `/drafts/${draftId}/teams/${teamId}/auto-agent`,
       token!,
       {
         method: 'PUT',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ willingness_pct: willingnessPct }),
+        body: JSON.stringify(autoAgentConfig),
       },
     )
       // No GET endpoint exists for auto-agent config (F-MOD-004 only exposes
       // PUT/PATCH) — the PUT response itself is the "read back" source of truth.
-      .then((d) => setWillingnessPct(d.willingness_pct))
+      .then((d) => setAutoAgentConfig({
+        use_owner_target_when_customized: d.use_owner_target_when_customized,
+        fallback_to_primary_aav: d.fallback_to_primary_aav,
+        max_over_base_pct: d.max_over_base_pct,
+        random_variance_pct: d.random_variance_pct,
+        bench_value_pct: d.bench_value_pct,
+        prioritize_starters: d.prioritize_starters,
+      }))
       .catch(() => {});
   }
 
@@ -390,17 +419,88 @@ export function Lobby({
             )}
 
             {prepTab === 'auto-agent' && (
-              <form className="lobby__auto-agent-form" onSubmit={submitWillingness}>
-                <label htmlFor="willingness-slider">Willingness ceiling ({Math.round(willingnessPct * 100)}%)</label>
+              <form className="lobby__auto-agent-form" onSubmit={submitAutoAgentConfig}>
+                <label htmlFor="max-over-base-slider">
+                  Max over base ({Math.round(autoAgentConfig.max_over_base_pct * 100)}%)
+                </label>
                 <input
-                  id="willingness-slider"
+                  id="max-over-base-slider"
                   type="range"
                   min={0}
                   max={1}
                   step={0.01}
-                  value={willingnessPct}
-                  onChange={(e) => setWillingnessPct(parseFloat(e.target.value))}
+                  value={autoAgentConfig.max_over_base_pct}
+                  onChange={(e) =>
+                    setAutoAgentConfig((c) => ({ ...c, max_over_base_pct: parseFloat(e.target.value) }))
+                  }
                 />
+
+                <label htmlFor="random-variance-slider">
+                  Random variance (±{Math.round(autoAgentConfig.random_variance_pct * 100)}%)
+                </label>
+                <input
+                  id="random-variance-slider"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={autoAgentConfig.random_variance_pct}
+                  onChange={(e) =>
+                    setAutoAgentConfig((c) => ({ ...c, random_variance_pct: parseFloat(e.target.value) }))
+                  }
+                />
+
+                <label htmlFor="bench-value-slider">
+                  Bench discount ({Math.round(autoAgentConfig.bench_value_pct * 100)}%)
+                </label>
+                <input
+                  id="bench-value-slider"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={autoAgentConfig.bench_value_pct}
+                  onChange={(e) =>
+                    setAutoAgentConfig((c) => ({ ...c, bench_value_pct: parseFloat(e.target.value) }))
+                  }
+                />
+
+                <label htmlFor="prioritize-starters-toggle">
+                  <input
+                    id="prioritize-starters-toggle"
+                    type="checkbox"
+                    checked={autoAgentConfig.prioritize_starters}
+                    onChange={(e) =>
+                      setAutoAgentConfig((c) => ({ ...c, prioritize_starters: e.target.checked }))
+                    }
+                  />
+                  Prioritize starters
+                </label>
+
+                <label htmlFor="use-owner-target-toggle">
+                  <input
+                    id="use-owner-target-toggle"
+                    type="checkbox"
+                    checked={autoAgentConfig.use_owner_target_when_customized}
+                    onChange={(e) =>
+                      setAutoAgentConfig((c) => ({ ...c, use_owner_target_when_customized: e.target.checked }))
+                    }
+                  />
+                  Use my Target Value when set
+                </label>
+
+                <label htmlFor="fallback-primary-aav-toggle">
+                  <input
+                    id="fallback-primary-aav-toggle"
+                    type="checkbox"
+                    checked={autoAgentConfig.fallback_to_primary_aav}
+                    onChange={(e) =>
+                      setAutoAgentConfig((c) => ({ ...c, fallback_to_primary_aav: e.target.checked }))
+                    }
+                  />
+                  Fall back to Primary AAV
+                </label>
+
                 <button type="submit">Save</button>
               </form>
             )}

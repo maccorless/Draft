@@ -395,6 +395,10 @@ export const budgetLedgerEntries = pgTable('budget_ledger_entries', {
 
 // ─── Auto-Agent & Strategy ────────────────────────────────────────────────────
 
+// F-MOD-004-rework-02 (UF-17-05): willingness_pct/enabled/last_transition_at are
+// retained (not dropped) but the ceiling calculation no longer reads
+// willingness_pct — it uses the per-player fields below, per
+// state-machine-flows.md §11 / data-model.md §10.5.
 export const autoAgentConfigs = pgTable('auto_agent_configs', {
   id: uuid('id').primaryKey().defaultRandom(),
   draft_id: uuid('draft_id')
@@ -408,6 +412,20 @@ export const autoAgentConfigs = pgTable('auto_agent_configs', {
     .default('0.800'),
   enabled: boolean('enabled').notNull().default(false),
   last_transition_at: timestamp('last_transition_at', { withTimezone: true }),
+  use_owner_target_when_customized: boolean('use_owner_target_when_customized')
+    .notNull()
+    .default(true),
+  fallback_to_primary_aav: boolean('fallback_to_primary_aav').notNull().default(true),
+  max_over_base_pct: decimal('max_over_base_pct', { precision: 4, scale: 3 })
+    .notNull()
+    .default('0.250'),
+  random_variance_pct: decimal('random_variance_pct', { precision: 4, scale: 3 })
+    .notNull()
+    .default('0.250'),
+  bench_value_pct: decimal('bench_value_pct', { precision: 4, scale: 3 })
+    .notNull()
+    .default('0.500'),
+  prioritize_starters: boolean('prioritize_starters').notNull().default(true),
 });
 
 export const nominatorMatches = pgTable('nominator_matches', {

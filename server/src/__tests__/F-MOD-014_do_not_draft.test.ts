@@ -403,7 +403,7 @@ describe.skipIf(SKIP_DB)('F-MOD-014 do not draft', () => {
     // mode must be set after start, not before (setControlMode is a no-op
     // when the team's state row doesn't exist yet).
     await setControlMode(draftId, team2Id, 'AUTO_AGENT', 'test', sql);
-    await upsertAutoAgentConfig(draftId, team2Id, 1.0, sql);
+    await upsertAutoAgentConfig(draftId, team2Id, {}, sql);
 
     const ws1 = await connectAndAuth(port, draftId, team1Token);
     const ws2 = await connectAndAuth(port, draftId, team2Token);
@@ -445,10 +445,10 @@ describe.skipIf(SKIP_DB)('F-MOD-014 do not draft', () => {
 
     // team2: AUTO_AGENT with player1 on its Do Not Draft list.
     await setControlMode(draftId, team2Id, 'AUTO_AGENT', 'test', sql);
-    await upsertAutoAgentConfig(draftId, team2Id, 1.0, sql);
+    await upsertAutoAgentConfig(draftId, team2Id, {}, sql);
     // team3: AUTO_AGENT with no Do Not Draft entries — should still bid normally.
     await setControlMode(draftId, team3Id, 'AUTO_AGENT', 'test', sql);
-    await upsertAutoAgentConfig(draftId, team3Id, 1.0, sql);
+    await upsertAutoAgentConfig(draftId, team3Id, {}, sql);
 
     const ws1 = await connectAndAuth(port, draftId, team1Token);
     const ws3 = await connectAndAuth(port, draftId, team3Token);

@@ -30,7 +30,7 @@ import {
 import {
   handleGraceExpiry,
   setControlMode,
-  upsertAutoAgentConfig,
+  computeAutoAgentWillingnessCeiling,
 } from '../auction/auto-agent.js';
 
 const DATABASE_URL =
@@ -51,6 +51,7 @@ interface DraftSetup {
   team1Id: string;
   team2Id: string;
   draftId: string;
+  datasetId: string;
   commToken: string;
   team1Token: string;
   team2Token: string;
@@ -250,7 +251,12 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
     `;
     // Now equal to the player's own id (F-MOD-016): dataset_player_id FKs to players.id.
     const playerEntryId = p.id;
-    await sql`UPDATE draft_datasets SET status = 'FROZEN' WHERE id = ${datasetId}`;
+    // F-MOD-004-rework-02: the per-player ceiling falls back to the dataset's
+    // Primary AAV — must be set for that fallback to resolve a base value.
+    await sql`
+      UPDATE draft_datasets SET status = 'FROZEN', primary_aav_source = 'test'
+      WHERE id = ${datasetId}
+    `;
 
     const draftRes = await server.inject({
       method: 'POST', url: `/leagues/${leagueId}/drafts`,
@@ -266,7 +272,7 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
       });
     }
 
-    return { leagueId, team1Id, team2Id, draftId, commToken, team1Token, team2Token, playerEntryId };
+    return { leagueId, team1Id, team2Id, draftId, datasetId, commToken, team1Token, team2Token, playerEntryId };
   }
 
   // ─── Test 1: Grace timer — partial disconnect doesn't trigger AUTO_AGENT ────
@@ -417,9 +423,10 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
   it('test_F_MOD_004_agent_bids_on_nomination_started', async () => {
     const { draftId, team2Id, team1Token, team2Token, playerEntryId } = await setupDraft();
 
-    // Set team2 to AUTO_AGENT with high willingness (100%)
+    // Set team2 to AUTO_AGENT. The test player's Primary AAV is $10 (1000 minor);
+    // default config (AAV-anchored, ±25% variance, 25% max-over-base, starter
+    // priority) yields a ceiling well above the 200 the agent needs to bid here.
     await setControlMode(draftId, team2Id, 'AUTO_AGENT', 'test', sql);
-    await upsertAutoAgentConfig(draftId, team2Id, 1.0, sql);
 
     // Connect team1 and team2 WS
     const { ws: ws1 } = await connectAndAuth(port, draftId, team1Token);
@@ -464,9 +471,10 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
   it('test_F_MOD_004_agent_bids_on_leadership_change', async () => {
     const { draftId, team2Id, team1Token, team2Token, playerEntryId } = await setupDraft();
 
-    // Set team2 to AUTO_AGENT, willingness = 50% (out of 20000 = 10000 ceiling)
+    // Set team2 to AUTO_AGENT. Default AAV-anchored config (Primary AAV $10,
+    // ±25% variance, 25% max-over-base, starter priority) yields a ceiling
+    // (750-1250 minor) well above the 400 the agent needs to bid here.
     await setControlMode(draftId, team2Id, 'AUTO_AGENT', 'test', sql);
-    await upsertAutoAgentConfig(draftId, team2Id, 0.5, sql);
 
     const { ws: ws1 } = await connectAndAuth(port, draftId, team1Token);
     const { ws: ws2 } = await connectAndAuth(port, draftId, team2Token);
@@ -516,10 +524,14 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
   it('test_F_MOD_004_agent_does_not_bid_above_willingness_ceiling', async () => {
     const { draftId, team2Id, team1Token, playerEntryId } = await setupDraft();
 
-    // Set team2 willingness very low (0.01 of 20000 = 200 ceiling)
-    // Agent will NOT bid when the bid would be > 200
+    // Give team2 a very low customized Owner Target for this player (50 minor).
+    // Per the per-player algorithm, base=50, starter branch caps at 50*1.25=62.5
+    // — well below the 300 the agent would need to bid, regardless of variance.
     await setControlMode(draftId, team2Id, 'AUTO_AGENT', 'test', sql);
-    await upsertAutoAgentConfig(draftId, team2Id, 0.01, sql); // ceiling = 200
+    await sql`
+      INSERT INTO owner_target_values (draft_id, team_id, dataset_player_id, target_value_minor)
+      VALUES (${draftId}, ${team2Id}, ${playerEntryId}, 50)
+    `;
 
     const { ws: ws1 } = await connectAndAuth(port, draftId, team1Token);
 
@@ -546,40 +558,54 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
     ws1.close();
   }, 15000);
 
-  // ─── Test 8: Willingness config REST endpoint ─────────────────────────────────
+  // ─── Test 8: Willingness config REST endpoint (F-MOD-004-rework-02) ───────────
 
-  it('test_F_MOD_004_willingness_config_put_endpoint', async () => {
+  it('test_F_MOD_004_rework_02_auto_agent_config_put_endpoint', async () => {
     const { draftId, team1Id, team1Token } = await setupDraft();
 
     const res = await server.inject({
       method: 'PUT',
       url: `/drafts/${draftId}/teams/${team1Id}/auto-agent`,
       headers: { authorization: `Bearer ${team1Token}` },
-      payload: { willingness_pct: 0.6 },
+      payload: { max_over_base_pct: 0.6, random_variance_pct: 0.1 },
     });
 
     expect(res.statusCode).toBe(200);
-    const body = res.json<{ team_id: string; willingness_pct: number }>();
+    const body = res.json<{
+      team_id: string;
+      max_over_base_pct: number;
+      random_variance_pct: number;
+      bench_value_pct: number;
+      prioritize_starters: boolean;
+    }>();
     expect(body.team_id).toBe(team1Id);
-    expect(body.willingness_pct).toBe(0.6);
+    expect(body.max_over_base_pct).toBe(0.6);
+    expect(body.random_variance_pct).toBe(0.1);
+    // Fields not sent keep the documented defaults
+    expect(body.bench_value_pct).toBeCloseTo(0.5, 3);
+    expect(body.prioritize_starters).toBe(true);
 
     // Verify persisted in DB
-    const rows = await sql<[{ willingness_pct: string }]>`
-      SELECT willingness_pct FROM auto_agent_configs
+    const rows = await sql<[{ max_over_base_pct: string; random_variance_pct: string }]>`
+      SELECT max_over_base_pct, random_variance_pct FROM auto_agent_configs
       WHERE draft_id = ${draftId} AND team_id = ${team1Id}
     `;
     expect(rows.length).toBeGreaterThan(0);
-    expect(parseFloat(rows[0]!.willingness_pct)).toBeCloseTo(0.6, 3);
+    expect(parseFloat(rows[0]!.max_over_base_pct)).toBeCloseTo(0.6, 3);
+    expect(parseFloat(rows[0]!.random_variance_pct)).toBeCloseTo(0.1, 3);
 
-    // Update again — should update existing row
+    // Update again (partial) — should update the existing row, not duplicate,
+    // and preserve the field set in the first call.
     const res2 = await server.inject({
       method: 'PUT',
       url: `/drafts/${draftId}/teams/${team1Id}/auto-agent`,
       headers: { authorization: `Bearer ${team1Token}` },
-      payload: { willingness_pct: 0.75 },
+      payload: { bench_value_pct: 0.3 },
     });
     expect(res2.statusCode).toBe(200);
-    expect(res2.json<{ willingness_pct: number }>().willingness_pct).toBe(0.75);
+    const body2 = res2.json<{ bench_value_pct: number; max_over_base_pct: number }>();
+    expect(body2.bench_value_pct).toBe(0.3);
+    expect(body2.max_over_base_pct).toBe(0.6); // preserved from the first PUT
 
     // Verify only one row (upsert, not duplicate)
     const rows2 = await sql<[{ count: string }]>`
@@ -587,6 +613,15 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
       WHERE draft_id = ${draftId} AND team_id = ${team1Id}
     `;
     expect(Number(rows2[0]?.count)).toBe(1);
+
+    // Invalid range is rejected
+    const badRes = await server.inject({
+      method: 'PUT',
+      url: `/drafts/${draftId}/teams/${team1Id}/auto-agent`,
+      headers: { authorization: `Bearer ${team1Token}` },
+      payload: { random_variance_pct: 1.5 },
+    });
+    expect(badRes.statusCode).toBe(400);
   }, 10000);
 
   // ─── Test 9: Explicit AUTO_AGENT transition via PATCH ─────────────────────────
@@ -763,9 +798,9 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
     expect(rows[0]?.control_mode).toBe('MANUAL');
   }, 10000);
 
-  // ─── Test 14: SET_AUTO_AGENT_CONFIG via WS command ───────────────────────────
+  // ─── Test 14: SET_AUTO_AGENT_CONFIG via WS command (F-MOD-004-rework-02) ─────
 
-  it('test_F_MOD_004_set_auto_agent_config_ws_command', async () => {
+  it('test_F_MOD_004_rework_02_set_auto_agent_config_ws_command', async () => {
     const { draftId, team1Id, team1Token } = await setupDraft();
 
     const { ws } = await connectAndAuth(port, draftId, team1Token);
@@ -777,21 +812,27 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
     );
     ws.send(JSON.stringify({
       type: 'SET_AUTO_AGENT_CONFIG',
-      payload: { willingness_pct: 0.55 },
+      payload: { bench_value_pct: 0.35, prioritize_starters: false },
     }));
     const updateMsg = await configUpdatedPromise;
     ws.close();
 
-    const p = updateMsg.payload as { team_id: string; willingness_pct: number };
+    const p = updateMsg.payload as {
+      team_id: string;
+      bench_value_pct: number;
+      prioritize_starters: boolean;
+    };
     expect(p.team_id).toBe(team1Id);
-    expect(p.willingness_pct).toBeCloseTo(0.55);
+    expect(p.bench_value_pct).toBeCloseTo(0.35);
+    expect(p.prioritize_starters).toBe(false);
 
     // Verify DB
-    const rows = await sql<[{ willingness_pct: string }]>`
-      SELECT willingness_pct FROM auto_agent_configs
+    const rows = await sql<[{ bench_value_pct: string; prioritize_starters: boolean }]>`
+      SELECT bench_value_pct, prioritize_starters FROM auto_agent_configs
       WHERE draft_id = ${draftId} AND team_id = ${team1Id}
     `;
-    expect(parseFloat(rows[0]?.willingness_pct ?? '0')).toBeCloseTo(0.55, 2);
+    expect(parseFloat(rows[0]?.bench_value_pct ?? '0')).toBeCloseTo(0.35, 2);
+    expect(rows[0]?.prioritize_starters).toBe(false);
   }, 10000);
 
   // ─── Test 15: Agent does NOT bid when PLAYER_AWARDED ─────────────────────────
@@ -799,9 +840,9 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
   it('test_F_MOD_004_agent_does_not_bid_on_player_awarded', async () => {
     const { draftId, team2Id, team1Token, playerEntryId } = await setupDraft();
 
-    // Set team2 AUTO_AGENT
+    // Set team2 AUTO_AGENT. Default AAV-anchored config (Primary AAV $10) yields
+    // a ceiling well above the 200 the agent needs to bid to win this auction.
     await setControlMode(draftId, team2Id, 'AUTO_AGENT', 'test', sql);
-    await upsertAutoAgentConfig(draftId, team2Id, 1.0, sql);
 
     const { ws: ws1 } = await connectAndAuth(port, draftId, team1Token);
 
@@ -910,4 +951,138 @@ describe.skipIf(SKIP_DB)('F-MOD-004 auto-agent mode', () => {
     `;
     expect(afterStart[0]?.control_mode).toBe('AUTO_AGENT');
   }, 15000);
+
+  // ─── Tests 17-20 (F-MOD-004-rework-02): per-player willingness ceiling ───────
+
+  it('test_F_MOD_004_rework_02_ceiling_is_per_player_not_flat_fraction_of_budget', async () => {
+    const { draftId, leagueId, team1Id, datasetId } = await setupDraft();
+
+    const [state] = await sql<[{ remaining_budget_minor: number; required_remaining_spots: number }]>`
+      SELECT remaining_budget_minor, required_remaining_spots FROM draft_team_states
+      WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+
+    // Two QB players with very different Primary AAVs.
+    const [lowAav] = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('Low AAV QB', 'QB', 'TB') RETURNING id
+    `;
+    const [highAav] = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('High AAV QB', 'QB', 'TB') RETURNING id
+    `;
+    await sql`INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source) VALUES (${datasetId}, ${lowAav!.id}, 500, 'test')`;
+    await sql`INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source) VALUES (${datasetId}, ${highAav!.id}, 8000, 'test')`;
+
+    const lowCeiling = await computeAutoAgentWillingnessCeiling(
+      draftId, team1Id, leagueId, lowAav!.id, state!.remaining_budget_minor, state!.required_remaining_spots, sql,
+    );
+    const highCeiling = await computeAutoAgentWillingnessCeiling(
+      draftId, team1Id, leagueId, highAav!.id, state!.remaining_budget_minor, state!.required_remaining_spots, sql,
+    );
+
+    expect(lowCeiling).not.toBeNull();
+    expect(highCeiling).not.toBeNull();
+    // Each ceiling is anchored to its OWN player's AAV, not a flat percentage
+    // (e.g. 0.8 * 20000 = 16000) shared across every player.
+    expect(lowCeiling!).toBeLessThan(16000);
+    expect(highCeiling!).toBeLessThan(16000);
+    expect(lowCeiling!).toBeLessThan(highCeiling!);
+    expect(lowCeiling!).toBeGreaterThanOrEqual(Math.floor(500 * 0.75));
+    expect(lowCeiling!).toBeLessThanOrEqual(Math.floor(500 * 1.25));
+    expect(highCeiling!).toBeGreaterThanOrEqual(Math.floor(8000 * 0.75));
+    expect(highCeiling!).toBeLessThanOrEqual(Math.floor(8000 * 1.25));
+  }, 10000);
+
+  it('test_F_MOD_004_rework_02_ceiling_reflects_aav_plus_minus_variance', async () => {
+    const { draftId, leagueId, team1Id, playerEntryId } = await setupDraft();
+    const [state] = await sql<[{ remaining_budget_minor: number; required_remaining_spots: number }]>`
+      SELECT remaining_budget_minor, required_remaining_spots FROM draft_team_states
+      WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+
+    const ceiling = await computeAutoAgentWillingnessCeiling(
+      draftId, team1Id, leagueId, playerEntryId, state!.remaining_budget_minor, state!.required_remaining_spots, sql,
+    );
+
+    // Primary AAV = 1000 minor; default random_variance_pct=0.25,
+    // max_over_base_pct=0.25. The player fills team1's only starter QB slot,
+    // so no bench discount applies, and the remaining budget is nowhere near
+    // the max_legal_bid clamp.
+    expect(ceiling).not.toBeNull();
+    expect(ceiling!).toBeGreaterThanOrEqual(Math.floor(1000 * 0.75));
+    expect(ceiling!).toBeLessThanOrEqual(Math.floor(1000 * 1.25));
+  }, 10000);
+
+  it('test_F_MOD_004_rework_02_customized_owner_target_overrides_aav', async () => {
+    const { draftId, leagueId, team1Id, playerEntryId } = await setupDraft();
+    const [state] = await sql<[{ remaining_budget_minor: number; required_remaining_spots: number }]>`
+      SELECT remaining_budget_minor, required_remaining_spots FROM draft_team_states
+      WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+
+    // Player's Primary AAV is 1000; give team1 a much higher customized target.
+    await sql`
+      INSERT INTO owner_target_values (draft_id, team_id, dataset_player_id, target_value_minor)
+      VALUES (${draftId}, ${team1Id}, ${playerEntryId}, 5000)
+    `;
+
+    const ceiling = await computeAutoAgentWillingnessCeiling(
+      draftId, team1Id, leagueId, playerEntryId, state!.remaining_budget_minor, state!.required_remaining_spots, sql,
+    );
+
+    expect(ceiling).not.toBeNull();
+    // Anchored to the customized target (5000), not the Primary AAV (1000).
+    expect(ceiling!).toBeGreaterThanOrEqual(Math.floor(5000 * 0.75));
+    expect(ceiling!).toBeLessThanOrEqual(Math.floor(5000 * 1.25));
+  }, 10000);
+
+  it('test_F_MOD_004_rework_02_bench_discount_applies_to_non_starter_filling_players', async () => {
+    const { draftId, leagueId, team1Id, datasetId } = await setupDraft();
+    const [state] = await sql<[{ remaining_budget_minor: number; required_remaining_spots: number }]>`
+      SELECT remaining_budget_minor, required_remaining_spots FROM draft_team_states
+      WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+
+    // Roster config (setupDraft) has only a QB starter slot + BN bench — an RB
+    // player cannot fill any unfilled starter slot, so it goes to bench.
+    const [rb] = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('Bench RB', 'RB', 'TB') RETURNING id
+    `;
+    await sql`INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, source) VALUES (${datasetId}, ${rb!.id}, 1000, 'test')`;
+
+    const rbCeiling = await computeAutoAgentWillingnessCeiling(
+      draftId, team1Id, leagueId, rb!.id, state!.remaining_budget_minor, state!.required_remaining_spots, sql,
+    );
+
+    expect(rbCeiling).not.toBeNull();
+    // Same AAV (1000) as the starter-filling QB test above, but discounted by
+    // bench_value_pct (default 0.5) since it doesn't fill a starter slot.
+    expect(rbCeiling!).toBeLessThanOrEqual(Math.floor(1000 * 1.25 * 0.5));
+    expect(rbCeiling!).toBeGreaterThanOrEqual(0);
+  }, 10000);
+
+  it('test_F_MOD_004_rework_02_new_config_defaults_to_aav_anchored_behavior', async () => {
+    const { draftId, leagueId, team1Id, playerEntryId } = await setupDraft();
+
+    // team1's AutoAgentConfiguration has never been explicitly set — no row
+    // exists in auto_agent_configs yet.
+    const rows = await sql<[{ id: string } | undefined]>`
+      SELECT id FROM auto_agent_configs WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+    expect(rows.length).toBe(0);
+
+    const [state] = await sql<[{ remaining_budget_minor: number; required_remaining_spots: number }]>`
+      SELECT remaining_budget_minor, required_remaining_spots FROM draft_team_states
+      WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+
+    const ceiling = await computeAutoAgentWillingnessCeiling(
+      draftId, team1Id, leagueId, playerEntryId, state!.remaining_budget_minor, state!.required_remaining_spots, sql,
+    );
+
+    // Documented defaults (AAV-anchored, ±25% variance) apply — not a flat
+    // percentage of total budget, and not a failure to compute.
+    expect(ceiling).not.toBeNull();
+    expect(ceiling!).toBeGreaterThan(0);
+    expect(ceiling!).toBeLessThan(20000); // nowhere near the flat-budget-fraction magnitude
+  }, 10000);
 });

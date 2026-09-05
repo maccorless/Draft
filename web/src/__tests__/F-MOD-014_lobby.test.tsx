@@ -159,23 +159,41 @@ describe('F-MOD-014 Lobby', () => {
   it('test_F_MOD_014_lobby_auto_agent_submit_calls_put_and_round_trips_value', async () => {
     global.fetch = makeFetchMock({
       'PUT /drafts/draft-1/teams/team-1/auto-agent': () =>
-        jsonResponse({ team_id: 'team-1', willingness_pct: 0.42 }),
+        jsonResponse({
+          team_id: 'team-1',
+          use_owner_target_when_customized: true,
+          fallback_to_primary_aav: true,
+          max_over_base_pct: 0.42,
+          random_variance_pct: 0.25,
+          bench_value_pct: 0.5,
+          prioritize_starters: true,
+        }),
     });
     render(<Lobby {...baseProps} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Auto-Agent' }));
 
-    const slider = await screen.findByLabelText(/Willingness ceiling/);
+    const slider = await screen.findByLabelText(/Max over base/);
     fireEvent.change(slider, { target: { value: '0.42' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
         '/drafts/draft-1/teams/team-1/auto-agent',
-        expect.objectContaining({ method: 'PUT', body: JSON.stringify({ willingness_pct: 0.42 }) }),
+        expect.objectContaining({
+          method: 'PUT',
+          body: JSON.stringify({
+            use_owner_target_when_customized: true,
+            fallback_to_primary_aav: true,
+            max_over_base_pct: 0.42,
+            random_variance_pct: 0.25,
+            bench_value_pct: 0.5,
+            prioritize_starters: true,
+          }),
+        }),
       );
     });
     await waitFor(() => {
-      expect(screen.getByLabelText(/Willingness ceiling \(42%\)/)).toBeTruthy();
+      expect(screen.getByLabelText(/Max over base \(42%\)/)).toBeTruthy();
     });
   });
 
