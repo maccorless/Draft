@@ -6,9 +6,9 @@ checkpoint_configuration:
   system_checkpoint_level: wave_plus_feature
   upgrade_reasons:
   - complexity_score=218 > 60
-  - max_wave_size=6 > 4
-  - total_features=25 > 12
-  generated_at: '2026-09-05T16:01:47.047999+00:00'
+  - max_wave_size=8 > 4
+  - total_features=27 > 12
+  generated_at: '2026-09-05T17:01:31.256891+00:00'
   verification_profiles:
     F-MOD-000:
       level: deep
@@ -64,6 +64,15 @@ checkpoint_configuration:
       - keyword_credential_scope
       - keyword_payment_scope
       override: null
+    F-MOD-002-rework-04:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_concurrency
+      - keyword_credential_scope
+      - keyword_payment_scope
+      override: null
     F-MOD-003:
       level: deep
       rule_version: '1'
@@ -91,6 +100,14 @@ checkpoint_configuration:
       - keyword_migration
       override: null
     F-MOD-004-rework-02:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      - keyword_migration
+      override: null
+    F-MOD-004-rework-03:
       level: deep
       rule_version: '1'
       reasons:
@@ -232,6 +249,8 @@ checkpoint_configuration:
         - quality_gate
         F-MOD-002-rework-03:
         - quality_gate
+        F-MOD-002-rework-04:
+        - quality_gate
         F-MOD-003:
         - quality_gate
         F-MOD-004:
@@ -239,6 +258,8 @@ checkpoint_configuration:
         F-MOD-004-rework-01:
         - quality_gate
         F-MOD-004-rework-02:
+        - quality_gate
+        F-MOD-004-rework-03:
         - quality_gate
         F-MOD-005:
         - quality_gate
@@ -507,6 +528,8 @@ checkpoint_configuration:
     - F-MOD-011-rework-02
     - F-MOD-002-rework-03
     - F-MOD-004-rework-02
+    - F-MOD-002-rework-04
+    - F-MOD-004-rework-03
     demo_checklist:
     - System starts successfully
     - All covered features are functional
