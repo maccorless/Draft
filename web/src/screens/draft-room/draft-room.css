@@ -99,6 +99,57 @@
   letter-spacing: 0.04em;
 }
 
+/* ── Team-by-team strip (UF-17-07 item 2) ──────────────────────────────────── */
+
+.draft-room__team-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.draft-room__team-strip-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+}
+
+.draft-room__team-strip-item--leading {
+  border-color: var(--color-accent);
+  background: var(--color-surface-alt);
+}
+
+.draft-room__team-strip-icon {
+  width: 1rem;
+  height: 1rem;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+}
+
+.draft-room__team-strip-name {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.draft-room__team-strip-budget {
+  font-family: var(--font-mono);
+  color: var(--color-text-muted);
+}
+
+.draft-room__team-strip-bid {
+  font-family: var(--font-mono);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent);
+}
+
 /* ── Layout: team context | active auction | recent bids ──────────────────── */
 
 .draft-room__layout {
@@ -281,28 +332,77 @@
   margin: 0;
 }
 
-.draft-room__nominate-search {
+.draft-room__nominate-hint {
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+/* ── Persistent player list panel (UF-17-07 item 1) ────────────────────────── */
+
+.draft-room__player-list {
   width: 100%;
-  min-height: 44px;
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.draft-room__player-list-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.draft-room__player-list-tab {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.draft-room__player-list-tab--active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-text-on-accent);
+}
+
+.draft-room__player-list-search {
+  width: 100%;
+  min-height: 40px;
+  margin-bottom: var(--space-3);
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   background: var(--color-surface);
   color: var(--color-text);
 }
 
-.draft-room__nominate-results {
-  width: 100%;
+.draft-room__player-list-rows {
   list-style: none;
   margin: 0;
   padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  overflow: hidden;
 }
 
-.draft-room__nominate-result {
+.draft-room__player-list-row {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.draft-room__player-list-row:last-child {
+  border-bottom: none;
+}
+
+.draft-room__player-list-row-btn {
   width: 100%;
   min-height: 44px;
   display: flex;
@@ -311,20 +411,25 @@
   gap: 2px;
   padding: var(--space-2) var(--space-4);
   border: none;
-  border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   text-align: left;
 }
 
-.draft-room__nominate-result:last-child {
-  border-bottom: none;
-}
-
-.draft-room__nominate-result:hover {
+.draft-room__player-list-row-btn:hover:not(:disabled) {
   background: var(--color-surface-alt);
 }
 
-.draft-room__nominate-meta {
+.draft-room__player-list-row-btn:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.draft-room__player-list-row-name {
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.draft-room__player-list-row-meta {
   font-size: var(--text-xs);
   color: var(--color-text-subtle);
 }

@@ -115,8 +115,11 @@ beforeEach(() => {
   (global as unknown as { WebSocket: typeof FakeWebSocket }).WebSocket = FakeWebSocket;
 });
 
-async function renderDraftRoom(role?: 'COMMISSIONER' | 'OWNER'): Promise<FakeWebSocket> {
-  installFetchMock();
+async function renderDraftRoom(
+  role?: 'COMMISSIONER' | 'OWNER',
+  installFn: () => void = installFetchMock,
+): Promise<FakeWebSocket> {
+  installFn();
   render(
     <MemoryRouter initialEntries={[`/draft-room?draftId=${DRAFT_ID}`]}>
       <Routes>
@@ -380,5 +383,138 @@ describe('F-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5
 
     await waitFor(() => expect(screen.getByTestId('roster-slot-RB').textContent).toContain('Justin Jefferson'));
     expect(screen.getByTestId('roster-slot-RB').textContent).toContain('$12');
+  });
+});
+
+// ── F-MOD-002-rework-05 (UF-17-07): persistent filterable/sortable player
+// list + top team-by-team budget/current-bid strip ──────────────────────────
+
+describe('F-MOD-002-rework-05 persistent player list panel (UF-17-07 item 1)', () => {
+  const rankingsFixture = [
+    { player_id: 'r1', dataset_entry_id: 'r1', name: 'Christian McCaffrey', position: 'RB', nfl_team: 'SF', aav_minor: 6000, tier: 1, projected_points: 320 },
+    { player_id: 'r2', dataset_entry_id: 'r2', name: 'Justin Jefferson', position: 'WR', nfl_team: 'MIN', aav_minor: 5500, tier: 1, projected_points: 300 },
+    { player_id: 'r3', dataset_entry_id: 'r3', name: 'Tyreek Hill', position: 'WR', nfl_team: 'MIA', aav_minor: 5500, tier: 1, projected_points: 310 },
+    { player_id: 'r4', dataset_entry_id: 'r4', name: 'Josh Allen', position: 'QB', nfl_team: 'BUF', aav_minor: 4000, tier: 1, projected_points: 280 },
+  ];
+  const rosterSlotsFixture = [
+    { position: 'QB', priority: 1, is_starter: true, slot_count: 1 },
+    { position: 'RB', priority: 2, is_starter: true, slot_count: 2 },
+    { position: 'WR', priority: 3, is_starter: true, slot_count: 2 },
+    { position: 'TE', priority: 4, is_starter: true, slot_count: 1 },
+    { position: 'BN', priority: 5, is_starter: false, slot_count: 6 },
+  ];
+
+  function installRankingsFetch(): void {
+    fetchCalls.length = 0;
+    global.fetch = vi.fn((url: string, init?: RequestInit) => {
+      fetchCalls.push({ url, init });
+      if (url.endsWith('/config')) {
+        return jsonResponse(200, { roster: null, roster_slots: rosterSlotsFixture, auction: { initial_budget_minor: 20000, min_bid_minor: 100 } });
+      }
+      if (url.endsWith('/players')) return jsonResponse(200, { players: rankingsFixture });
+      if (url.endsWith('/roster-grid')) return jsonResponse(200, { teams: rosterGridFixture });
+      if (url.endsWith('/target-values')) return jsonResponse(200, { targets: [] });
+      return jsonResponse(404, { code: 'NOT_FOUND', message: 'not mocked: ' + url });
+    }) as unknown as typeof fetch;
+  }
+
+  it('test_F_MOD_002_rework_05_default_sort_is_aav_desc_then_projected_points_desc_tiebreak', async () => {
+    await renderDraftRoom(undefined, installRankingsFetch);
+    await waitFor(() => expect(screen.getByTestId('player-list-panel')).toBeTruthy());
+
+    const rows = screen.getAllByTestId(/^player-list-row-/);
+    expect(rows.map((r) => r.getAttribute('data-testid'))).toEqual([
+      'player-list-row-r1', // aav 6000
+      'player-list-row-r3', // aav 5500, 310 pts — tiebreak winner over r2
+      'player-list-row-r2', // aav 5500, 300 pts
+      'player-list-row-r4', // aav 4000
+    ]);
+  });
+
+  it('test_F_MOD_002_rework_05_position_tab_filters_without_changing_sort_order', async () => {
+    await renderDraftRoom(undefined, installRankingsFetch);
+    await waitFor(() => expect(screen.getByTestId('player-list-tab-WR')).toBeTruthy());
+
+    fireEvent.click(screen.getByTestId('player-list-tab-WR'));
+
+    const rows = screen.getAllByTestId(/^player-list-row-/);
+    expect(rows.map((r) => r.getAttribute('data-testid'))).toEqual([
+      'player-list-row-r3',
+      'player-list-row-r2',
+    ]);
+  });
+
+  it('test_F_MOD_002_rework_05_excludes_already_drafted_players', async () => {
+    const ws = await renderDraftRoom(undefined, installRankingsFetch);
+    await waitFor(() => expect(screen.getByTestId('player-list-row-r1')).toBeTruthy());
+
+    ws.push({
+      type: 'PLAYER_AWARDED',
+      payload: {
+        player_auction_id: 'pa-x', player_name: 'Christian McCaffrey', winning_team_id: 't2',
+        price_minor: 6000, roster_slot: 'RB', resolution_sequence: 1,
+        accepted_bid_count: 1, unique_bidder_count: 1, aav_minor: 6000, remaining_budget_minor: 14000,
+      },
+    });
+
+    await waitFor(() => expect(screen.queryByTestId('player-list-row-r1')).toBeNull());
+  });
+
+  it('test_F_MOD_002_rework_05_selecting_from_list_during_nomination_turn_sends_NOMINATE_COMMAND_at_min_bid', async () => {
+    const ws = await renderDraftRoom(undefined, installRankingsFetch);
+    await waitFor(() => expect(screen.getByTestId('player-list-panel')).toBeTruthy());
+
+    ws.push({
+      type: 'NOMINATION_TURN_CHANGED',
+      payload: { current_nominator_team_id: TEAM_ID, nomination_deadline_ts: Date.now() + 30000 },
+    });
+
+    await waitFor(() => expect((screen.getByTestId('player-list-nominate-r1') as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByTestId('player-list-nominate-r1'));
+
+    const sent = ws.sent.map((s) => JSON.parse(s)).filter((m: { type: string }) => m.type === 'NOMINATE_COMMAND');
+    expect(sent).toEqual([{ type: 'NOMINATE_COMMAND', payload: { player_dataset_entry_id: 'r1', opening_bid_minor: 100 } }]);
+  });
+
+  it('test_F_MOD_002_rework_05_nominate_action_disabled_when_not_owner_turn', async () => {
+    await renderDraftRoom(undefined, installRankingsFetch);
+    await waitFor(() => expect(screen.getByTestId('player-list-panel')).toBeTruthy());
+    expect((screen.getByTestId('player-list-nominate-r1') as HTMLButtonElement).disabled).toBe(true);
+  });
+});
+
+describe('F-MOD-002-rework-05 team-by-team strip (UF-17-07 item 2)', () => {
+  it('test_F_MOD_002_rework_05_strip_shows_every_team_in_order_with_budget_and_no_highlight_when_no_auction_open', async () => {
+    await renderDraftRoom();
+    await waitFor(() => expect(screen.getByTestId('team-strip')).toBeTruthy());
+
+    expect(screen.getByTestId('team-strip-t1')).toBeTruthy();
+    expect(screen.getByTestId('team-strip-t2')).toBeTruthy();
+    expect(screen.getByTestId('team-strip-budget-t1').textContent).toBe('$200');
+    expect(screen.queryByTestId('team-strip-bid-t1')).toBeNull();
+    expect(screen.queryByTestId('team-strip-bid-t2')).toBeNull();
+  });
+
+  it('test_F_MOD_002_rework_05_strip_highlights_current_leader_with_bid_amount', async () => {
+    const ws = await renderDraftRoom();
+    nominateJustinJefferson(ws); // nominator_team_id: 't2'
+    await waitFor(() => expect(screen.getByTestId('active-player-name')).toBeTruthy());
+
+    ws.push({
+      type: 'BID_ACCEPTED',
+      payload: {
+        player_auction_id: 'pa-1',
+        bid_amount_minor: 300,
+        leading_team_id: 't1',
+        auction_version: 2,
+        rebid_deadline_ts: Date.now() + 60000,
+        anti_snipe_extended: false,
+      },
+    });
+
+    await waitFor(() => expect(screen.getByTestId('team-strip-bid-t1')).toBeTruthy());
+    expect(screen.getByTestId('team-strip-bid-t1').textContent).toBe('$3');
+    expect(screen.getByTestId('team-strip-t1').className).toContain('draft-room__team-strip-item--leading');
+    expect(screen.queryByTestId('team-strip-bid-t2')).toBeNull();
   });
 });
