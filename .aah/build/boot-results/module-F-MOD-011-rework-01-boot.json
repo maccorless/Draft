@@ -1,0 +1,5 @@
+{"module": "F-MOD-011-rework-01", "all_healthy": true, "logs": ".aah/build/boot-logs/",
+ "services": [
+   {"name": "backend", "url": "http://localhost:3000/health", "http_code": 200, "healthy": true, "pid": 45698},
+   {"name": "frontend", "url": "http://localhost:5173", "http_code": 200, "healthy": true, "pid": 45732}
+ ]}
