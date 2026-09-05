@@ -8,7 +8,7 @@ F-MOD-002-rework-05
 F-MOD-002.md
 
 ## Status
-in_progress
+implementing
 
 ## Title
 Live Auction Engine with Bid Pipeline
