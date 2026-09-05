@@ -21,6 +21,8 @@ interface DraftRoomProps {
   leagueId: string;
   token: string;
   teamId: string | null;
+  /** Optional — when 'COMMISSIONER', the in-room Pause Draft action is shown (UF-01-03 item 3). */
+  role?: 'COMMISSIONER' | 'OWNER';
 }
 
 interface RosterSlotDef {
@@ -116,7 +118,7 @@ function useCountdown(deadlineTs: number | null): number {
   return Math.max(0, Math.round((deadlineTs - now) / 1000));
 }
 
-export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps): React.ReactElement {
+export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomProps): React.ReactElement {
   const ws = useAuctionSocket(draftId, token);
   const navigate = useNavigate();
   const [config, setConfig] = useState<DraftConfig | null>(null);
@@ -128,6 +130,15 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
   const [closeCardAward, setCloseCardAward] = useState<AwardEntry | null>(null);
   const [showPopover, setShowPopover] = useState(false);
   const awardCountRef = useRef(0);
+  // UF-01-03 item 1 (client-side half): the +$1 button computes its amount
+  // from local state at click time. Disable it immediately on click and only
+  // re-enable once the pending BID_ACCEPTED/BID_REJECTED response — or a
+  // newer auction-state broadcast — has actually been applied to local
+  // state, so a rapid double-click (or a click racing an incoming
+  // leader-change broadcast) can never fire a second increment computed
+  // from the same stale current-bid value.
+  const [plusOneInFlight, setPlusOneInFlight] = useState(false);
+  const plusOneClickRef = useRef<{ auctionId: string; version: number; errorAtClick: unknown } | null>(null);
 
   useEffect(() => {
     fetch(`/drafts/${draftId}/config`, { headers: { authorization: `Bearer ${token}` } })
@@ -195,6 +206,22 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
 
   const drafted = useMemo(() => new Set(ws.recentAwards.map((a) => a.player_name)), [ws.recentAwards]);
   const myGridTeam = teamId ? rosterGrid.find((t) => t.team_id === teamId) ?? null : null;
+
+  // UF-01-03 items 5-6: always-visible starter-vs-bench roster status, sourced
+  // from the same RosterEntry-backed /roster-grid slots the roster sidebar
+  // grid already fetches — no new endpoint needed. Server order (priority
+  // ASC, starters returned ahead of bench per war-room.ts) is preserved.
+  const myStarterSlots = useMemo(
+    () => (myGridTeam?.slots ?? []).filter((s) => s.is_starter),
+    [myGridTeam],
+  );
+  const myBenchSummary = useMemo(() => {
+    const bench = (myGridTeam?.slots ?? []).filter((s) => !s.is_starter);
+    return {
+      filled: bench.reduce((sum, s) => sum + s.filled, 0),
+      total: bench.reduce((sum, s) => sum + s.total, 0),
+    };
+  }, [myGridTeam]);
 
   const auction = ws.currentAuction;
   // Neither leading_team_id (the nominator leads at the opening price from
@@ -273,8 +300,36 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
       .slice(0, 8);
   }, [players, drafted, nominateSearch]);
 
+  // Re-enable the +$1 button once a NEWER auction-state broadcast has been
+  // applied (a different player_auction_id, or a version bump on the same
+  // one) or a NEW BID_REJECTED has arrived since the click that disabled it.
+  // Comparing against the value captured at click time (not just "is there
+  // an error/auction at all") avoids re-enabling instantly off of state that
+  // already existed before the click.
+  useEffect(() => {
+    if (!plusOneInFlight) return;
+    const clicked = plusOneClickRef.current;
+    if (!clicked) {
+      setPlusOneInFlight(false);
+      return;
+    }
+    if (!auction || auction.player_auction_id !== clicked.auctionId || auction.auction_version !== clicked.version) {
+      setPlusOneInFlight(false);
+      return;
+    }
+    if (ws.lastError && ws.lastError !== clicked.errorAtClick) {
+      setPlusOneInFlight(false);
+    }
+  }, [plusOneInFlight, auction, ws.lastError]);
+
   function handlePlusOne(): void {
-    if (!auction) return;
+    if (!auction || plusOneInFlight) return;
+    plusOneClickRef.current = {
+      auctionId: auction.player_auction_id,
+      version: auction.auction_version,
+      errorAtClick: ws.lastError,
+    };
+    setPlusOneInFlight(true);
     ws.bid(auction.player_auction_id, auction.current_bid_minor + 100, 'RELATIVE');
   }
 
@@ -291,6 +346,20 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
     ws.nominate(entryId, Math.max(config?.auction?.min_bid_minor ?? 100, 100));
     void aavMinor;
     setNominateSearch('');
+  }
+
+  // UF-01-03 item 3: an owner who is also the commissioner needs a visible
+  // Pause action reachable from inside their own Draft Room, not only from
+  // the separate Commissioner Console — reuses the existing pause endpoint,
+  // then routes into the console for the rest of the commissioner controls.
+  const isCommissioner = role === 'COMMISSIONER';
+  function handlePauseDraft(): void {
+    fetch(`/drafts/${draftId}/pause`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}` },
+    })
+      .catch(() => {})
+      .finally(() => navigate('/commissioner'));
   }
 
   const connectionMeta: Record<string, { icon: typeof WifiHigh; label: string }> = {
@@ -328,6 +397,29 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
             <span className="draft-room__auto-badge" data-testid="auto-agent-badge">
               <Robot size={14} weight="bold" /> AUTO
             </span>
+          )}
+          {/* UF-01-03 item 4: cross-navigation to the same team identity's War
+              Room, opened as a separate synchronized window per CLAUDE.md. */}
+          <a
+            className="draft-room__war-room-link"
+            href={`/war-room?draftId=${draftId}`}
+            target="_blank"
+            rel="noreferrer"
+            data-testid="open-war-room-link"
+          >
+            War Room ↗
+          </a>
+          {/* UF-01-03 item 3: in-room Pause action for an owner who is also
+              the commissioner — reuses the existing POST /drafts/:id/pause. */}
+          {isCommissioner && (
+            <button
+              className="draft-room__pause-btn"
+              onClick={handlePauseDraft}
+              disabled={ws.draftStatus !== 'RUNNING'}
+              data-testid="pause-draft-button"
+            >
+              Pause Draft
+            </button>
           )}
           <span
             className={`draft-room__conn draft-room__conn--${ws.connectionStatus}`}
@@ -371,6 +463,28 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
             <div className="draft-room__would-fill">
               <span className="draft-room__would-fill-label">If won</span>
               <strong className="draft-room__would-fill-value">{wouldFill}</strong>
+            </div>
+          )}
+
+          {myGridTeam && (
+            <div className="draft-room__my-roster" data-testid="my-roster">
+              <h3 className="draft-room__panel-heading">My Roster</h3>
+              <ul className="draft-room__roster-slot-list">
+                {myStarterSlots.map((slot) => (
+                  <li
+                    key={slot.position}
+                    className={`draft-room__roster-slot${slot.filled >= slot.total ? ' draft-room__roster-slot--filled' : ' draft-room__roster-slot--open'}`}
+                    data-testid={`roster-slot-${slot.position}`}
+                  >
+                    <span className="draft-room__roster-slot-position">{slot.position}</span>
+                    <span className="draft-room__roster-slot-count">{slot.filled}/{slot.total}</span>
+                  </li>
+                ))}
+                <li className="draft-room__roster-slot" data-testid="roster-slot-bench">
+                  <span className="draft-room__roster-slot-position">Bench</span>
+                  <span className="draft-room__roster-slot-count">{myBenchSummary.filled}/{myBenchSummary.total}</span>
+                </li>
+              </ul>
             </div>
           )}
         </aside>
@@ -469,7 +583,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId }: DraftRoomProps):
                 <button
                   className="draft-room__bid-btn draft-room__bid-btn--plus-one"
                   onClick={handlePlusOne}
-                  disabled={!canPlaceBid}
+                  disabled={!canPlaceBid || plusOneInFlight}
                   data-testid="plus-one-button"
                 >
                   +$1 → {formatMoney(auction.current_bid_minor + 100)}

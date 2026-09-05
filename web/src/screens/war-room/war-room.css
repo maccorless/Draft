@@ -33,6 +33,22 @@
   color: var(--color-led-green);
 }
 
+.war-room__topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.war-room__draft-room-link {
+  font-size: var(--text-xs);
+  color: var(--color-text-on-chrome-muted);
+  text-decoration: underline;
+}
+
+.war-room__draft-room-link:hover {
+  color: var(--color-text-on-chrome);
+}
+
 /* ── Grid layout per screen-information-architecture.md §15 ───────────────── */
 
 .war-room__grid {

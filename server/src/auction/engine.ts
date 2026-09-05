@@ -203,6 +203,19 @@ export function setPostNominationHook(hook: PostNominationHook): void {
   postNominationHook = hook;
 }
 
+// ─── User-facing money formatting ─────────────────────────────────────────────
+// UF-01-03 item 1: BID_REJECTED (and related ERROR) "reason" strings must never
+// interpolate a raw *_minor integer — every server-constructed user-facing
+// reason that embeds a money amount is formatted as whole dollars here,
+// matching the client's own formatMoney convention (web/src/screens/
+// draft-room/index.tsx) so a reconnecting/replaying client and a live one see
+// identical, already-formatted text. `code` remains the machine-readable
+// field for any client that wants to build its own message instead.
+
+function formatMoney(minor: number): string {
+  return `$${Math.round(minor / 100)}`;
+}
+
 // ─── max_legal_bid ─────────────────────────────────────────────────────────────
 
 export function computeMaxLegalBid(
@@ -393,7 +406,7 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
       payload: {
         player_auction_id: command.player_auction_id,
         code: 'BID_TOO_LOW',
-        reason: `Bid ${command.bid_amount_minor} must exceed current ${auction.current_bid_minor}`,
+        reason: `Bid ${formatMoney(command.bid_amount_minor)} must exceed current ${formatMoney(auction.current_bid_minor)}`,
       },
     });
     return { accepted: false, playerAuctionId: command.player_auction_id };
@@ -438,7 +451,7 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
       payload: {
         player_auction_id: command.player_auction_id,
         code: 'EXCEEDS_MAX_LEGAL_BID',
-        reason: `Bid ${command.bid_amount_minor} exceeds max legal bid ${maxLegalBid}`,
+        reason: `Bid ${formatMoney(command.bid_amount_minor)} exceeds max legal bid ${formatMoney(maxLegalBid)}`,
       },
     });
     return { accepted: false, playerAuctionId: command.player_auction_id };
@@ -597,7 +610,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
   if (command.opening_bid_minor < cfg.min_bid_minor) {
     broadcast(draftId, {
       type: 'ERROR',
-      payload: { code: 'BID_TOO_LOW', reason: `Opening bid must be at least ${cfg.min_bid_minor}` },
+      payload: { code: 'BID_TOO_LOW', reason: `Opening bid must be at least ${formatMoney(cfg.min_bid_minor)}` },
     });
     return { succeeded: false };
   }

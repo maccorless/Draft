@@ -1117,4 +1117,169 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
 
     // team3 is cleaned up by afterEach's `DELETE FROM teams WHERE league_id = ...`.
   }, 10000);
+
+  // ── F-MOD-002-rework-02: dollar-formatted BID_REJECTED reasons ────────────
+  // UF-01-03 item 1: engine.ts interpolated raw *_minor cents directly into
+  // user-facing "reason" strings (e.g. "Bid 2600 must exceed current 2600").
+  // Every reason that embeds a money amount must be formatted as whole
+  // dollars (e.g. "$26"), matching the client's formatMoney convention —
+  // no raw *_minor integer should ever reach a user-facing message.
+
+  it('test_F_MOD_002_rework_02_bid_too_low_reason_is_dollar_formatted_not_raw_minor', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    const nomResp = await sendAndReceive(ws1, {
+      type: 'NOMINATE_COMMAND',
+      payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 2600 },
+    });
+    await waitForMessage(ws2, 3000);
+    const auctionId = String(nomResp.payload?.['player_auction_id'] ?? '');
+
+    // bid_amount_minor === current_bid_minor (2600) — the exact "legitimate
+    // race" shape called out in the feedback (BID_TOO_LOW with equal amounts).
+    const response = await sendAndReceive(ws2, {
+      type: 'BID_COMMAND',
+      payload: { player_auction_id: auctionId, bid_amount_minor: 2600, bid_type: 'ABSOLUTE' },
+    });
+
+    expect(response.type).toBe('BID_REJECTED');
+    expect(response.payload?.['code']).toBe('BID_TOO_LOW');
+    const reason = String(response.payload?.['reason'] ?? '');
+    // Dollar-formatted (2600 minor -> $26), never the raw minor integer.
+    expect(reason).toContain('$26');
+    expect(reason).not.toContain('2600');
+
+    ws1.close();
+    ws2.close();
+  });
+
+  it('test_F_MOD_002_rework_02_exceeds_max_legal_bid_reason_is_dollar_formatted_not_raw_minor', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    const nomResp = await sendAndReceive(ws1, {
+      type: 'NOMINATE_COMMAND',
+      payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+    });
+    await waitForMessage(ws2, 3000);
+    const auctionId = String(nomResp.payload?.['player_auction_id'] ?? '');
+
+    // max_legal_bid = 1200 - (10-1)*100 = 300
+    await sql`
+      UPDATE draft_team_states
+      SET remaining_budget_minor = 1200, required_remaining_spots = 10
+      WHERE draft_id = ${draftId} AND team_id = ${team2Id}
+    `;
+
+    const response = await sendAndReceive(ws2, {
+      type: 'BID_COMMAND',
+      payload: { player_auction_id: auctionId, bid_amount_minor: 400, bid_type: 'ABSOLUTE' },
+    });
+
+    expect(response.type).toBe('BID_REJECTED');
+    expect(response.payload?.['code']).toBe('EXCEEDS_MAX_LEGAL_BID');
+    const reason = String(response.payload?.['reason'] ?? '');
+    expect(reason).toContain('$4'); // 400 minor -> $4
+    expect(reason).toContain('$3'); // max_legal_bid 300 minor -> $3
+    expect(reason).not.toContain('400');
+    expect(reason).not.toContain('300');
+
+    ws1.close();
+    ws2.close();
+  });
+
+  it('test_F_MOD_002_rework_02_nominate_opening_bid_too_low_reason_is_dollar_formatted', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+
+    // min_bid_minor is 100 ($1) per setupDraft's auction config — nominate below it.
+    const response = await sendAndReceive(ws1, {
+      type: 'NOMINATE_COMMAND',
+      payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 50 },
+    });
+
+    expect(response.type).toBe('ERROR');
+    const reason = String(response.payload?.['reason'] ?? '');
+    expect(reason).toContain('$1');
+    expect(reason).not.toContain('100');
+
+    ws1.close();
+  });
+
+  // ── F-MOD-002-rework-02: live-effect configuration (no restart required) ──
+  // UF-01-03 item 2: a commissioner's mid-draft edit to nomination_timer_ms/
+  // second_bid_timer_ms/rebid_timer_ms must take effect starting with the
+  // very next auction/turn that reads it — no server restart. Confirms the
+  // PUT /leagues/:id/config/auction route is a plain DB write (no in-process
+  // cache to invalidate) and that dispatchNominationTurn picks up the new
+  // value on the very next turn.
+
+  it('test_F_MOD_002_rework_02_mid_draft_nomination_timer_edit_takes_effect_on_next_turn_without_restart', async () => {
+    // Start with a long timer so the first turn would never auto-nominate
+    // within the test window if the edit were NOT picked up.
+    await setupDraft({ nominationTimerMs: 60000 });
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    // team1 nominates manually (consumes the first turn without needing the
+    // 60s timer to fire) so we can observe the SECOND team's turn dispatch,
+    // which re-reads nomination_timer_ms fresh at dispatch time.
+    const nomResp = await sendAndReceive(ws1, {
+      type: 'NOMINATE_COMMAND',
+      payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+    });
+    await waitForMessage(ws2, 3000);
+    const auctionId = String(nomResp.payload?.['player_auction_id'] ?? '');
+
+    // Mid-draft commissioner edit — no restart of the server/draft happens here.
+    await server.inject({
+      method: 'PUT',
+      url: `/leagues/${leagueId}/config/auction`,
+      headers: { authorization: `Bearer ${commToken}` },
+      payload: {
+        initial_budget_minor: 20000,
+        nomination_timer_ms: 300, // was 60000 — should apply to team2's upcoming turn
+        second_bid_timer_ms: 60000,
+        rebid_timer_ms: 60000,
+        anti_snipe_threshold_ms: 500,
+        anti_snipe_extension_ms: 500,
+        min_bid_minor: 100,
+      },
+    });
+
+    // Force the auction to resolve so nomination-turn advance dispatches team2's turn.
+    await sql`UPDATE player_auctions SET rebid_deadline = NOW() - INTERVAL '1 second' WHERE id = ${auctionId}`;
+
+    const award1 = await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
+    expect(award1.type).toBe('PLAYER_AWARDED');
+
+    const turnChanged1 = await waitForMessage(ws1, 4000);
+    await waitForMessage(ws2, 4000);
+    expect(turnChanged1.type).toBe('NOMINATION_TURN_CHANGED');
+    expect(turnChanged1.payload?.['current_nominator_team_id']).toBe(team2Id);
+
+    // With the new 300ms timer in effect, team2 (still MANUAL, no NOMINATE_COMMAND
+    // sent) auto-nominates well within a few seconds — proving the edit applied
+    // without any server/draft restart.
+    const nom2 = await waitForMessage(ws1, 3000);
+    await waitForMessage(ws2, 3000);
+    expect(nom2.type).toBe('NOMINATION_STARTED');
+    expect(nom2.payload?.['system_nominated']).toBe(true);
+    expect(nom2.payload?.['nominator_team_id']).toBe(team2Id);
+
+    ws1.close();
+    ws2.close();
+  }, 15000);
 });

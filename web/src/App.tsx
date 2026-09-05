@@ -421,7 +421,7 @@ function DraftRoomRoute({ auth }: { auth: AuthState }) {
   const [params] = useSearchParams();
   const draftId = params.get('draftId');
   if (!draftId) return <div style={styles.center}><p style={styles.error}>Missing draftId</p></div>;
-  return <DraftRoom draftId={draftId} leagueId={auth.leagueId} token={auth.token} teamId={auth.teamId ?? null} />;
+  return <DraftRoom draftId={draftId} leagueId={auth.leagueId} token={auth.token} teamId={auth.teamId ?? null} role={auth.role} />;
 }
 
 function WarRoomRoute({ auth }: { auth: AuthState }) {

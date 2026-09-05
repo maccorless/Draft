@@ -345,9 +345,22 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
     <div className="war-room">
       <header className="war-room__topbar">
         <span className="war-room__title">War Room</span>
-        <span className={`war-room__conn war-room__conn--${ws.connectionStatus}`}>
-          {CONNECTION_LABEL[ws.connectionStatus] ?? ws.connectionStatus}
-        </span>
+        <div className="war-room__topbar-actions">
+          {/* UF-01-03 item 4: reciprocal link back to the same team identity's
+              Draft Room, opened as a separate synchronized window. */}
+          <a
+            className="war-room__draft-room-link"
+            href={`/draft-room?draftId=${draftId}`}
+            target="_blank"
+            rel="noreferrer"
+            data-testid="open-draft-room-link"
+          >
+            Draft Room ↗
+          </a>
+          <span className={`war-room__conn war-room__conn--${ws.connectionStatus}`}>
+            {CONNECTION_LABEL[ws.connectionStatus] ?? ws.connectionStatus}
+          </span>
+        </div>
       </header>
 
       <div className="war-room__grid">
