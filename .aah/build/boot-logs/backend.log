@@ -195,8 +195,10 @@
 {"level":30,"time":1788623539177,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-2u","res":{"statusCode":200},"responseTime":13.336666000002879,"msg":"request completed"}
 {"level":30,"time":1788623539177,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-2v","res":{"statusCode":200},"responseTime":7.238875000002736,"msg":"request completed"}
 {"level":30,"time":1788623539179,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-2x","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":54844},"msg":"incoming request"}
-{"level":30,"time":1788623539179,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-2y","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":54845},"msg":"incoming request"}
-{"level":30,"time":1788623539181,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-2w","res":{"statusCode":200},"responseTime":5.570167000005313,"msg":"request completed"}
+{"level":30,"time":1788623539179,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-2y","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","11:08:49 AM [tsx] change in ./db/schema/index.ts Restarting...
+11:08:54 AM [tsx] Process didn't exit in 5s. Force killing...
+11:09:01 AM [tsx] change in ./src/auction/auto-agent.ts Process hasn't exited. Killing process...
+}
 {"level":30,"time":1788623539183,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-2z","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/audit-log","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":54847},"msg":"incoming request"}
 {"level":30,"time":1788623539183,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-2y","res":{"statusCode":200},"responseTime":3.9330410000038682,"msg":"request completed"}
 {"level":30,"time":1788623539185,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-30","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":54849},"msg":"incoming request"}
@@ -234,7 +236,9 @@
 {"level":30,"time":1788623553984,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-3g","res":{"statusCode":200},"responseTime":3.674749999991036,"msg":"request completed"}
 {"level":30,"time":1788623553984,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-3f","res":{"statusCode":200},"responseTime":4.586666000002879,"msg":"request completed"}
 {"level":30,"time":1788623554519,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-3h","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":54885},"msg":"incoming request"}
-{"level":30,"time":1788623554520,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-3i","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":54886},"msg":"incoming request"}
+{"level":30,"time":1788623554520,"pid":66465,"hostname11:08:49 AM [tsx] change in ./db/schema/index.ts Process hasn't exited. Killing process...
+11:09:01 AM [tsx] change in ./src/auction/auto-agent.ts Process hasn't exited. Killing process...
+rt":54886},"msg":"incoming request"}
 {"level":30,"time":1788623554520,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-3j","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/audit-log","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":54887},"msg":"incoming request"}
 {"level":30,"time":1788623554523,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-3h","res":{"statusCode":200},"responseTime":3.4875839999876916,"msg":"request completed"}
 {"level":30,"time":1788623554525,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-3j","res":{"statusCode":200},"responseTime":4.6450000000040745,"msg":"request completed"}
@@ -436,8 +440,9 @@
 {"level":30,"time":1788623610618,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-6d","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":55094},"msg":"incoming request"}
 {"level":30,"time":1788623610618,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-6e","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":55095},"msg":"incoming request"}
 {"level":30,"time":1788623610619,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-6f","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/audit-log","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":55096},"msg":"incoming request"}
-{"level":30,"time":1788623610622,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-6d","res":{"statusCode":200},"responseTime":3.9207920000189915,"msg":"request completed"}
-{"level":30,"time":1788623610623,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-6f","res":{"statusCode":200},"responseTime":4.5882500000006985,"msg":"request completed"}
+{"level":30,"time":1788623610622,"pid":66465,"hostname":"Ke11:08:49 AM [tsx] change in ./db/schema/index.ts Process hasn't exited. Killing process...
+11:09:01 AM [tsx] change in ./src/auction/auto-agent.ts Process hasn't exited. Killing process...
+ini.local","reqId":"req-6f","res":{"statusCode":200},"responseTime":4.5882500000006985,"msg":"request completed"}
 {"level":30,"time":1788623610626,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-6e","res":{"statusCode":200},"responseTime":7.390666999999667,"msg":"request completed"}
 {"level":30,"time":1788623610635,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-6g","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":55100},"msg":"incoming request"}
 {"level":30,"time":1788623610635,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-6h","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":55101},"msg":"incoming request"}
@@ -1572,8 +1577,9 @@
 {"level":30,"time":1788624010407,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-mv","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56308},"msg":"incoming request"}
 {"level":30,"time":1788624026393,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-mw","req":{"method":"GET","url":"/ws/drafts/f0680432-03db-4886-8d17-6241ba534c38","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56310},"msg":"incoming request"}
 {"level":30,"time":1788624026406,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-mx","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56312},"msg":"incoming request"}
-{"level":30,"time":1788624042393,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-my","req":{"method":"GET","url":"/ws/drafts/f0680432-03db-4886-8d17-6241ba534c38","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56314},"msg":"incoming request"}
-{"level":30,"time":1788624042409,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-mz","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56316},"msg":"incoming request"}
+{"level":30,"time":1788624042393,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-my","req":{"method":"GET","url":"/ws/dra11:08:49 AM [tsx] change in ./db/schema/index.ts Process hasn't exited. Killing process...
+11:09:01 AM [tsx] change in ./src/auction/auto-agent.ts Process hasn't exited. Killing process...
+tname":"Kens-Mac-mini.local","reqId":"req-mz","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56316},"msg":"incoming request"}
 {"level":30,"time":1788624058394,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-n0","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56319},"msg":"incoming request"}
 {"level":30,"time":1788624058410,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-n1","req":{"method":"GET","url":"/ws/drafts/f0680432-03db-4886-8d17-6241ba534c38","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56321},"msg":"incoming request"}
 {"level":30,"time":1788624074394,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-n2","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56323},"msg":"incoming request"}
@@ -1632,3 +1638,24 @@
 {"level":30,"time":1788624490405,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-oj","req":{"method":"GET","url":"/ws/drafts/f0680432-03db-4886-8d17-6241ba534c38","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56455},"msg":"incoming request"}
 {"level":30,"time":1788624506394,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-ok","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56458},"msg":"incoming request"}
 {"level":30,"time":1788624506407,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-ol","req":{"method":"GET","url":"/ws/drafts/f0680432-03db-4886-8d17-6241ba534c38","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56460},"msg":"incoming request"}
+{"level":30,"time":1788624522392,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-om","req":{"method":"GET","url":"/ws/drafts/f0680432-03db-4886-8d17-6241ba534c38","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56462},"msg":"incoming request"}
+{"level":30,"time":1788624522406,"pid":66465,"hostname":"Kens-Mac-mini.local","reqId":"req-on","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56464},"msg":"incoming request"}
+11:08:49 AM [tsx] change in ./db/schema/index.ts Restarting...
+{"level":30,"time":1788624530063,"pid":70493,"hostname":"Kens-Mac-mini.local","msg":"Server listening at http://127.0.0.1:3000"}
+{"level":30,"time":1788624530063,"pid":70493,"hostname":"Kens-Mac-mini.local","msg":"Server listening at http://192.168.2.101:3000"}
+{"level":30,"time":1788624530530,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-1","req":{"method":"GET","url":"/ws/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56467},"msg":"incoming request"}
+{"level":30,"time":1788624530603,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-2","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":56471},"msg":"incoming request"}
+{"level":30,"time":1788624530604,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-3","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":56472},"msg":"incoming request"}
+{"level":30,"time":1788624530605,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-4","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/audit-log","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":56473},"msg":"incoming request"}
+{"level":30,"time":1788624530627,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-4","res":{"statusCode":200},"responseTime":21.28904200000011,"msg":"request completed"}
+{"level":30,"time":1788624530629,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-2","res":{"statusCode":200},"responseTime":25.585833000000093,"msg":"request completed"}
+{"level":30,"time":1788624530629,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-5","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/audit-log","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":56480},"msg":"incoming request"}
+{"level":30,"time":1788624530630,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-6","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/health","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":56482},"msg":"incoming request"}
+{"level":30,"time":1788624530633,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-5","res":{"statusCode":200},"responseTime":3.026290999999901,"msg":"request completed"}
+{"level":30,"time":1788624530634,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-6","res":{"statusCode":200},"responseTime":3.9251250000002074,"msg":"request completed"}
+{"level":30,"time":1788624530635,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-3","res":{"statusCode":200},"responseTime":30.899582999999893,"msg":"request completed"}
+{"level":30,"time":1788624530636,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-7","req":{"method":"GET","url":"/drafts/bfa1448f-043c-45f0-810a-b580f1c7d58a/roster-grid","host":"127.0.0.1:3000","remoteAddress":"127.0.0.1","remotePort":56484},"msg":"incoming request"}
+{"level":30,"time":1788624530642,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-7","res":{"statusCode":200},"responseTime":5.842083000000002,"msg":"request completed"}
+{"level":30,"time":1788624538394,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-8","req":{"method":"GET","url":"/ws/drafts/1359fca8-0315-4a63-bf64-849246c5341b","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56487},"msg":"incoming request"}
+{"level":30,"time":1788624538407,"pid":70493,"hostname":"Kens-Mac-mini.local","reqId":"req-9","req":{"method":"GET","url":"/ws/drafts/f0680432-03db-4886-8d17-6241ba534c38","host":"localhost:5173","remoteAddress":"127.0.0.1","remotePort":56489},"msg":"incoming request"}
+11:09:01 AM [tsx] change in ./src/auction/auto-agent.ts Restarting...
