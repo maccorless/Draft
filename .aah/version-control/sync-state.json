@@ -542,6 +542,14 @@
         "url": "https://github.com/maccorless/Draft/issues/3"
       },
       "base": {}
+    },
+    "F-MOD-004-rework-02": {
+      "remote_ref": {
+        "number": 5,
+        "node_id": "I_kwDOUI9K_M8AAAABPK5dEA",
+        "url": "https://github.com/maccorless/Draft/issues/5"
+      },
+      "base": {}
     }
   }
 }
