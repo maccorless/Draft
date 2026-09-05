@@ -550,6 +550,14 @@
         "url": "https://github.com/maccorless/Draft/issues/5"
       },
       "base": {}
+    },
+    "F-MOD-002-rework-04": {
+      "remote_ref": {
+        "number": 3,
+        "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
+        "url": "https://github.com/maccorless/Draft/issues/3"
+      },
+      "base": {}
     }
   }
 }
