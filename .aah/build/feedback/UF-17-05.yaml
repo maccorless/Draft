@@ -32,4 +32,19 @@ steps:
   affected_features:
   - F-MOD-004-rework-02
   completed_at: "2026-09-05T16:10:00Z"
-status: in_progress
+- phase: build
+  input: "Build F-MOD-004-rework-02 via aah-feature-implementer, apply migration to dev DB, then boot for hands-on review."
+  output: >
+    F-MOD-004-rework-02 implemented and committed (f21daed): new
+    computeAutoAgentWillingnessCeiling() in auto-agent.ts implements the
+    5-step per-player algorithm; auto_agent_configs migrated
+    (0008_auto_agent_per_player_ceiling.sql) with AAV-anchored defaults;
+    PUT /auto-agent, SET_AUTO_AGENT_CONFIG WS command, and the Draft Room
+    config panel updated to the new fields. 284/284 tests pass (21 for this
+    feature). Migration applied to the dev DB; verified live with a fresh
+    reseeded mock draft: Jahmyr Gibbs $74 (AAV $61, +21%), Puka Nacua $68
+    (AAV $59, +15%), Ja'Marr Chase $66 (AAV $57, +16%) - all AAV-anchored
+    with reasonable variance, replacing the flat $200-regardless-of-player
+    behavior. rework marked completed via core.build.rework complete.
+  completed_at: "2026-09-05T16:40:00Z"
+status: completed
