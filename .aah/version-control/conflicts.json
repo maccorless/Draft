@@ -239,6 +239,22 @@
       },
       "detected_at": "sync",
       "status": "resolved"
+    },
+    {
+      "conflict_id": "CF-F-MOD-011-status",
+      "feature_id": "F-MOD-011",
+      "field": "status",
+      "field_class": "status",
+      "base": "done",
+      "local": "done",
+      "remote": "implementing",
+      "remote_ref": {
+        "number": 13,
+        "node_id": "I_kwDOUI9K_M8AAAABPr8ITQ",
+        "url": "https://github.com/maccorless/Draft/issues/13"
+      },
+      "detected_at": "sync",
+      "status": "open"
     }
   ]
 }
