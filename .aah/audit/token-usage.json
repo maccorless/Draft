@@ -1,13 +1,13 @@
 {
-  "total_all_tokens": 2307714903,
-  "total_io_tokens": 3806775,
-  "total_cache_tokens": 2303908128,
-  "total_input_tokens": 16081,
-  "total_output_tokens": 3790694,
-  "total_cache_read_tokens": 2247584223,
-  "total_cache_creation_tokens": 56323905,
-  "session_count": 7,
-  "updated_at": "2026-09-05T21:45:24.084350+00:00",
+  "total_all_tokens": 2317645651,
+  "total_io_tokens": 3833943,
+  "total_cache_tokens": 2313811708,
+  "total_input_tokens": 16279,
+  "total_output_tokens": 3817664,
+  "total_cache_read_tokens": 2257198313,
+  "total_cache_creation_tokens": 56613395,
+  "session_count": 8,
+  "updated_at": "2026-09-05T21:56:17.373650+00:00",
   "sessions": [
     {
       "session_id": "dc397d7e-8283-48fd-8eaa-dfc2dad9e4a1",
@@ -239,19 +239,54 @@
           "total_all_tokens": 661206145
         }
       }
+    },
+    {
+      "session_id": "9d097310-fff4-4ce0-854f-4e68e76d03d4",
+      "timestamp": "2026-09-05T21:56:17.373650+00:00",
+      "input_tokens": 198,
+      "output_tokens": 26970,
+      "cache_read_input_tokens": 9614090,
+      "cache_creation_input_tokens": 289490,
+      "total_io_tokens": 27168,
+      "total_cache_tokens": 9903580,
+      "total_all_tokens": 9930748,
+      "main_thread_tokens": 9930748,
+      "subagent_tokens": 0,
+      "by_phase": {
+        "build": {
+          "input_tokens": 198,
+          "output_tokens": 26970,
+          "cache_read_input_tokens": 9614090,
+          "cache_creation_input_tokens": 289490,
+          "total_io_tokens": 27168,
+          "total_cache_tokens": 9903580,
+          "total_all_tokens": 9930748
+        }
+      }
     }
   ],
   "models": [
     {
+      "model": "claude-sonnet-4-6",
+      "sessions": 1,
+      "input_tokens": 3955,
+      "output_tokens": 932458,
+      "cache_read_input_tokens": 321057908,
+      "cache_creation_input_tokens": 11882466,
+      "total_io_tokens": 936413,
+      "total_cache_tokens": 332940374,
+      "total_all_tokens": 333876787
+    },
+    {
       "model": "claude-sonnet-5",
-      "sessions": 6,
-      "input_tokens": 11552,
-      "output_tokens": 2746805,
-      "cache_read_input_tokens": 1864607674,
-      "cache_creation_input_tokens": 41729171,
-      "total_io_tokens": 2758357,
-      "total_cache_tokens": 1906336845,
-      "total_all_tokens": 1909095202
+      "sessions": 2,
+      "input_tokens": 784,
+      "output_tokens": 139171,
+      "cache_read_input_tokens": 73211727,
+      "cache_creation_input_tokens": 3002751,
+      "total_io_tokens": 139955,
+      "total_cache_tokens": 76214478,
+      "total_all_tokens": 76354433
     }
   ]
 }
