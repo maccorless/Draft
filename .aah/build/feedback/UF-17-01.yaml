@@ -1,0 +1,13 @@
+feedback_id: UF-17-01
+wave: 17
+source: user
+started_at: '2026-09-05T14:05:00Z'
+feedback_details: |
+  Add a "Start Now" button to the Commissioner Draft Control UI (F-MOD-011, web/src/screens/commissioner/DraftControl.tsx) that lets the commissioner start the draft immediately, independent of whether/when it was scheduled. The server already exposes POST /drafts/:draftId/start (server/src/auction/routes.ts) which transitions a CREATED draft straight to RUNNING with no schedule gate — the gap is purely on the frontend: no UI anywhere currently calls this endpoint. Add a "Start Now" control to the Draft Controls panel, visible/enabled only when health.status === 'CREATED', that calls this endpoint and reports success/failure like the existing pause/resume controls. Context: user wants this to run a manual mock draft in the browser — commissioner sets up the draft, sets all owners to AUTO_AGENT, then needs to kick off the live auction on demand rather than waiting for a scheduled time.
+steps:
+- phase: plan
+  completed_at: null
+  affected_modules:
+  - commissioner-draft-control-ui
+  blast_radius_features: []
+status: in_progress

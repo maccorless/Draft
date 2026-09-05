@@ -170,6 +170,18 @@
       ]
     },
     {
+      "id": "F-MOD-011-rework-01",
+      "module_ref": "MOD-011",
+      "layers": [
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-002",
+        "F-MOD-004"
+      ]
+    },
+    {
       "id": "F-MOD-012",
       "module_ref": "MOD-012",
       "layers": [
@@ -299,6 +311,10 @@
     },
     {
       "from": "F-MOD-002",
+      "to": "F-MOD-011-rework-01"
+    },
+    {
+      "from": "F-MOD-002",
       "to": "F-MOD-015"
     },
     {
@@ -320,6 +336,10 @@
     {
       "from": "F-MOD-004",
       "to": "F-MOD-011"
+    },
+    {
+      "from": "F-MOD-004",
+      "to": "F-MOD-011-rework-01"
     },
     {
       "from": "F-MOD-004",

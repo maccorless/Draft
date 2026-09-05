@@ -26,9 +26,15 @@ for the new endpoints (added alongside `server/src/auction/routes.ts`), reusing 
 
 **What it builds, grounded in `module-map.yaml` MOD-011 and PRD §30:**
 
-1. **Pause/resume + timer controls.** Pause/resume reuse the existing `POST /drafts/:draftId/pause`
-   and `POST /drafts/:draftId/resume` endpoints (`server/src/auction/routes.ts`) — this module wires
-   buttons to them. Timer extension is new: `POST /drafts/:id/timers/extend` (body: `{ seconds }`),
+1. **Start Now / Pause/resume + timer controls.** "Start Now" reuses the existing
+   `POST /drafts/:draftId/start` endpoint (`server/src/auction/routes.ts`), which transitions a
+   `CREATED` draft straight to `RUNNING` — this endpoint has no scheduled-start-time gate of its own,
+   so the commissioner can call it at any time regardless of whether or when the draft was scheduled.
+   This module adds a "Start Now" button to the Draft Controls panel, visible/enabled only while
+   `health.status === 'CREATED'`, wired to that endpoint. Pause/resume reuse the existing
+   `POST /drafts/:draftId/pause` and `POST /drafts/:draftId/resume` endpoints
+   (`server/src/auction/routes.ts`) — this module wires buttons to them. Timer extension is new:
+   `POST /drafts/:id/timers/extend` (body: `{ seconds }`),
    commissioner-only, valid only while a `PlayerAuction` is in a non-terminal state
    (`SECOND_BID_OPEN` or `REBID_OPEN` per `data-model.md` §PlayerAuction) — extends that auction's
    `deadline_at`, bumps `auction_version`, appends a `DraftEvent`, and broadcasts the new deadline so
@@ -80,6 +86,13 @@ for the new endpoints (added alongside `server/src/auction/routes.ts`), reusing 
 
 **Behavioral expectations:**
 
+- Given a `CREATED` draft (not yet started, regardless of whether or when a scheduled start time
+  is set or has passed), when the commissioner clicks "Start Now" in the Draft Control section,
+  then `POST /drafts/:id/start` fires, the draft transitions to `RUNNING`, a `DRAFT_STATUS_CHANGED`
+  broadcast is received, and the UI reflects `RUNNING` without a page reload.
+- Given a draft that is not `CREATED` (already `RUNNING`, `PAUSED`, or `COMPLETE`), when the
+  commissioner views the Draft Control section, then the "Start Now" control is not shown or is
+  disabled, and clicking it (if somehow triggered) is a no-op that makes no request.
 - Given a `RUNNING` draft, when the commissioner clicks Pause in the Draft Control section, then
   `POST /drafts/:id/pause` fires, the draft transitions to `PAUSED`, a `DRAFT_STATUS_CHANGED`
   broadcast is received, and the UI reflects `PAUSED` without a page reload.
