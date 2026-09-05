@@ -590,7 +590,7 @@
       "passes": false
     },
     {
-      "status": "pending",
+      "status": "in_progress",
       "id": "F-MOD-002-rework-04",
       "title": "Live Auction Engine with Bid Pipeline",
       "module_ref": "MOD-002",
@@ -2092,7 +2092,7 @@
       "passes": true
     },
     {
-      "status": "pending",
+      "status": "in_progress",
       "id": "F-MOD-004-rework-03",
       "title": "Auto-Agent Mode for Disconnected Teams",
       "module_ref": "MOD-004",

@@ -9,9 +9,29 @@ feedback_details: |
   This does not affect data already produced by the completed mock draft (that data can simply be discarded/reseeded); the fix is about preventing this from ever happening again.
 steps:
 - phase: plan
-  completed_at: null
+  input: >
+    Add an independent ROSTER_FULL bid-rejection gate (F-MOD-002/engine.ts)
+    and a matching Auto-Agent bid-trigger filter (F-MOD-004/auto-agent.ts)
+    so a full-roster team can never bid/win again, protecting both manual
+    and Auto-Agent bidders.
   affected_modules:
   - live-auction-core
   - auto-agent
   blast_radius_features: []
+  output: >
+    Case A rework of both features. F-MOD-002.md: added a "Roster-full hard
+    gate" behavioral expectation requiring bid validation to reject with
+    ROSTER_FULL when required_remaining_spots <= 0 independent of
+    max_legal_bid, plus an "Award never proceeds without a roster slot"
+    expectation making awardAuction() throw on a null assignRosterSlot()
+    result instead of silently charging budget. F-MOD-004.md: Bidding
+    cadence now requires required_remaining_spots > 0 as a precondition for
+    both bid triggers, plus a new behavioral expectation. Created
+    F-MOD-002-rework-04 (supersedes F-MOD-002) and F-MOD-004-rework-03
+    (supersedes F-MOD-004) via core.plan.create_rework_entry, both in wave
+    17. feature-list.json and dag.json regenerated. Committed as c3baff9.
+  affected_features:
+  - F-MOD-002-rework-04
+  - F-MOD-004-rework-03
+  completed_at: "2026-09-05T17:10:00Z"
 status: in_progress
