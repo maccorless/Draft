@@ -24,4 +24,15 @@ steps:
   affected_features:
   - F-MOD-002-rework-03
   completed_at: "2026-09-05T15:35:00Z"
-status: in_progress
+- phase: build
+  input: "Build F-MOD-002-rework-03 via aah-feature-implementer, then boot for hands-on review."
+  output: >
+    F-MOD-002-rework-03 implemented and committed (2c3dc43):
+    GET /drafts/:draftId/roster-grid now returns each slot's filled players
+    as {name, price_minor}; My Roster panel renders player name + dollar
+    price per filled slot. 43/43 tests pass, lint clean. Verified live in
+    browser: signed in as Gamma Gorillas mid-draft, My Roster correctly
+    showed "Bijan Robinson $200", "Jeremiyah Love $36", etc. for filled
+    slots. rework marked completed via core.build.rework complete.
+  completed_at: "2026-09-05T15:50:00Z"
+status: completed
