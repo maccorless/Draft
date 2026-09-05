@@ -25,4 +25,15 @@ steps:
   affected_features:
   - F-MOD-011-rework-01
   completed_at: "2026-09-05T14:15:00Z"
-status: in_progress
+- phase: build
+  input: "Build F-MOD-011-rework-01 via aah-feature-implementer, then boot for hands-on review."
+  output: >
+    F-MOD-011-rework-01 implemented and committed (28f0054): Start Now button
+    added to DraftControl.tsx, gated on health.status === 'CREATED', calling
+    existing POST /drafts/:id/start. New test suite (4 tests) + existing
+    server suite (19 tests) pass, eslint clean. Verified live in browser:
+    button appeared on CREATED draft and successfully started it (status
+    changed to RUNNING). rework marked completed via
+    core.build.rework complete.
+  completed_at: "2026-09-05T14:35:00Z"
+status: completed
