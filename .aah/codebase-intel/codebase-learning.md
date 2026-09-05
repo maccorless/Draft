@@ -145,9 +145,10 @@ See §4's route table. WS message types confirmed in code (`server/src/ws/auctio
 | Auth epoch revocation | `auth_epoch` re-read from `leagues`/`teams` table on every command (never from token payload) | `server/src/league/auth-hook.ts`, `server/src/auction/routes.ts`, `auto-agent-routes.ts` |
 | Starter-first roster assignment | Lowest priority-number unfilled starter slot, then bench | `server/src/auction/engine.ts` (award path) |
 | Nominator Match | One-per-auction right to match high bid at same price, consumed permanently | `server/src/auction/engine.ts` (`processNominatorMatchCommand`) |
-| Nomination turn advance | Shared by explicit `PASS_NOMINATION` and post-award | `server/src/auction/engine.ts` `advanceNominationTurn` — **currently does not enforce a deadline or trigger auto-nomination; this is the gap fix UF-01-02 addresses** |
-| Auto-Agent control mode | `MANUAL` / `AUTO_AGENT`, separate from WS connection state; grace-timer takeover on full disconnect | `server/src/auction/auto-agent.ts` (`setControlMode`, `handleGraceExpiry`) |
-| Auto-Agent reactive bidding | Fires on nomination and on every leadership change, gated by `willingness_pct` ceiling | `server/src/auction/auto-agent.ts` (`triggerAutoAgentBidsOnNomination`, `triggerAutoAgentBidsOnLeaderChange`) |
+| Nomination turn advance | Shared by explicit `PASS_NOMINATION` and post-award; auto-nominates on missed AUTO_AGENT/MANUAL turn via the Nomination Queue (fixed UF-01-02/F-MOD-002-rework-01) | `server/src/auction/engine.ts` `advanceNominationTurn` |
+| Auto-Agent control mode | `MANUAL` / `AUTO_AGENT`, separate from WS connection state; grace-timer takeover on full disconnect; `setControlMode` upserts `DraftTeamState` so a pre-start mode change isn't silently dropped (F-MOD-004-rework-01) | `server/src/auction/auto-agent.ts` (`setControlMode`, `handleGraceExpiry`) |
+| Auto-Agent per-player willingness ceiling | Fires on nomination and on every leadership change (recursive: each accepted Auto-Agent bid re-triggers the leader-change check for the other AUTO_AGENT teams). 5-step ceiling per player (F-MOD-004-rework-02): base = customized `owner_target_values` row else Primary AAV via `resolvePlayerPrimaryAav`; apply stable `random_variance_pct`; cap at `base * (1 + max_over_base_pct)`; full value if it fills an unfilled starter slot and `prioritize_starters`, else discounted by `bench_value_pct`; clamp to `max_legal_bid`. Excludes `do_not_draft_items` and any team with `required_remaining_spots <= 0` (F-MOD-004-rework-03) | `server/src/auction/auto-agent.ts` (`computeAutoAgentWillingnessCeiling`, `triggerAutoAgentBidsOnNomination`, `triggerAutoAgentBidsOnLeaderChange`) |
+| Roster-full hard gate | Bid validation rejects with `ROSTER_FULL` when the bidding team's `required_remaining_spots <= 0`, independent of `max_legal_bid`; `awardAuction` throws (caught per-auction, never charges budget) if `assignRosterSlot` finds no eligible slot (F-MOD-002-rework-04) | `server/src/auction/engine.ts` (`processBidCommand`, `awardAuction`, `assignRosterSlot`) |
 | Commissioner on-behalf-of override | COMMISSIONER-only; nominate/bid as another team | `server/src/ws/auction-handler.ts` (`resolveOnBehalfOfTeamId`) |
 | Watch List / Nomination Queue / Do Not Draft | Private per-team lists; Nomination Queue may auto-nominate, Watch List never does | `server/src/draft/strategy.ts` (`getTopNominationQueueEntry`), `server/src/draft/do-not-draft.ts` |
 | Append-only history | Superseded rows marked inactive, never deleted | `server/src/draft/corrections.ts` |
@@ -196,9 +197,9 @@ See §4's route table. WS message types confirmed in code (`server/src/ws/auctio
 
 | Area | Observation | Impact | Confidence |
 |------|-------------|--------|------------|
-| Auto-nomination gap | Auto-Agent never proactively nominates; no nomination-turn deadline timer exists | High — a fully-AUTO_AGENT draft cannot progress past the first turn | High (confirmed by code read; being fixed in UF-01-02) |
-| `engine.ts` size | 1290 lines, many concerns (bid, nominate, award, match, timers) in one file | Medium — readability/maintainability, not correctness | Medium |
-| Codebase intel staleness | This document and the diagram files were last fully synthesized at plan-mode (pre-implementation); 10-18 features have since landed | Medium — future refreshes should prioritize a fuller re-read once the module set stabilizes | High |
+| `engine.ts` size | ~1290+ lines, many concerns (bid, nominate, award, match, timers, roster-full gate) in one file | Medium — readability/maintainability, not correctness | Medium |
+| Draft Room nomination UX | Nomination is search-box-only (`nominateSearch`/`availablePlayers` in `web/src/screens/draft-room/index.tsx`) — no persistent filterable/sortable player list; being addressed by UF-17-07 | Medium — usability gap, not correctness | High (confirmed by code read) |
+| Codebase intel staleness | This document and the diagram files were last fully synthesized at plan-mode (pre-implementation); resolved auto-nomination gap and refreshed the Auto-Agent/roster-full rows as of 2026-09-05 (wave 17 fixes) | Medium — future refreshes should prioritize a fuller re-read once the module set stabilizes | High |
 
 ---
 
