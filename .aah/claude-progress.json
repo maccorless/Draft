@@ -1,8 +1,8 @@
 {
-  "last_updated": "2026-09-05T22:15:30.764042+00:00",
+  "last_updated": "2026-09-05T22:30:03.064434+00:00",
   "current_phase": "build",
-  "current_wave": null,
-  "current_tier": 0,
+  "current_wave": 17,
+  "current_tier": 8,
   "last_completed_feature": "F-MOD-011-rework-01",
   "in_progress_features": [],
   "known_issues": [],
