@@ -99,24 +99,65 @@ components:
   schemas:
     AutoAgentConfigRequest:
       type: object
-      required: [willingness_pct]
+      description: |
+        Per-player willingness ceiling configuration (state-machine-flows.md §11,
+        data-model.md §10.5). Partial update — all fields optional; omitted
+        fields keep their current (or default) value. Replaces the prior flat
+        willingness_pct-of-total-budget field.
       properties:
-        willingness_pct:
+        use_owner_target_when_customized:
+          type: boolean
+          description: Prefer the team's customized Owner Target over Primary AAV, when one exists
+        fallback_to_primary_aav:
+          type: boolean
+          description: Fall back to the dataset's Primary AAV when no customized Owner Target exists
+        max_over_base_pct:
+          type: number
+          format: float
+          minimum: 0.0
+          description: Cap the varied value at base * (1 + max_over_base_pct)
+        random_variance_pct:
           type: number
           format: float
           minimum: 0.0
           maximum: 1.0
-          description: Fraction of remaining budget Auto-Agent will bid up to
+          description: Stable ± variance applied to the base value, per team+player
+        bench_value_pct:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Discount applied when the player would not fill a currently-unfilled starter slot
+        prioritize_starters:
+          type: boolean
+          description: Use the full (undiscounted) value when the player would fill a starter slot
 
     AutoAgentConfigResponse:
       type: object
-      required: [team_id, willingness_pct]
+      required:
+        - team_id
+        - use_owner_target_when_customized
+        - fallback_to_primary_aav
+        - max_over_base_pct
+        - random_variance_pct
+        - bench_value_pct
+        - prioritize_starters
       properties:
         team_id:
           type: string
           format: uuid
-        willingness_pct:
+        use_owner_target_when_customized:
+          type: boolean
+        fallback_to_primary_aav:
+          type: boolean
+        max_over_base_pct:
           type: number
+        random_variance_pct:
+          type: number
+        bench_value_pct:
+          type: number
+        prioritize_starters:
+          type: boolean
 
     ControlModeRequest:
       type: object
