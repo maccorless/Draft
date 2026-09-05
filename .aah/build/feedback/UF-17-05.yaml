@@ -6,8 +6,30 @@ feedback_details: |
   Observed live during the mock draft: the first player nominated (Bijan Robinson) sold for $200 on a $250 starting budget. User expected Auto-Agent bidding to be driven by a per-player target of roughly AAV +/- 25% variance, which would produce a much lower ceiling for most players. Root cause, traced against the authoritative design docs (not just the built feature spec): state-machine-flows.md section 11 "Auto-Agent Offer Calculation" and data-model.md section 10.5 "AutoAgentConfiguration" specify a per-player willingness ceiling: base = the team's customized OwnerPlayerTarget for that player if one exists, else the dataset's Primary AAV for that player; apply a stable/random variance (random_variance_pct); apply a max_over_base_pct ceiling; if the player would fill a currently-unfilled starter slot use that starter willingness, otherwise discount it by bench_value_pct; clamp to max_legal_bid; skip entirely if the player is on that team's Do Not Draft list. The actual implementation (server/src/auction/auto-agent.ts, triggerAutoAgentBidsOnNomination/triggerAutoAgentBidsOnLeaderChange, ~lines 245-246 and 289-290) computes willingnessCeiling as `floor(remaining_budget_minor * willingnessPct)` — a single flat percentage (default 0.8 / 80%) of the team's TOTAL remaining budget, with no per-player AAV/Target grounding, no variance, and no starter/bench distinction at all. This is exactly why the ceiling was $200 on a $250 budget (80% of $250) regardless of which player was up. Do Not Draft exclusion IS already correctly implemented (both functions already filter out do_not_draft_items). The supporting data already exists and is populated by other already-built modules: player_aav_sources (dataset_id, player_id, aav_minor, source) joined via draft_datasets.primary_aav_source to resolve a player's Primary AAV; owner_target_values (draft_id, team_id, dataset_player_id, target_value_minor) for a team's customized per-player target (row presence = customized, per OwnerPlayerTarget.is_customized in the data model); roster_slot_definitions/roster_entries already used elsewhere (e.g. server/src/draft/war-room.ts) to determine starter-slot fill state. The auto_agent_configs table (server/db/schema/index.ts) currently has only willingness_pct + enabled — it needs the fields data-model.md 10.5 actually specifies: use_owner_target_when_customized (bool), fallback_to_primary_aav (bool), max_over_base_pct (decimal), random_variance_pct (decimal), bench_value_pct (decimal), prioritize_starters (bool) — a migration is required. Fix: rewrite the Auto-Agent willingness-ceiling calculation in auto-agent.ts to implement state-machine-flows.md section 11's flow exactly (base value -> variance -> max_over_base_pct ceiling -> starter/bench distinction -> clamp to max_legal_bid), reading real values from player_aav_sources/draft_datasets.primary_aav_source, owner_target_values, and the new AutoAgentConfiguration fields (add sensible defaults, e.g. random_variance_pct=0.25 matching the user's +/-25% expectation, max_over_base_pct as a reasonable ceiling above base, bench_value_pct as a discount below 1.0, prioritize_starters=true) so a fresh AutoAgentConfig row behaves sanely without per-team configuration. Existing behavioral expectations that must keep holding: Do Not Draft exclusion, bid validation through the same pipeline as manual bids, and never exceeding max_legal_bid.
 steps:
 - phase: plan
-  completed_at: null
+  input: >
+    Rewrite the Auto-Agent willingness ceiling to implement
+    state-machine-flows.md sec.11 exactly (per-player, AAV/Target-anchored,
+    with variance and starter/bench discount), replacing the flat
+    80%-of-budget calculation (F-MOD-004, built and promoted, previously
+    reworked once).
   affected_modules:
   - auto-agent
   blast_radius_features: []
+  output: >
+    Case A (implemented feature) rework. Rewrote F-MOD-004.md's "Willingness
+    ceiling" section to specify the full 5-step per-player algorithm (base
+    value from owner_target_values or Primary AAV via
+    draft_datasets.primary_aav_source -> variance -> max-over-base ceiling
+    -> starter/bench discount -> clamp to max_legal_bid), documented the
+    auto_agent_configs migration needed for the six AutoAgentConfiguration
+    fields data-model.md 10.5 specifies with sane out-of-box defaults
+    (random_variance_pct=0.25 etc.), updated Bidding cadence/WS
+    command/config-panel prose and 6 behavioral expectations (2 rewritten,
+    4 new) to match, replacing the old willingness_pct-based ones. Created
+    superseding entry F-MOD-004-rework-02.md via
+    core.plan.create_rework_entry, placed in wave 17. feature-list.json and
+    dag.json regenerated. Committed as 659be36.
+  affected_features:
+  - F-MOD-004-rework-02
+  completed_at: "2026-09-05T16:10:00Z"
 status: in_progress
