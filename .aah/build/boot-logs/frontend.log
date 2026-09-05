@@ -10,3 +10,9 @@ Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: http://192.168.2.101:5173/  en1
+11:10:18 AM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
+11:10:18 AM [vite] ws proxy error:
+Error: connect ECONNREFUSED 127.0.0.1:3000
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
