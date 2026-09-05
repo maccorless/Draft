@@ -6,68 +6,7 @@
   - `__dirname` (vite.config.ts:11:33). Use `import.meta.dirname` instead
 Set `VITE_CONFIG_NATIVE_IGNORE_WARNING=true` to suppress this warning.
 
-  VITE v8.2.2  ready in 76 ms
+  VITE v8.2.2  ready in 87 ms
 
   ➜  Local:   http://localhost:5173/
   ➜  Network: http://192.168.2.101:5173/  en1
-11:10:18 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:10:18 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:11:38 AM [vite] (client) hmr update /src/screens/lobby/index.tsx
-11:11:41 AM [vite] (client) hmr update /src/screens/lobby/index.tsx
-11:11:49 AM [vite] (client) hmr update /src/screens/lobby/index.tsx
-11:12:00 AM [vite] (client) hmr update /src/screens/lobby/index.tsx
-11:17:46 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:17:46 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:23:57 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:23:59 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:03 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:10 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:10 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:11 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:26 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:26 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:26 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:41 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:42 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:42 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:56 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:58 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
-11:24:58 AM [vite] ws proxy error:
-Error: connect ECONNREFUSED 127.0.0.1:3000
-    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)
