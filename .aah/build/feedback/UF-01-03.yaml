@@ -188,4 +188,35 @@ steps:
   - F-MOD-014
   - F-MOD-015
   - F-MOD-017
-status: in_progress
+- phase: build
+  input: >
+    Build F-MOD-002-rework-02 per its updated spec in F-MOD-002.md.
+  output: >
+    Implemented by aah-feature-implementer: server-side formatMoney helper
+    applied to all three BID_REJECTED/nomination reason strings that
+    previously leaked raw *_minor cents; client-side +$1 button now disables
+    on click and re-enables only on a matching BID_ACCEPTED/BID_REJECTED or a
+    newer auction-state broadcast; confirmed (via a new regression test) that
+    AuctionConfiguration timer values were already re-read fresh per
+    nomination/bid dispatch (rework-01's existing behavior) — no caching gap
+    found; added an in-Draft-Room "Pause Draft" action gated on
+    role === 'COMMISSIONER'; added reciprocal Draft Room <-> War Room links
+    (opened as a separate window); added an always-visible "My Roster" panel
+    showing filled/open starter slots and bench count. 4 new server tests +
+    10 new web tests added. Independently re-verified (the per-feature
+    evidence JSON has a known cross-contamination bug, reported separately):
+    ran server/src/__tests__/F-MOD-002_auction.test.ts directly (29/29 pass)
+    and web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx directly
+    (10/10 pass); spot-read the actual diffs against the spec (formatMoney
+    call sites, plusOneInFlight debounce guard + re-enable effect, isCommissioner
+    gate on the Pause button, war-room-link href/target, handlePauseDraft's
+    call to POST /drafts/:id/pause + navigate to /commissioner) — all match.
+    Whole-codebase regression suite: 424/424 passing. Standards gate: pass.
+    Live-verified in the browser (owner and commissioner logins) before
+    promotion. Promoted main -> develop; tagged Draft/iter-3/aah-build.
+    Note: hit an unrelated environment failure mid-gate-run — Docker Desktop's
+    daemon had stopped responding (likely resource pressure from a very long
+    session running many regression cycles); restarted it and retried, no
+    code changes involved.
+  completed_at: '2026-09-05T08:00:00Z'
+status: completed
