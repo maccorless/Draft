@@ -47,6 +47,7 @@ describe.skipIf(SKIP_DB)('F-MOD-013 draft summary report metrics', () => {
   let p1Id: string;
   let p2Id: string;
   let p3Id: string;
+  let p4Id: string;
 
   function makeToken(payload: object): string {
     return server.jwt.sign(payload);
@@ -65,11 +66,19 @@ describe.skipIf(SKIP_DB)('F-MOD-013 draft summary report metrics', () => {
   });
 
   /**
-   * Team1 wins 2 players (P1 assigned the sole starter QB slot, P2 falls to
-   * bench since the starter slot is full and there is no explicit BN slot
-   * definition — assignRosterSlot then returns null, leaving P2 with no
-   * active roster_entries row, which reports.ts's LEFT JOIN treats as
-   * is_starter=false). Team2 wins 1 player (P3, starter).
+   * Team1 wins 2 players (P1 assigned the sole starter QB slot, P2 assigned
+   * the one bench slot once the starter slot is full — a real, active
+   * roster_entries row with is_starter=false). Team2 wins 2 players (P3
+   * starter, P4 bench) — every team must fully fill its roster
+   * (starter + bench) for the draft to auto-complete, which the report
+   * endpoint requires (409 otherwise).
+   *
+   * Since F-MOD-002-rework-04, a bid can only ever be won when an eligible
+   * slot (starter or bench) actually exists — awardAuction() now fails
+   * loudly instead of silently completing an acquisition with no roster
+   * slot, so this fixture must give both teams a real bench slot rather
+   * than engineering the old "no slot at all" edge case (which also
+   * silently kept the draft artificially "complete" one pick too early).
    *
    * AAV/price/points values are fixed literals so the expected metrics
    * below are hand-computed from the spec's formula description, not by
@@ -100,17 +109,16 @@ describe.skipIf(SKIP_DB)('F-MOD-013 draft summary report metrics', () => {
     });
     team2Id = t2.json<{ id: string }>().id;
 
-    // Roster config: single starter QB slot, no bench slot definition, no
-    // bench_slots — total_roster_size=1 so each team's single starter slot
-    // decides completion. Team1's second pick (P2) has nowhere to go once
-    // the starter slot is full, so assignRosterSlot returns null for it —
-    // that's the "bench" case reports.ts's LEFT JOIN treats as is_starter=false.
+    // Roster config: single starter QB slot plus one bench slot
+    // (total_roster_size=2). Team1's second pick (P2) fills the bench slot
+    // once the starter slot is full — a real roster_entries row with
+    // is_starter=false, which reports.ts's LEFT JOIN surfaces normally.
     await server.inject({
       method: 'PUT',
       url: `/leagues/${leagueId}/config/roster`,
       headers: { authorization: `Bearer ${commToken}` },
       payload: {
-        bench_slots: 0,
+        bench_slots: 1,
         slots: [{ position: 'QB', priority: 1, is_starter: true, slot_count: 1 }],
       },
     });
@@ -146,16 +154,21 @@ describe.skipIf(SKIP_DB)('F-MOD-013 draft summary report metrics', () => {
     const [p3] = await sql<[{ id: string }]>`
       INSERT INTO players (name, position, nfl_team) VALUES ('F013-QB3', 'QB', 'SF') RETURNING id
     `;
+    const [p4] = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('F013-QB4', 'QB', 'DAL') RETURNING id
+    `;
     p1Id = p1.id;
     p2Id = p2.id;
     p3Id = p3.id;
+    p4Id = p4.id;
 
     await sql`
       INSERT INTO player_aav_sources (dataset_id, player_id, aav_minor, projected_points, source)
       VALUES
         (${datasetId}, ${p1Id}, 2500, 20.0, 'test'),
         (${datasetId}, ${p2Id}, 1000, 8.0, 'test'),
-        (${datasetId}, ${p3Id}, 1400, 15.0, 'test')
+        (${datasetId}, ${p3Id}, 1400, 15.0, 'test'),
+        (${datasetId}, ${p4Id}, 1000, 6.0, 'test')
     `;
 
     await sql`UPDATE draft_datasets SET status = 'FROZEN' WHERE id = ${datasetId}`;
@@ -193,12 +206,20 @@ describe.skipIf(SKIP_DB)('F-MOD-013 draft summary report metrics', () => {
     `;
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    // Team2: P3 (starter, $1500)
+    // Team2: P3 (starter, $1500) then P4 (bench — starter slot already full, $300)
     await sql`
       INSERT INTO player_auctions
         (draft_id, dataset_player_id, status, current_bid_minor, current_leader_id,
          auction_version, rebid_deadline, resolution_sequence)
       VALUES (${draftId}, ${p3Id}, 'OPEN', 1500, ${team2Id}, 1, ${pastDeadline}, NULL)
+    `;
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    await sql`
+      INSERT INTO player_auctions
+        (draft_id, dataset_player_id, status, current_bid_minor, current_leader_id,
+         auction_version, rebid_deadline, resolution_sequence)
+      VALUES (${draftId}, ${p4Id}, 'OPEN', 300, ${team2Id}, 1, ${pastDeadline}, NULL)
     `;
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
@@ -225,15 +246,15 @@ describe.skipIf(SKIP_DB)('F-MOD-013 draft summary report metrics', () => {
     expect(team1.roster_depth_score.value).toBeCloseTo(8, 5);
     expect(team1.roster_depth_score.calculation_version).toBeTruthy();
 
-    // Team2: P3 (starter, 15 pts), no bench picks.
+    // Team2: P3 (starter, 15 pts) + P4 (bench, 6 pts). Starter points exclude bench.
     expect(team2.projected_starter_points).toBeCloseTo(15, 5);
-    expect(team2.roster_depth_score.value).toBeCloseTo(0, 5);
+    expect(team2.roster_depth_score.value).toBeCloseTo(6, 5);
 
     // AAV efficiency: (sumAav - sumPrice) / sumAav * 100
     // Team1: sumAav=3500, sumPrice=2500 -> (3500-2500)/3500*100 = 28.5714...
     expect(team1.aav_efficiency_pct).toBeCloseTo(28.5714, 3);
-    // Team2: sumAav=1400, sumPrice=1500 -> (1400-1500)/1400*100 = -7.1428...
-    expect(team2.aav_efficiency_pct).toBeCloseTo(-7.1428, 3);
+    // Team2: sumAav=2400, sumPrice=1800 -> (2400-1800)/2400*100 = 25
+    expect(team2.aav_efficiency_pct).toBeCloseTo(25, 3);
   }, 20000);
 
   it('F_MOD_013_report_bench_player_points_excluded_from_starter_sum', async () => {
@@ -261,9 +282,9 @@ describe.skipIf(SKIP_DB)('F-MOD-013 draft summary report metrics', () => {
     });
     const body = res.json<ReportBody>();
 
-    // spend: 2000 + 500 + 1500 = 4000; aav: 2500 + 1000 + 1400 = 4900
-    expect(body.league_totals.spend_minor).toBe(4000);
-    expect(body.league_totals.aav_minor).toBe(4900);
+    // spend: 2000 + 500 + 1500 + 300 = 4300; aav: 2500 + 1000 + 1400 + 1000 = 5900
+    expect(body.league_totals.spend_minor).toBe(4300);
+    expect(body.league_totals.aav_minor).toBe(5900);
   }, 20000);
 
   it('F_MOD_013_report_still_returns_409_for_non_complete_draft', async () => {
