@@ -34,4 +34,20 @@ steps:
   - F-MOD-002-rework-04
   - F-MOD-004-rework-03
   completed_at: "2026-09-05T17:10:00Z"
-status: in_progress
+- phase: build
+  input: "Build F-MOD-002-rework-04 then F-MOD-004-rework-03 via aah-feature-implementer (DAG order)."
+  output: >
+    Both reworks implemented and committed. F-MOD-002-rework-04 (a6d6402):
+    ROSTER_FULL bid-rejection gate added to processBidCommand; awardAuction()
+    now throws instead of silently proceeding when assignRosterSlot() finds
+    no slot. Two new tests reproduce the exact reported bug (red) then
+    confirm the fix (green); 32/32 server + 13/13 web tests pass.
+    F-MOD-004-rework-03 (cf8ce32): added required_remaining_spots > 0 to
+    both Auto-Agent bid-trigger queries; new test confirms red (bid
+    attempted) before fix, green (excluded) after; 22/22 tests pass. Skipped
+    a full live re-run (would require a full 192-pick draft) per user
+    decision to trust the tests, which directly reproduce the defect rather
+    than only covering the happy path. Both reworks marked completed via
+    core.build.rework complete.
+  completed_at: "2026-09-05T17:20:00Z"
+status: completed
