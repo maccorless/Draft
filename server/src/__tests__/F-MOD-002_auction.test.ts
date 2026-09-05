@@ -1351,4 +1351,152 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     ws1.close();
     ws2.close();
   }, 10000);
+
+  // ── UF-17-06: roster-full hard gate ───────────────────────────────────────
+
+  it('test_F_MOD_002_rework_04_bid_rejected_with_ROSTER_FULL_when_roster_already_full', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    const nomResp = await sendAndReceive(ws1, {
+      type: 'NOMINATE_COMMAND',
+      payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+    });
+    await waitForMessage(ws2, 3000);
+    const auctionId = String(nomResp.payload?.['player_auction_id'] ?? '');
+
+    // Team2's roster is completely full (every starter + bench spot filled) —
+    // required_remaining_spots <= 0 must independently gate the bid, even
+    // though remaining_budget_minor is generous and max_legal_bid would
+    // otherwise permit this amount (the bug this rework fixes: max_legal_bid's
+    // reserve formula collapses to 0 once required_remaining_spots hits 0/1,
+    // so the dollar check alone never rejects a full-roster team).
+    await sql`
+      UPDATE draft_team_states
+      SET required_remaining_spots = 0
+      WHERE draft_id = ${draftId} AND team_id = ${team2Id}
+    `;
+
+    const response = await sendAndReceive(ws2, {
+      type: 'BID_COMMAND',
+      payload: { player_auction_id: auctionId, bid_amount_minor: 200, bid_type: 'ABSOLUTE' },
+    });
+
+    expect(response.type).toBe('BID_REJECTED');
+    expect(response.payload?.['code']).toBe('ROSTER_FULL');
+
+    // BidAttempt recorded as rejected
+    const attempts = await sql<[{ accepted: boolean; rejection_reason: string }]>`
+      SELECT accepted, rejection_reason FROM bid_attempts
+      WHERE draft_id = ${draftId} AND bid_amount_minor = 200
+    `;
+    expect(attempts.length).toBe(1);
+    expect(attempts[0]!.accepted).toBe(false);
+    expect(attempts[0]!.rejection_reason).toBe('ROSTER_FULL');
+
+    // No DB rows modified — current bid unchanged
+    const [auction] = await sql<[{ current_bid_minor: number }]>`
+      SELECT current_bid_minor FROM player_auctions WHERE id = ${auctionId}
+    `;
+    expect(auction.current_bid_minor).toBe(100);
+
+    ws1.close();
+    ws2.close();
+  });
+
+  it('test_F_MOD_002_rework_04_award_throws_and_does_not_charge_when_no_roster_slot_available', async () => {
+    await setupDraft();
+
+    // Force assignRosterSlot() to find no eligible slot for team1 by filling
+    // every roster_slot_definition (QB 1 + RB 2 + WR 2 + BN 6 = 11) with dummy
+    // acquisitions/roster_entries — WITHOUT touching draft_team_states, so
+    // required_remaining_spots stays at its initial 11 and the ROSTER_FULL
+    // gate (tested above) does not interfere with isolating this
+    // defense-in-depth path.
+    const slotDefs = await sql<[{ id: string; slot_count: number }]>`
+      SELECT rsd.id, rsd.slot_count FROM roster_slot_definitions rsd
+      JOIN roster_configurations rc ON rc.id = rsd.config_id
+      WHERE rc.league_id = ${leagueId}
+    `;
+    const [dummyAuction] = await sql<[{ id: string }]>`
+      INSERT INTO player_auctions
+        (draft_id, dataset_player_id, status, current_bid_minor, current_leader_id, auction_version, resolution_sequence)
+      VALUES
+        (${draftId}, ${player1EntryId}, 'AWARDED', 100, ${team1Id}, 1, 1)
+      RETURNING id
+    `;
+    // Fill each slot definition to its full slot_count — a single roster_entry
+    // per definition would leave e.g. RB (slot_count 2) or BN (slot_count 6)
+    // with room, so assignRosterSlot() would still find a home there.
+    for (const slot of slotDefs) {
+      for (let i = 0; i < slot.slot_count; i++) {
+        const [acq] = await sql<[{ id: string }]>`
+          INSERT INTO acquisitions (draft_id, team_id, player_auction_id, price_minor, resolution_sequence, active)
+          VALUES (${draftId}, ${team1Id}, ${dummyAuction!.id}, 1, 1, true)
+          RETURNING id
+        `;
+        await sql`
+          INSERT INTO roster_entries (acquisition_id, draft_id, team_id, roster_slot_id, active)
+          VALUES (${acq!.id}, ${draftId}, ${team1Id}, ${slot.id}, true)
+        `;
+      }
+    }
+
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    // Nominate the second (real, distinct) player so award logic runs on a
+    // genuine OPEN auction rather than the dummy AWARDED row above.
+    const [nom1] = await Promise.all([
+      waitForMessage(ws1, 4000),
+      waitForMessage(ws2, 4000),
+      Promise.resolve().then(() =>
+        ws1.send(JSON.stringify({
+          type: 'NOMINATE_COMMAND',
+          payload: { player_dataset_entry_id: playerIds[1], opening_bid_minor: 100 },
+        })),
+      ),
+    ]);
+    const auctionId = String(nom1.payload?.['player_auction_id'] ?? '');
+
+    // Expire the deadline so the award timer attempts to award team1 (current
+    // leader from nomination) — assignRosterSlot() must return null for team1
+    // since every slot is already full, and awardAuction() must throw rather
+    // than silently charging budget / incrementing roster_filled_count.
+    await sql`
+      UPDATE player_auctions
+      SET rebid_deadline = NOW() - INTERVAL '2 seconds'
+      WHERE id = ${auctionId}
+    `;
+
+    // No PLAYER_AWARDED should ever arrive for this auction — give the ~500ms
+    // award-timer poll several chances to (wrongly) fire, then assert nothing
+    // changed.
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    const [auction] = await sql<[{ status: string }]>`
+      SELECT status FROM player_auctions WHERE id = ${auctionId}
+    `;
+    expect(auction.status).toBe('OPEN'); // never transitioned to AWARDED
+
+    const acqs = await sql<[{ id: string }]>`
+      SELECT id FROM acquisitions WHERE draft_id = ${draftId} AND player_auction_id = ${auctionId}
+    `;
+    expect(acqs.length).toBe(0); // no acquisition inserted for the un-awardable player
+
+    const [state] = await sql<[{ remaining_budget_minor: number; roster_filled_count: number }]>`
+      SELECT remaining_budget_minor, roster_filled_count
+      FROM draft_team_states WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+    expect(state.remaining_budget_minor).toBe(20000); // unchanged — never charged
+    expect(state.roster_filled_count).toBe(0); // unchanged — dummy fills bypassed this counter
+
+    ws1.close();
+    ws2.close();
+  }, 10000);
 });

@@ -432,6 +432,34 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
+  // 6b. Roster-full hard gate — independent of max_legal_bid. Once
+  // required_remaining_spots reaches 0 (every starter + bench slot filled),
+  // computeMaxLegalBid()'s reserve term collapses to 0 and max_legal_bid
+  // equals the team's full remaining budget, so the dollar-amount check below
+  // would never by itself reject a bid from a team with zero roster room
+  // left. A team whose roster is completely full can never legally place
+  // another bid, regardless of amount.
+  if (teamState.required_remaining_spots <= 0) {
+    await sql`
+      INSERT INTO bid_attempts
+        (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
+         server_receipt_time, accepted, rejection_reason)
+      VALUES
+        (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
+         ${command.bid_type}, ${serverReceiptTime.toISOString()},
+         false, 'ROSTER_FULL')
+    `;
+    broadcast(draftId, {
+      type: 'BID_REJECTED',
+      payload: {
+        player_auction_id: command.player_auction_id,
+        code: 'ROSTER_FULL',
+        reason: 'Your roster is full — no remaining slots for another player',
+      },
+    });
+    return { accepted: false, playerAuctionId: command.player_auction_id };
+  }
+
   const maxLegalBid = computeMaxLegalBid(
     teamState.remaining_budget_minor,
     teamState.required_remaining_spots,
@@ -1224,6 +1252,21 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
     leagueId,
     auction.player_position,
   );
+
+  // Award never proceeds without a roster slot. The ROSTER_FULL bid-validation
+  // gate above should make this unreachable in practice (a team can only win
+  // an auction it was legally allowed to bid on), but treat a null result as
+  // a hard failure rather than silently charging the team's budget and
+  // incrementing roster_filled_count/decrementing required_remaining_spots
+  // for a player who ends up with no RosterEntry at all — this throw is
+  // caught by processAwardCycle's existing per-auction try/catch, which logs
+  // it instead of corrupting team state.
+  if (!slot) {
+    throw new Error(
+      `assignRosterSlot returned no eligible slot for team ${auction.current_leader_id} ` +
+        `(auction ${auctionId}, position ${auction.player_position}) — refusing to award`,
+    );
+  }
 
   // Primary AAV for the close card's over/under diff (F-MOD-017) — static
   // reference data, resolved the same way nomination does, ahead of the
