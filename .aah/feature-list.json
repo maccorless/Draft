@@ -708,7 +708,7 @@
       "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-002-rework-05",
       "title": "Live Auction Engine with Bid Pipeline",
       "module_ref": "MOD-002",

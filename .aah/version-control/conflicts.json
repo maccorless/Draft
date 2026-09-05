@@ -374,7 +374,7 @@
       "field": "status",
       "field_class": "status",
       "base": "implementing",
-      "local": "implementing",
+      "local": "done",
       "remote": "in_progress",
       "remote_ref": {
         "number": 3,
