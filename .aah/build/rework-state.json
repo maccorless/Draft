@@ -51,8 +51,9 @@
         "F-MOD-011-rework-02"
       ],
       "attempts": 1,
-      "status": "in_progress",
-      "triggered_at": "2026-09-05T15:11:09.885754+00:00"
+      "status": "completed",
+      "triggered_at": "2026-09-05T15:11:09.885754+00:00",
+      "completed_at": "2026-09-05T15:28:20.948812+00:00"
     }
   ]
 }

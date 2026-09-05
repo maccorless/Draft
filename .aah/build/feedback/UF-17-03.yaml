@@ -25,4 +25,18 @@ steps:
   affected_features:
   - F-MOD-011-rework-02
   completed_at: "2026-09-05T15:20:00Z"
-status: in_progress
+- phase: build
+  input: "Build F-MOD-011-rework-02 via aah-feature-implementer, then boot for hands-on review."
+  output: >
+    F-MOD-011-rework-02 implemented and committed (9980925): authedJson()
+    (DraftControl.tsx) only sets content-type: application/json when
+    init.body is present. New test
+    F-MOD-011-rework-02_bodyless_post.test.tsx deliberately runs against a
+    real Fastify+Postgres server instead of a mocked fetch (the mock is what
+    let the original bug through) and was verified red-then-green. Verified
+    live in browser: clicked Start Now, draft transitioned CREATED->RUNNING,
+    all 12 Auto-Agent teams began bidding and completing picks autonomously
+    (4+ picks made unattended). rework marked completed via
+    core.build.rework complete.
+  completed_at: "2026-09-05T15:25:00Z"
+status: completed
