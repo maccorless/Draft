@@ -6,8 +6,22 @@ feedback_details: |
   Feature gap found while watching the mock draft run live: the Draft Room's "My Roster" panel (web/src/screens/draft-room/index.tsx, ~lines 470-486, data-testid="my-roster") only shows starter/bench slot fill counts (e.g. "QB 1/1", "Bench 3/7") — it never shows which player was drafted into each slot or what price was paid. During a live auction, the owner should be able to see, per acquired player: the player's name and the price they paid for him. The data already exists — RosterEntry rows join to Acquisition (purchase_price_minor) and Player (name); the post-draft summary report (server/src/draft/reports.ts, ~lines 155-220) already runs exactly this join (acquisitions JOIN players ON ... -> player_name, purchase_price_minor) for the completed-draft report, but that data is not exposed anywhere during the live draft. Fix: extend GET /drafts/:draftId/roster-grid (server/src/draft/war-room.ts) — or add a parallel field to it — so each team's response includes the acquired player's name and purchase_price_minor per filled roster slot (not just aggregate counts), and update the Draft Room "My Roster" panel to render each filled slot's player name and price paid alongside the existing slot-count/status display (starter vs. bench distinction stays as-is).
 steps:
 - phase: plan
-  completed_at: null
+  input: >
+    Extend GET /drafts/:draftId/roster-grid to expose per-slot player name +
+    purchase_price_minor, and update the My Roster panel to render it
+    (F-MOD-002, built and promoted, previously reworked twice, both done).
   affected_modules:
   - live-auction-core
   blast_radius_features: []
+  output: >
+    Case A (implemented feature) rework. Edited F-MOD-002.md in place: item
+    (c) of the Draft Room description now requires per-slot player name +
+    price paid, sourced the same way reports.ts already joins
+    acquisitions+players; added a new behavioral expectation. Created
+    superseding entry F-MOD-002-rework-03.md via
+    core.plan.create_rework_entry, placed in wave 17. feature-list.json and
+    dag.json regenerated. Committed as 9a801af.
+  affected_features:
+  - F-MOD-002-rework-03
+  completed_at: "2026-09-05T15:35:00Z"
 status: in_progress
