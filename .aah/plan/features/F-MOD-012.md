@@ -113,6 +113,10 @@ elsewhere.
   renders (before confirm), then it shows the plain-language cost statement naming the pick range and
   player count, followed by the detailed per-pick preview (player, team, price) for every pick that
   will be reversed.
+- Given the rollback preview renders, when it shows the detailed per-pick breakdown, then each
+  reversed pick additionally shows the budget amount returned to that team and the roster slot it
+  vacates, and shows the associated Whammy interaction (amount and team) for any pick whose sequence
+  has one.
 - Given the draft is not currently `PAUSED`, when the commissioner confirms a rollback, then the UI
   pauses the draft before submitting `POST /drafts/:draftId/rollback`.
 - Given a rollback request with `{count}`, when the server returns `200` with `rolled_back` and

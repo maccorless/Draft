@@ -105,6 +105,11 @@ produces:
     schema_file: schema/MOD-005-api-schema.yaml
     request_schema: RollbackRequest
     response_schema: RollbackResponse
+
+  - operation_id: previewRollback
+    schema_file: schema/MOD-005-api-schema.yaml
+    request_schema: RollbackPreviewRequest    # NEW — not yet defined in MOD-005-api-schema.yaml; requires a schema entry (query param `count`, GET, no body)
+    response_schema: RollbackPreviewResponse  # NEW — not yet defined in MOD-005-api-schema.yaml; requires a schema entry: { state_version, picks_to_reverse: [{ acquisition_id, player_name, team_id, price_minor, budget_return_minor, roster_slot: { id, label }, whammy_interactions: [{ budget_ledger_entry_id, whammy_event_id, amount_minor }] }] }
 ```
 
 ## Required Env Variables
