@@ -218,6 +218,9 @@ components:
           type: string
         position:
           type: string
+        aav_minor:
+          type: integer
+          description: Primary-source AAV for this player, joined the same way other panels already do
 
     NominationQueueEntry:
       type: object
