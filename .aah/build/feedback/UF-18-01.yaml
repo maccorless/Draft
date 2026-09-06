@@ -46,4 +46,24 @@ steps:
   - F-MOD-014-rework-01
   - F-MOD-015
   - F-MOD-017
-status: in_progress
+  output: >
+    User chose the "narrow direct fix" path (not the full 33-feature rework
+    pipeline) — attempted directly by the calling session, outside the normal
+    plan/rework flow. Root cause confirmed empirically against a real DB:
+    `${JSON.stringify(x)}::jsonb` double-encodes because postgres.js's
+    ParameterDescription-driven type negotiation re-applies its own JSON
+    serializer to an already-stringified value when the parameter's inferred
+    type is unknown (0) and the query casts to ::jsonb. `${sql.json(x)}::jsonb`
+    (the officially-recommended postgres.js pattern) reproduces correctly in
+    every standalone script tested, but broke NOMINATION_STARTED event writes
+    (a core, previously-working auction path) when applied inside the real
+    app/test harness for reasons not fully diagnosed despite deep investigation
+    (bytes.js monkeypatching confirmed the raw object reaches the byte
+    serializer unconverted, but why serialization is skipped only in-app,
+    never in isolation, was not resolved). Given the risk of shipping a fix
+    that breaks core nomination to address a lower-severity data-encoding
+    bug, all changes were reverted; the codebase is back to its original
+    state (JSON.stringify(x)::jsonb writes, unchanged). No fix was shipped.
+  completed_at: '2026-09-06T14:35:00Z'
+status: escalated_to_human
+
