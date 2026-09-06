@@ -1,7 +1,7 @@
 {
   "features": [
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-000-rework-01",
       "title": "Walking Skeleton: Scaffold, Auth, Protocol, and Boot",
       "module_ref": "MOD-000",
@@ -954,7 +954,7 @@
       "passes": true
     },
     {
-      "status": "planned",
+      "status": "implementing",
       "id": "F-MOD-002-rework-06",
       "title": "Live Auction Engine with Bid Pipeline",
       "module_ref": "MOD-002",

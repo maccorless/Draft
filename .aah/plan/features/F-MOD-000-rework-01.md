@@ -83,7 +83,7 @@ F-MOD-000.md
   - TS-CONV-001
 
 ## Status
-implementing
+done
 
 ## Title
 Walking Skeleton: Scaffold, Auth, Protocol, and Boot
