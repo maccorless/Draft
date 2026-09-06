@@ -1499,4 +1499,51 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     ws1.close();
     ws2.close();
   }, 10000);
+
+  it('test_F_MOD_002_rework_06_bid_accepted_carries_bid_type_and_ms_remaining_at_receipt', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+
+    const nomResp = await sendAndReceive(ws1, {
+      type: 'NOMINATE_COMMAND',
+      payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+    });
+    await waitForMessage(ws2, 3000);
+    const auctionId = String(nomResp.payload?.['player_auction_id'] ?? '');
+
+    const [bid1] = await Promise.all([
+      waitForMessage(ws1, 4000),
+      waitForMessage(ws2, 4000),
+      Promise.resolve().then(() =>
+        ws2.send(JSON.stringify({
+          type: 'BID_COMMAND',
+          payload: { player_auction_id: auctionId, bid_amount_minor: 200, bid_type: 'ABSOLUTE' },
+        })),
+      ),
+    ]);
+
+    expect(bid1.payload?.['bid_type']).toBe('ABSOLUTE');
+    expect(typeof bid1.payload?.['ms_remaining_at_receipt']).toBe('number');
+    expect(bid1.payload?.['ms_remaining_at_receipt'] as number).toBeGreaterThan(0);
+
+    ws1.close();
+    ws2.close();
+  });
+
+  it('test_F_MOD_002_rework_06_owner_can_list_league_players_during_running_draft', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const res = await server.inject({
+      method: 'GET',
+      url: `/leagues/${leagueId}/players`,
+      headers: { authorization: `Bearer ${team1Token}` },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ players: unknown[] }>();
+    expect(body.players.length).toBe(2);
+  });
 });

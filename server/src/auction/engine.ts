@@ -562,6 +562,9 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
   }
 
   // 9. In-memory update after commit — broadcast BID_ACCEPTED
+  const msRemainingAtReceipt = auction.rebid_deadline
+    ? new Date(auction.rebid_deadline as unknown as string | Date).getTime() - serverReceiptTime.getTime()
+    : null;
   broadcast(draftId, {
     type: 'BID_ACCEPTED',
     payload: {
@@ -571,6 +574,8 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
       auction_version: newVersion!,
       rebid_deadline_ts: finalRebidDeadlineTs!,
       anti_snipe_extended: antiSnipeExtended,
+      bid_type: command.bid_type,
+      ms_remaining_at_receipt: msRemainingAtReceipt,
     },
   });
 

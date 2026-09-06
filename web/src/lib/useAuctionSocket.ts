@@ -40,6 +40,19 @@ export interface BidLadderEntry {
   team_id: string;
   at_ts: number;
   is_match: boolean;
+  bid_type: 'MATCH' | 'ABSOLUTE' | 'RELATIVE' | null;
+  ms_remaining_at_receipt: number | null;
+}
+
+export interface AntiSnipeNotice {
+  receivedAt: number;
+}
+
+export interface WhammyNotice {
+  team_id: string;
+  amount_minor: number;
+  description: string;
+  receivedAt: number;
 }
 
 export interface AwardEntry {
@@ -78,6 +91,8 @@ interface AuctionState {
   asOfSequence: number;
   lastError: { code: string; reason: string } | null;
   nominationAudioCue: NominationAudioCue | null;
+  antiSnipeNotice: AntiSnipeNotice | null;
+  whammyNotice: WhammyNotice | null;
 }
 
 const initialState: AuctionState = {
@@ -93,6 +108,8 @@ const initialState: AuctionState = {
   asOfSequence: -1,
   lastError: null,
   nominationAudioCue: null,
+  antiSnipeNotice: null,
+  whammyNotice: null,
 };
 
 type Action =
@@ -172,11 +189,18 @@ function reducer(state: AuctionState, action: Action): AuctionState {
       if (!state.currentAuction || state.currentAuction.player_auction_id !== p['player_auction_id']) {
         return state;
       }
+      const bidType = (p['bid_type'] as BidLadderEntry['bid_type'] | undefined) ?? null;
       const entry: BidLadderEntry = {
         bid_amount_minor: Number(p['bid_amount_minor']),
         team_id: String(p['leading_team_id']),
         at_ts: Date.now(),
         is_match: false,
+        // Only MATCH or a custom absolute jump is notable enough to show a
+        // bid-type indicator (per screen-information-architecture.md §2.2);
+        // a plain +$1 relative bid stays untagged.
+        bid_type: bidType === 'RELATIVE' ? null : bidType,
+        ms_remaining_at_receipt:
+          p['ms_remaining_at_receipt'] == null ? null : Number(p['ms_remaining_at_receipt']),
       };
       return {
         ...state,
@@ -188,6 +212,27 @@ function reducer(state: AuctionState, action: Action): AuctionState {
           rebid_deadline_ts: Number(p['rebid_deadline_ts']),
         },
         bidLadder: [entry, ...state.bidLadder].slice(0, 10),
+        antiSnipeNotice: p['anti_snipe_extended'] === true ? { receivedAt: Date.now() } : state.antiSnipeNotice,
+      };
+    }
+
+    case 'WHAMMY_APPLIED': {
+      const teamId = String(p['team_id'] ?? '');
+      const prevTeam = state.teams[teamId];
+      return {
+        ...state,
+        teams: prevTeam
+          ? {
+              ...state.teams,
+              [teamId]: { ...prevTeam, remaining_budget_minor: Number(p['new_remaining_budget_minor'] ?? prevTeam.remaining_budget_minor) },
+            }
+          : state.teams,
+        whammyNotice: {
+          team_id: teamId,
+          amount_minor: Number(p['amount_minor'] ?? 0),
+          description: String(p['description'] ?? ''),
+          receivedAt: Date.now(),
+        },
       };
     }
 

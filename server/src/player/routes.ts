@@ -27,7 +27,7 @@ import {
   drafts,
 } from '../../db/schema/index.js';
 import { CreateDraftRequestSchema } from '@draft/shared-types';
-import { requireCommissioner } from '../league/auth-hook.js';
+import { requireCommissioner, requireLeagueMember } from '../league/auth-hook.js';
 import { ExcelAdapter } from './adapters/excel.js';
 import { EspnPdfAdapter } from './adapters/espn-pdf.js';
 import { FantasyProsAdapter } from './adapters/fantasypros.js';
@@ -563,7 +563,7 @@ export async function registerPlayerRoutes(
    */
   server.get<{ Params: LeagueParams }>(
     '/leagues/:leagueId/players',
-    { preHandler: requireCommissioner(server, db) },
+    { preHandler: requireLeagueMember(server, db) },
     async (req, reply) => {
       const leagueId = req.params.leagueId;
 

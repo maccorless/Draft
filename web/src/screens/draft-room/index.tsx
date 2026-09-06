@@ -190,6 +190,25 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
     }
   }, [ws.recentAwards.length]);
 
+  // Anti-snipe extension + Whammy toasts: same ephemeral, self-dismissing
+  // pattern as the close card, keyed on receivedAt so a repeat of the same
+  // event still re-triggers the auto-dismiss timer.
+  const [antiSnipeVisible, setAntiSnipeVisible] = useState(false);
+  useEffect(() => {
+    if (!ws.antiSnipeNotice) return;
+    setAntiSnipeVisible(true);
+    const timer = setTimeout(() => setAntiSnipeVisible(false), 4000);
+    return () => clearTimeout(timer);
+  }, [ws.antiSnipeNotice?.receivedAt]);
+
+  const [whammyVisible, setWhammyVisible] = useState(false);
+  useEffect(() => {
+    if (!ws.whammyNotice) return;
+    setWhammyVisible(true);
+    const timer = setTimeout(() => setWhammyVisible(false), 4000);
+    return () => clearTimeout(timer);
+  }, [ws.whammyNotice?.receivedAt]);
+
   // The popover is scoped to whichever player is currently up for auction —
   // close it rather than let it silently show stale data for a new player.
   useEffect(() => {
@@ -436,6 +455,12 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
           onDismiss={dismissCloseCard}
         />
       )}
+      {whammyVisible && ws.whammyNotice && (
+        <div className="draft-room__whammy-toast" role="status" data-testid="whammy-toast">
+          {(rosterGrid.find((t) => t.team_id === ws.whammyNotice!.team_id)?.team_name ?? 'A team')} —{' '}
+          {ws.whammyNotice.description || 'Whammy'} ({formatMoney(ws.whammyNotice.amount_minor)})
+        </div>
+      )}
       {showPopover && auction && activePlayerDetail && (
         <PlayerDetailPopover
           player={activePlayerDetail}
@@ -573,6 +598,12 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                           >
                             <span className="draft-room__roster-slot-player-name">{player.name}</span>
                             <span className="draft-room__roster-slot-player-price">{formatMoney(player.price_minor)}</span>
+                            <span className="draft-room__roster-slot-player-bye" data-testid={`roster-slot-${slot.position}-player-${i}-bye`}>
+                              {players.find((p) => p.name === player.name)?.bye_week ?? '—'}
+                            </span>
+                            <span className="draft-room__roster-slot-player-points" data-testid={`roster-slot-${slot.position}-player-${i}-points`}>
+                              {players.find((p) => p.name === player.name)?.projected_points ?? '—'}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -645,6 +676,11 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   {auction.tier !== null && ` · Tier ${auction.tier}`}
                 </p>
                 <p className="draft-room__player-aav">AAV {formatMoney(auction.aav_minor)}</p>
+                {myTargetValueMinor !== null && (
+                  <p className="draft-room__my-target" data-testid="my-target-value">
+                    My Target {formatMoney(myTargetValueMinor)}
+                  </p>
+                )}
               </div>
 
               <div className="draft-room__price-block">
@@ -660,6 +696,12 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   {secondsLeft}s
                 </div>
               </div>
+
+              {antiSnipeVisible && (
+                <div className="draft-room__anti-snipe-badge" role="status" data-testid="anti-snipe-badge">
+                  Deadline extended — anti-snipe
+                </div>
+              )}
 
               {ws.lastError && (
                 <div className="draft-room__bid-error" role="alert" data-testid="bid-error">
@@ -777,6 +819,16 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   <span className="draft-room__bid-ladder-team">
                     {rosterGrid.find((t) => t.team_id === entry.team_id)?.team_name ?? '—'}
                   </span>
+                  {entry.bid_type && (
+                    <span className="draft-room__bid-ladder-type" data-testid="bid-ladder-type">
+                      {entry.bid_type}
+                    </span>
+                  )}
+                  {entry.ms_remaining_at_receipt !== null && (
+                    <span className="draft-room__bid-ladder-remaining" data-testid="bid-ladder-remaining">
+                      {Math.max(0, Math.round(entry.ms_remaining_at_receipt / 1000))}s left
+                    </span>
+                  )}
                 </li>
               ))}
             </ol>
