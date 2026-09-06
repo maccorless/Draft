@@ -35,6 +35,8 @@ flowchart TD
     AATRIGGER -.->|"re-enters pipeline<br/>as a new bid command"| ENQUEUE
 ```
 
+`BID_ACCEPTED`'s broadcast payload (from `BROADCAST` above) carries `bid_type` and `ms_remaining_at_receipt` (rebid_deadline minus server_receipt_time, null if no rebid deadline yet), added in F-MOD-002-rework-06 so the client's Recent Bids ladder can render a bid-type indicator and time-at-receipt without recomputing it client-side.
+
 ## Data Ingestion Pipeline (pre-draft)
 
 ```mermaid
