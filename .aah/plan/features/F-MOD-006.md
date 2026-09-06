@@ -133,7 +133,8 @@ produces:
 ## Required Env Variables
 - DATABASE_URL — PostgreSQL connection string
 - JWT_SECRET — JWT signing key
-- SENDGRID_API_KEY — SendGrid API key for post-draft email dispatch
+- SENDGRID_API_KEY — SendGrid API key for post-draft email dispatch (already catalogued in F-MOD-000; reused here for real send, not stubbed)
+- SENDGRID_FROM_EMAIL — Verified SendGrid sender address for post-draft summary emails (post-launch addition; must land in `.env.example` and `config/env-check.cjs` in the same change as the send-call code)
 - NODE_ENV — Runtime environment
 
 ## Lint Config
