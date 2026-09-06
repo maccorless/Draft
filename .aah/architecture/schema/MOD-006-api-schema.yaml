@@ -60,6 +60,109 @@ paths:
               schema:
                 $ref: "#/components/schemas/EmailDispatchResponse"
 
+  /leagues/{leagueId}/espn-team-mappings:
+    get:
+      operationId: listEspnTeamMappings
+      summary: List Team -> ESPN-team mappings (ProviderTeamMapping, provider_code=espn)
+      tags: [espn-transfer]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      responses:
+        "200":
+          description: Current mappings, one per internal Team (unmapped teams included with external fields null)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProviderTeamMapping"
+
+  /leagues/{leagueId}/espn-team-mappings/{teamId}:
+    put:
+      operationId: setEspnTeamMapping
+      summary: Commissioner sets/confirms one Team's ESPN-team mapping
+      tags: [espn-transfer]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProviderTeamMappingRequest"
+      responses:
+        "200":
+          description: Mapping set
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderTeamMapping"
+
+  /drafts/{draftId}/canonical-export:
+    get:
+      operationId: getCanonicalExport
+      summary: Canonical JSON export of every acquisition (ExportJob, provider_code=canonical)
+      tags: [espn-transfer]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: Canonical JSON export
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CanonicalExport"
+
+  /drafts/{draftId}/reconciliation:
+    get:
+      operationId: getReconciliationStatus
+      summary: Get reconciliation status for every ReconciliationItem in this draft's ExportJob
+      tags: [espn-transfer]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: Reconciliation items with their current status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReconciliationItem"
+
+  /drafts/{draftId}/reconciliation/{reconciliationItemId}/confirm:
+    post:
+      operationId: confirmReconciliationItem
+      summary: Commissioner marks one ReconciliationItem CONFIRMED (player transfer verified in ESPN)
+      tags: [espn-transfer]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+        - name: reconciliationItemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Item marked CONFIRMED
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReconciliationItem"
+        "409":
+          description: Item is already CONFIRMED, or is AMBIGUOUS and must be resolved via setEspnTeamMapping first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -70,6 +173,13 @@ components:
   parameters:
     draftId:
       name: draftId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    leagueId:
+      name: leagueId
       in: path
       required: true
       schema:
@@ -172,3 +282,97 @@ components:
           type: string
         message:
           type: string
+
+    ProviderTeamMappingRequest:
+      type: object
+      required: [external_team_id, external_team_name]
+      properties:
+        external_team_id:
+          type: string
+          nullable: true
+        external_team_name:
+          type: string
+        verified:
+          type: boolean
+
+    ProviderTeamMapping:
+      allOf:
+        - $ref: "#/components/schemas/ProviderTeamMappingRequest"
+        - type: object
+          required: [league_id, provider_code, team_id]
+          properties:
+            league_id:
+              type: string
+              format: uuid
+            provider_code:
+              type: string
+              enum: [espn]
+            team_id:
+              type: string
+              format: uuid
+
+    CanonicalExportAcquisition:
+      type: object
+      properties:
+        player_id:
+          type: string
+          format: uuid
+        player_name:
+          type: string
+        team_id:
+          type: string
+          format: uuid
+        price_minor:
+          type: integer
+        roster_slot:
+          type: string
+        resolution_sequence:
+          type: integer
+
+    CanonicalExport:
+      type: object
+      required: [export_job_id, schema_version, status, acquisitions]
+      properties:
+        export_job_id:
+          type: string
+          format: uuid
+        schema_version:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, VALIDATED, GENERATED, FAILED]
+        acquisitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CanonicalExportAcquisition"
+
+    ReconciliationItem:
+      type: object
+      required: [id, export_job_id, team_id, player_id, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        export_job_id:
+          type: string
+          format: uuid
+        team_id:
+          type: string
+          format: uuid
+        player_id:
+          type: string
+          format: uuid
+        recommended_target_slot:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, AMBIGUOUS, FAILED]
+        confirmed_by_user_id:
+          type: string
+          format: uuid
+          nullable: true
+        confirmed_at:
+          type: string
+          format: date-time
+          nullable: true

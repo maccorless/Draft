@@ -93,6 +93,81 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /leagues/{leagueId}/whammy-definitions:
+    get:
+      operationId: listWhammyDefinitions
+      summary: List configured Whammy definitions (probability/weight auto-trigger config)
+      tags: [whammy]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      responses:
+        "200":
+          description: List of configured Whammy definitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WhammyDefinition"
+    post:
+      operationId: createWhammyDefinition
+      summary: Commissioner creates a new Whammy definition (auto-trigger eligible)
+      tags: [whammy]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhammyDefinitionRequest"
+      responses:
+        "200":
+          description: Whammy definition created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhammyDefinition"
+        "403":
+          description: Non-commissioner caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /leagues/{leagueId}/whammy-definitions/{whammyDefinitionId}:
+    put:
+      operationId: updateWhammyDefinition
+      summary: Commissioner updates a Whammy definition's weight/probability/rule
+      tags: [whammy]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - name: whammyDefinitionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WhammyDefinitionRequest"
+      responses:
+        "200":
+          description: Whammy definition updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WhammyDefinition"
+        "403":
+          description: Non-commissioner caller
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 x-websocket-events:
   events:
     - type: WHAMMY_APPLIED
@@ -120,6 +195,13 @@ components:
         format: uuid
     whammyId:
       name: whammyId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    leagueId:
+      name: leagueId
       in: path
       required: true
       schema:
@@ -191,3 +273,41 @@ components:
           type: string
         message:
           type: string
+
+    WhammyDefinitionRequest:
+      type: object
+      required: [name, type, display_message, weight]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [POSITIVE, NEGATIVE]
+        budget_delta_minor:
+          type: integer
+          nullable: true
+        trigger_rule_json:
+          type: object
+          nullable: true
+          description: Commissioner-configured probability/weight auto-trigger rule
+        display_message:
+          type: string
+        offline_action_text:
+          type: string
+          nullable: true
+        weight:
+          type: number
+          description: Relative selection weight among eligible definitions when auto-triggering
+
+    WhammyDefinition:
+      allOf:
+        - $ref: "#/components/schemas/WhammyDefinitionRequest"
+        - type: object
+          required: [id, whammy_configuration_id]
+          properties:
+            id:
+              type: string
+              format: uuid
+            whammy_configuration_id:
+              type: string
+              format: uuid
