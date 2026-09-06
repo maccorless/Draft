@@ -41,7 +41,7 @@ This module therefore adds a read-only preview endpoint, `GET /drafts/:draftId/r
 **UI screens (Commissioner Console additions):**
 
 - **Correction panel** — pick selector (lists awarded picks with player name, team, current price), new-price integer input (minimum $1.00 = 100 minor), ledger preview showing the projected effect on the team's remaining budget, and a submit button. Displays a "Would make pick illegal" error inline when the server rejects with 409. On success, shows the new price and updated remaining budget.
-- **Rollback panel** — count input (default 1), a preview listing which picks (player name, team, price) will be reversed (populated from the same data the server will use), a confirmation dialog ("Roll back these N picks?"), and a confirm button. The panel is disabled and shows "Pause the draft first" when Draft.status is not PAUSED. On success, lists the reversed picks.
+- **Rollback panel** — count input (default 1), a preview listing which picks (player name, team, price) will be reversed (populated from the same data the server will use), a confirmation dialog ("Roll back these N picks?"), and a confirm button. The panel is disabled and shows "Pause the draft first" when Draft.status is not PAUSED. On success, lists the reversed picks. (Post-launch addition: the preview is fetched from `GET /drafts/:draftId/rollback/preview` and expands per pick to show budget returned, roster slot vacated, and any Whammy interaction — this is owned by MOD-012 and consumes the response shape described below; MOD-005 is responsible only for the backend endpoint.)
 - **Draft Board highlight** — corrected picks are visually distinguished (e.g., a "corrected" badge showing old and new price); rolled-back picks are shown as inactive/struck-through rather than removed.
 
 **Behavioral expectations:**
@@ -59,6 +59,14 @@ This module therefore adds a read-only preview endpoint, `GET /drafts/:draftId/r
 - Given POST /drafts/:id/rollback is called with count=N and fewer than N active acquisitions exist, then: the server rolls back only the available picks and returns the actual rolled_back count in the response (or returns 409 if count=0 acquisitions are available, per schema minimum=1).
 
 - Given any step of the rollback transaction fails (e.g., DB error mid-loop), then: the entire transaction is rolled back, no rows are partially modified, and the server returns an error response; in-memory DraftTeamState is not updated.
+
+- Given a commissioner sends GET /drafts/:id/rollback/preview?count=N, then: the server performs no writes and selects the same N highest-`resolution_sequence` active acquisitions the mutating rollback endpoint would select; the response includes, per pick, the player name, team_id, price_minor, budget_return_minor (equal to price_minor), the vacated roster slot (slot id and label/type), and a (possibly empty) whammy_interactions array of any WHAMMY-type BudgetLedgerEntry for that team whose triggering WhammyEvent occurred at or after that pick's resolution_sequence; the response also includes the draft's current state_version.
+
+- Given fewer than N active acquisitions exist when GET /drafts/:id/rollback/preview?count=N is called, then: the preview returns only the available picks (same "fewer than N" behavior as the mutating endpoint), and returns 409 if zero picks are available.
+
+- Given a non-commissioner token sends GET /drafts/:id/rollback/preview, then: the server rejects with HTTP 401/403 and returns no preview data.
+
+- Given the commissioner confirms a rollback in the UI after fetching a preview, when the draft's state_version has advanced since the preview was computed, then: MOD-012 is expected to treat the preview as stale and re-fetch before allowing confirmation (per data-model.md §17.5); MOD-005's mutating rollback endpoint itself performs no state_version check and is unchanged by this addition.
 
 - Given a PRICE_CORRECTED or ROLLBACK_APPLIED WS broadcast is sent, then: all WebSocket sessions currently subscribed to that draft_id receive the broadcast; clients not connected to that draft are unaffected (per MOD-003 multi-draft isolation).
 
