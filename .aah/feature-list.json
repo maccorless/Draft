@@ -959,7 +959,7 @@
       "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-002-rework-06",
       "title": "Live Auction Engine with Bid Pipeline",
       "module_ref": "MOD-002",
@@ -1765,7 +1765,7 @@
       "passes": true
     },
     {
-      "status": "planned",
+      "status": "implementing",
       "id": "F-MOD-005-rework-01",
       "title": "Commissioner Price Correction and Bounded Rollback",
       "module_ref": "MOD-005",

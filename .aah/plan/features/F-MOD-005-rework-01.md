@@ -83,7 +83,7 @@ F-MOD-005.md
   - TS-CONV-001
 
 ## Status
-planned
+implementing
 
 ## Title
 Commissioner Price Correction and Bounded Rollback
