@@ -1765,7 +1765,7 @@
       "passes": true
     },
     {
-      "status": "implementing",
+      "status": "done",
       "id": "F-MOD-005-rework-01",
       "title": "Commissioner Price Correction and Bounded Rollback",
       "module_ref": "MOD-005",
@@ -1995,7 +1995,7 @@
       "passes": true
     },
     {
-      "status": "planned",
+      "status": "implementing",
       "id": "F-MOD-006-rework-01",
       "title": "Draft Completion, Reports, and Nominator Match",
       "module_ref": "MOD-006",

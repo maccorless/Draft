@@ -485,16 +485,16 @@
       "feature_id": "F-MOD-006-rework-01",
       "field": "status",
       "field_class": "status",
-      "base": null,
-      "local": "planned",
+      "base": "planned",
+      "local": "implementing",
       "remote": "done",
       "remote_ref": {
         "number": 7,
         "node_id": "I_kwDOUI9K_M8AAAABPK5gnQ",
         "url": "https://github.com/maccorless/Draft/issues/7"
       },
-      "detected_at": "sync",
-      "status": "resolved"
+      "detected_at": "lifecycle-update",
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-008-rework-01-description",
