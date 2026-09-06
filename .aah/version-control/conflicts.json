@@ -622,7 +622,7 @@
         "url": "https://github.com/maccorless/Draft/issues/14"
       },
       "detected_at": "sync",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-013-rework-01-description",
@@ -638,7 +638,7 @@
         "url": "https://github.com/maccorless/Draft/issues/15"
       },
       "detected_at": "sync",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-013-rework-01-status",

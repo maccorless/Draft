@@ -850,7 +850,7 @@
           "status": "planned"
         }
       },
-      "remote_updated_at": "2026-09-06T03:30:32Z",
+      "remote_updated_at": "2026-09-06T03:31:20Z",
       "lifecycle": "planned",
       "status_label": "aah:planned"
     },
@@ -875,7 +875,9 @@
           "status": "planned"
         }
       },
-      "remote_updated_at": "2026-09-06T03:30:34Z"
+      "remote_updated_at": "2026-09-06T03:31:32Z",
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-013-rework-01": {
       "remote_ref": {
@@ -899,7 +901,7 @@
       },
       "lifecycle": "planned",
       "status_label": "aah:planned",
-      "remote_updated_at": "2026-09-06T03:30:42Z"
+      "remote_updated_at": "2026-09-06T03:31:12Z"
     },
     "F-MOD-014-rework-01": {
       "remote_ref": {
