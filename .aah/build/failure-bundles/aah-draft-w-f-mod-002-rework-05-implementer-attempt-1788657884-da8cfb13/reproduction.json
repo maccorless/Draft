@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "run_id": "aah-draft-w-f-mod-002-rework-05-implementer-attempt-1788657884-da8cfb13",
+  "created_at": "2026-09-06T01:25:32.761383+00:00",
+  "subject": {
+    "commit_sha": "26a3b46849ff7e627c3558cfcb8d0f102767443441e8be458b283744915b59b1",
+    "branch": "feature/F-MOD-002-rework-05",
+    "rel_path": ".claude/worktrees/F-MOD-002-rework-05"
+  },
+  "execution": {
+    "argv": [
+      "DATABASE_URL=postgres://draft:draft_local_dev@localhost:5432/draft_test",
+      "JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!!",
+      "NODE_ENV=test",
+      "npx",
+      "vitest",
+      "run",
+      "--reporter=verbose",
+      "server/src/__tests__/F-MOD-002_auction.test.ts",
+      "web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx"
+    ],
+    "cwd": ".claude/worktrees/F-MOD-002-rework-05",
+    "adapter": "Node.js,TypeScript,Fastify,PostgreSQL,Drizzle,React,Vite,Zod,Vitest,Railway,ws",
+    "seed": null,
+    "started_at": "2026-09-06T01:24:44.340145+00:00",
+    "finished_at": "2026-09-06T01:25:32.752420+00:00",
+    "exit_code": 1
+  },
+  "tool_versions": {
+    "python": "3.12.13",
+    "pytest": null,
+    "docker": null
+  },
+  "cleanup": {
+    "transport": "none",
+    "action": "cleanup_namespace",
+    "namespace": "aah-draft-w-f-mod-002-rework-05-implementer-attempt-1788657884-da8cfb13",
+    "removed": [],
+    "leftover": [],
+    "errors": [],
+    "stopped": true,
+    "timestamp": "2026-09-06T01:25:32.750957+00:00"
+  },
+  "diagnostic": null,
+  "logs": {
+    "stderr": {
+      "file": "stderr.log",
+      "sha256": "def3fc455f442b7ca1fd0dda657cbe2d61dce46d8db5fd2a125319ef73960f3b",
+      "bytes": 78680
+    },
+    "stdout": {
+      "file": "stdout.log",
+      "sha256": "802bdc40907bc12e221c328b19e3200bff84b53e9f944509822f80487abc734f",
+      "bytes": 15107
+    }
+  },
+  "dropped_log_streams": [],
+  "retention": {
+    "local_log_days": 30,
+    "metadata_retention": "milestone",
+    "source": "fixed"
+  }
+}
