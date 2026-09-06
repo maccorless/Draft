@@ -119,7 +119,19 @@ produces:
     schema_file: schema/MOD-010-api-schema.yaml
     request_schema: WhammyConfigRequest
     response_schema: "200 OK (no response body)"
+
+  - operation_id: deleteTeam
+    schema_file: schema/MOD-010-api-schema.yaml
+    request_schema: "(none)"
+    response_schema: "200 OK (no response body); 409 Conflict if the league's draft has left CREATED status"
+
+  - operation_id: resolveAmbiguousMatch
+    schema_file: schema/MOD-010-api-schema.yaml
+    request_schema: ResolveAmbiguousMatchRequest
+    response_schema: "200 OK (no response body)"
 ```
+
+**New schema additions needed for the above (not yet in `schema/MOD-010-api-schema.yaml`):** `deleteTeam` (`DELETE /leagues/:leagueId/teams/:teamId`) and `resolveAmbiguousMatch` (`POST /leagues/:leagueId/datasets/:datasetId/ambiguities/resolve`, request body `{ resolutions: Record<string, string> }` where each value is a `player_id` or the literal `'skip'`). This module also changes the response shape of MOD-016's existing CSV/Excel/ESPN-PDF/FantasyPros import endpoints (`server/src/player/routes.ts`) to add `ambiguous_rows` alongside their existing `errors` array — an additive, backward-compatible field, not a breaking change to `ImportResultSchema` in `shared-types/src/schemas/league.ts`, which this module extends with an `ambiguous_rows` field and an `AmbiguousRowSchema`/`PlayerCandidateSchema` pair.
 
 ## Required Env Variables
 
@@ -135,4 +147,4 @@ produces:
 ## Constraints
 
 ## Status
-done
+in_progress
