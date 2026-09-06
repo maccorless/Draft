@@ -116,3 +116,9 @@ produces:
     request_schema: {}
     response_schema: NOMINATION_TURN_CHANGED
 ```
+
+## Test Config
+
+- command: npx vitest run web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx
+- test_paths:
+  - web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx
