@@ -1,0 +1,49 @@
+feedback_id: UF-18-01
+wave: 18
+source: user
+started_at: '2026-09-06T13:54:46Z'
+feedback_details: |
+  Fix the pre-existing repo-wide bug where DraftEvent/payload JSONB columns are double-encoded: writes throughout server/src/auction/engine.ts, server/src/draft/whammy.ts, server/src/draft/draft-control.ts (and any other module doing `${JSON.stringify(x)}::jsonb` inserts) store `payload` as a JSON string inside a jsonb column instead of a native jsonb object. This was discovered and only locally worked around (via `(payload #>> '{}')::jsonb ->> 'key'`) in the new query added in feature F-MOD-005-rework-01 (server/src/draft/corrections.ts). Fix at the source: correct the write side so payload is inserted as a proper jsonb object (not a double-encoded string), update any read-side code that currently compensates for the double-encoding (including the workaround just added in corrections.ts, which should revert to a normal jsonb read once the write side is fixed), and confirm no regressions across the affected modules' existing tests. (feature: F-MOD-005-rework-01)
+steps:
+- phase: plan
+  completed_at: null
+  affected_modules:
+  - MOD-002
+  - MOD-005
+  - MOD-009
+  - MOD-011
+  blast_radius_features:
+  - F-MOD-002
+  - F-MOD-002-rework-01
+  - F-MOD-002-rework-02
+  - F-MOD-002-rework-03
+  - F-MOD-002-rework-04
+  - F-MOD-002-rework-05
+  - F-MOD-002-rework-06
+  - F-MOD-003
+  - F-MOD-004
+  - F-MOD-004-rework-01
+  - F-MOD-004-rework-02
+  - F-MOD-004-rework-03
+  - F-MOD-005
+  - F-MOD-005-rework-01
+  - F-MOD-006
+  - F-MOD-006-rework-01
+  - F-MOD-008
+  - F-MOD-008-rework-01
+  - F-MOD-009
+  - F-MOD-009-rework-01
+  - F-MOD-010
+  - F-MOD-010-rework-01
+  - F-MOD-011
+  - F-MOD-011-rework-01
+  - F-MOD-011-rework-02
+  - F-MOD-012
+  - F-MOD-012-rework-01
+  - F-MOD-013
+  - F-MOD-013-rework-01
+  - F-MOD-014
+  - F-MOD-014-rework-01
+  - F-MOD-015
+  - F-MOD-017
+status: in_progress
