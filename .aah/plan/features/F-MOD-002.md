@@ -138,6 +138,16 @@ produces:
     schema_file: schema/MOD-002-api-schema.yaml
     request_schema: {}
     response_schema: NOMINATION_TURN_CHANGED
+
+  - operation_id: ws_WHAMMY_APPLIED
+    schema_file: schema/MOD-002-api-schema.yaml
+    request_schema: {}
+    response_schema: WHAMMY_APPLIED
+
+  - operation_id: ws_SNIPING_PENALTY_APPLIED
+    schema_file: schema/MOD-002-api-schema.yaml
+    request_schema: {}
+    response_schema: SNIPING_PENALTY_APPLIED
 ```
 
 ## Required Env Variables
