@@ -22,8 +22,8 @@
         }
       },
       "remote_updated_at": "2026-09-06T03:25:53Z",
-      "lifecycle": "done",
-      "status_label": "aah:done"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-001": {
       "remote_ref": {
@@ -70,8 +70,8 @@
         }
       },
       "remote_updated_at": "2026-09-05T21:25:15Z",
-      "lifecycle": "done",
-      "status_label": "aah:done",
+      "lifecycle": "planned",
+      "status_label": "aah:planned",
       "last_seen_comment_id": 0
     },
     "F-MOD-003": {
@@ -144,8 +144,8 @@
         }
       },
       "remote_updated_at": "2026-09-06T03:25:55Z",
-      "lifecycle": "done",
-      "status_label": "aah:done"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-006": {
       "remote_ref": {
@@ -168,8 +168,8 @@
         }
       },
       "remote_updated_at": "2026-09-06T03:25:57Z",
-      "lifecycle": "done",
-      "status_label": "aah:done"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-007": {
       "remote_ref": {
@@ -216,8 +216,8 @@
         }
       },
       "remote_updated_at": "2026-09-06T03:26:00Z",
-      "lifecycle": "done",
-      "status_label": "aah:done"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-009": {
       "remote_ref": {
@@ -240,8 +240,8 @@
         }
       },
       "remote_updated_at": "2026-09-06T03:26:02Z",
-      "lifecycle": "done",
-      "status_label": "aah:done"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-016": {
       "remote_ref": {
@@ -341,8 +341,8 @@
         }
       },
       "remote_updated_at": "2026-09-06T03:26:07Z",
-      "lifecycle": "implementing",
-      "status_label": "aah:implementing"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-013": {
       "remote_ref": {
@@ -365,8 +365,8 @@
         }
       },
       "remote_updated_at": "2026-09-06T03:26:10Z",
-      "lifecycle": "implementing",
-      "status_label": "aah:implementing"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-014": {
       "remote_ref": {
@@ -392,8 +392,8 @@
         }
       },
       "remote_updated_at": "2026-09-06T03:26:12Z",
-      "lifecycle": "implementing",
-      "status_label": "aah:implementing"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-010": {
       "remote_ref": {
@@ -468,8 +468,8 @@
       },
       "last_seen_comment_id": 0,
       "remote_updated_at": "2026-09-05T21:25:18Z",
-      "lifecycle": "implementing",
-      "status_label": "aah:implementing"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-002-rework-02": {
       "remote_ref": {
@@ -492,7 +492,9 @@
         }
       },
       "last_seen_comment_id": 0,
-      "remote_updated_at": "2026-09-05T21:25:20Z"
+      "remote_updated_at": "2026-09-05T21:25:20Z",
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-011-rework-01": {
       "remote_ref": {
@@ -588,7 +590,9 @@
         }
       },
       "last_seen_comment_id": 0,
-      "remote_updated_at": "2026-09-05T21:25:22Z"
+      "remote_updated_at": "2026-09-05T21:25:22Z",
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-004-rework-02": {
       "remote_ref": {
@@ -634,7 +638,9 @@
         }
       },
       "last_seen_comment_id": 0,
-      "remote_updated_at": "2026-09-05T21:25:25Z"
+      "remote_updated_at": "2026-09-05T21:25:25Z",
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-004-rework-03": {
       "remote_ref": {
@@ -681,8 +687,8 @@
       },
       "last_seen_comment_id": 0,
       "remote_updated_at": "2026-09-06T03:28:28Z",
-      "lifecycle": "done",
-      "status_label": "aah:done"
+      "lifecycle": "planned",
+      "status_label": "aah:planned"
     },
     "F-MOD-000-rework-01": {
       "remote_ref": {

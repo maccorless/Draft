@@ -5,16 +5,16 @@
       "feature_id": "F-MOD-000",
       "field": "status",
       "field_class": "status",
-      "base": "planned",
+      "base": "done",
       "local": "done",
-      "remote": "pending",
+      "remote": "planned",
       "remote_ref": {
         "number": 1,
         "node_id": "I_kwDOUI9K_M8AAAABPK5Weg",
         "url": "https://github.com/maccorless/Draft/issues/1"
       },
-      "detected_at": "lifecycle-update",
-      "status": "resolved"
+      "detected_at": "sync",
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-001-status",
@@ -39,14 +39,14 @@
       "field_class": "status",
       "base": "done",
       "local": "done",
-      "remote": "implementing",
+      "remote": "planned",
       "remote_ref": {
         "number": 3,
         "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
         "url": "https://github.com/maccorless/Draft/issues/3"
       },
       "detected_at": "sync",
-      "status": "resolved"
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-003-status",
@@ -85,32 +85,32 @@
       "feature_id": "F-MOD-005",
       "field": "status",
       "field_class": "status",
-      "base": "planned",
+      "base": "done",
       "local": "done",
-      "remote": "pending",
+      "remote": "planned",
       "remote_ref": {
         "number": 6,
         "node_id": "I_kwDOUI9K_M8AAAABPK5enQ",
         "url": "https://github.com/maccorless/Draft/issues/6"
       },
-      "detected_at": "lifecycle-update",
-      "status": "resolved"
+      "detected_at": "sync",
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-006-status",
       "feature_id": "F-MOD-006",
       "field": "status",
       "field_class": "status",
-      "base": "planned",
+      "base": "done",
       "local": "done",
-      "remote": "pending",
+      "remote": "planned",
       "remote_ref": {
         "number": 7,
         "node_id": "I_kwDOUI9K_M8AAAABPK5gnQ",
         "url": "https://github.com/maccorless/Draft/issues/7"
       },
-      "detected_at": "lifecycle-update",
-      "status": "resolved"
+      "detected_at": "sync",
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-007-status",
@@ -133,32 +133,32 @@
       "feature_id": "F-MOD-008",
       "field": "status",
       "field_class": "status",
-      "base": "planned",
+      "base": "done",
       "local": "done",
-      "remote": "pending",
+      "remote": "planned",
       "remote_ref": {
         "number": 9,
         "node_id": "I_kwDOUI9K_M8AAAABPK5kxQ",
         "url": "https://github.com/maccorless/Draft/issues/9"
       },
-      "detected_at": "lifecycle-update",
-      "status": "resolved"
+      "detected_at": "sync",
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-009-status",
       "feature_id": "F-MOD-009",
       "field": "status",
       "field_class": "status",
-      "base": "planned",
+      "base": "done",
       "local": "done",
-      "remote": "pending",
+      "remote": "planned",
       "remote_ref": {
         "number": 10,
         "node_id": "I_kwDOUI9K_M8AAAABPK5maw",
         "url": "https://github.com/maccorless/Draft/issues/10"
       },
-      "detected_at": "lifecycle-update",
-      "status": "resolved"
+      "detected_at": "sync",
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-002-rework-01-description",
@@ -181,16 +181,16 @@
       "feature_id": "F-MOD-002-rework-01",
       "field": "status",
       "field_class": "status",
-      "base": "implementing",
-      "local": "implementing",
-      "remote": "in_progress",
+      "base": "done",
+      "local": "done",
+      "remote": "planned",
       "remote_ref": {
         "number": 3,
         "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
         "url": "https://github.com/maccorless/Draft/issues/3"
       },
       "detected_at": "sync",
-      "status": "resolved"
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-002-rework-02-description",
@@ -373,16 +373,16 @@
       "feature_id": "F-MOD-002-rework-05",
       "field": "status",
       "field_class": "status",
-      "base": "implementing",
+      "base": "done",
       "local": "done",
-      "remote": "in_progress",
+      "remote": "planned",
       "remote_ref": {
         "number": 3,
         "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
         "url": "https://github.com/maccorless/Draft/issues/3"
       },
-      "detected_at": "lifecycle-update",
-      "status": "resolved"
+      "detected_at": "sync",
+      "status": "open"
     },
     {
       "conflict_id": "CF-F-MOD-000-rework-01-description",
@@ -687,6 +687,118 @@
       },
       "detected_at": "sync",
       "status": "resolved"
+    },
+    {
+      "conflict_id": "CF-F-MOD-002-rework-02-status",
+      "feature_id": "F-MOD-002-rework-02",
+      "field": "status",
+      "field_class": "status",
+      "base": "done",
+      "local": "done",
+      "remote": "planned",
+      "remote_ref": {
+        "number": 3,
+        "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
+        "url": "https://github.com/maccorless/Draft/issues/3"
+      },
+      "detected_at": "sync",
+      "status": "open"
+    },
+    {
+      "conflict_id": "CF-F-MOD-002-rework-03-status",
+      "feature_id": "F-MOD-002-rework-03",
+      "field": "status",
+      "field_class": "status",
+      "base": "done",
+      "local": "done",
+      "remote": "planned",
+      "remote_ref": {
+        "number": 3,
+        "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
+        "url": "https://github.com/maccorless/Draft/issues/3"
+      },
+      "detected_at": "sync",
+      "status": "open"
+    },
+    {
+      "conflict_id": "CF-F-MOD-002-rework-04-status",
+      "feature_id": "F-MOD-002-rework-04",
+      "field": "status",
+      "field_class": "status",
+      "base": "done",
+      "local": "done",
+      "remote": "planned",
+      "remote_ref": {
+        "number": 3,
+        "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
+        "url": "https://github.com/maccorless/Draft/issues/3"
+      },
+      "detected_at": "sync",
+      "status": "open"
+    },
+    {
+      "conflict_id": "CF-F-MOD-010-status",
+      "feature_id": "F-MOD-010",
+      "field": "status",
+      "field_class": "status",
+      "base": "implementing",
+      "local": "in_progress",
+      "remote": "planned",
+      "remote_ref": {
+        "number": 17,
+        "node_id": "I_kwDOUI9K_M8AAAABPsuTzw",
+        "url": "https://github.com/maccorless/Draft/issues/17"
+      },
+      "detected_at": "sync",
+      "status": "open"
+    },
+    {
+      "conflict_id": "CF-F-MOD-012-status",
+      "feature_id": "F-MOD-012",
+      "field": "status",
+      "field_class": "status",
+      "base": "done",
+      "local": "done",
+      "remote": "planned",
+      "remote_ref": {
+        "number": 14,
+        "node_id": "I_kwDOUI9K_M8AAAABPsIWKQ",
+        "url": "https://github.com/maccorless/Draft/issues/14"
+      },
+      "detected_at": "sync",
+      "status": "open"
+    },
+    {
+      "conflict_id": "CF-F-MOD-013-status",
+      "feature_id": "F-MOD-013",
+      "field": "status",
+      "field_class": "status",
+      "base": "done",
+      "local": "done",
+      "remote": "planned",
+      "remote_ref": {
+        "number": 15,
+        "node_id": "I_kwDOUI9K_M8AAAABPsTZGA",
+        "url": "https://github.com/maccorless/Draft/issues/15"
+      },
+      "detected_at": "sync",
+      "status": "open"
+    },
+    {
+      "conflict_id": "CF-F-MOD-014-status",
+      "feature_id": "F-MOD-014",
+      "field": "status",
+      "field_class": "status",
+      "base": "done",
+      "local": "done",
+      "remote": "planned",
+      "remote_ref": {
+        "number": 16,
+        "node_id": "I_kwDOUI9K_M8AAAABPshbvg",
+        "url": "https://github.com/maccorless/Draft/issues/16"
+      },
+      "detected_at": "sync",
+      "status": "open"
     }
   ]
 }
