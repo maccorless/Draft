@@ -1,14 +1,14 @@
 checkpoint_configuration:
   project_name: Draft
   checkpoint_config_version: 5.1.1
-  total_waves: 18
-  complexity_score: 218
+  total_waves: 19
+  complexity_score: 228
   system_checkpoint_level: wave_plus_feature
   upgrade_reasons:
-  - complexity_score=218 > 60
-  - max_wave_size=9 > 4
-  - total_features=28 > 12
-  generated_at: '2026-09-05T21:22:10.225433+00:00'
+  - complexity_score=228 > 60
+  - max_wave_size=10 > 4
+  - total_features=38 > 12
+  generated_at: '2026-09-06T03:10:17.666582+00:00'
   verification_profiles:
     F-MOD-000:
       level: deep
@@ -18,6 +18,16 @@ checkpoint_configuration:
       - keyword_auth_scope
       - keyword_credential_scope
       - keyword_migration
+      - keyword_payment_scope
+      override: null
+    F-MOD-000-rework-01:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      - keyword_migration
+      - keyword_payment_scope
       override: null
     F-MOD-001:
       level: deep
@@ -82,6 +92,15 @@ checkpoint_configuration:
       - keyword_credential_scope
       - keyword_payment_scope
       override: null
+    F-MOD-002-rework-06:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_concurrency
+      - keyword_credential_scope
+      - keyword_payment_scope
+      override: null
     F-MOD-003:
       level: deep
       rule_version: '1'
@@ -131,12 +150,28 @@ checkpoint_configuration:
       - keyword_auth_scope
       - keyword_credential_scope
       override: null
+    F-MOD-005-rework-01:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
     F-MOD-006:
       level: deep
       rule_version: '1'
       reasons:
       - keyword_auth_scope
       - keyword_concurrency
+      - keyword_integrity
+      override: null
+    F-MOD-006-rework-01:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_concurrency
+      - keyword_integrity
       override: null
     F-MOD-007:
       level: deep
@@ -152,7 +187,23 @@ checkpoint_configuration:
       - keyword_auth_scope
       - keyword_credential_scope
       override: null
+    F-MOD-008-rework-01:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
     F-MOD-009:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - high_fanout
+      - keyword_auth_scope
+      - keyword_concurrency
+      - keyword_credential_scope
+      override: null
+    F-MOD-009-rework-01:
       level: deep
       rule_version: '1'
       reasons:
@@ -167,6 +218,17 @@ checkpoint_configuration:
       - keyword_auth_scope
       - keyword_credential_scope
       - keyword_migration
+      - keyword_payment_scope
+      - keyword_regulated_data
+      override: null
+    F-MOD-010-rework-01:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      - keyword_migration
+      - keyword_payment_scope
       - keyword_regulated_data
       override: null
     F-MOD-011:
@@ -197,13 +259,35 @@ checkpoint_configuration:
       - keyword_auth_scope
       - keyword_credential_scope
       override: null
+    F-MOD-012-rework-01:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
     F-MOD-013:
       level: deep
       rule_version: '1'
       reasons:
       - keyword_auth_scope
+      - keyword_integrity
+      override: null
+    F-MOD-013-rework-01:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_integrity
       override: null
     F-MOD-014:
+      level: deep
+      rule_version: '1'
+      reasons:
+      - keyword_auth_scope
+      - keyword_credential_scope
+      override: null
+    F-MOD-014-rework-01:
       level: deep
       rule_version: '1'
       reasons:
@@ -214,6 +298,7 @@ checkpoint_configuration:
       level: deep
       rule_version: '1'
       reasons:
+      - high_fanout
       - keyword_auth_scope
       - keyword_credential_scope
       override: null
@@ -248,6 +333,8 @@ checkpoint_configuration:
       checks_by_feature:
         F-MOD-000:
         - quality_gate
+        F-MOD-000-rework-01:
+        - quality_gate
         F-MOD-001:
         - quality_gate
         F-MOD-002:
@@ -262,6 +349,8 @@ checkpoint_configuration:
         - quality_gate
         F-MOD-002-rework-05:
         - quality_gate
+        F-MOD-002-rework-06:
+        - quality_gate
         F-MOD-003:
         - quality_gate
         F-MOD-004:
@@ -274,15 +363,25 @@ checkpoint_configuration:
         - quality_gate
         F-MOD-005:
         - quality_gate
+        F-MOD-005-rework-01:
+        - quality_gate
         F-MOD-006:
+        - quality_gate
+        F-MOD-006-rework-01:
         - quality_gate
         F-MOD-007:
         - quality_gate
         F-MOD-008:
         - quality_gate
+        F-MOD-008-rework-01:
+        - quality_gate
         F-MOD-009:
         - quality_gate
+        F-MOD-009-rework-01:
+        - quality_gate
         F-MOD-010:
+        - quality_gate
+        F-MOD-010-rework-01:
         - quality_gate
         F-MOD-011:
         - quality_gate
@@ -292,9 +391,15 @@ checkpoint_configuration:
         - quality_gate
         F-MOD-012:
         - quality_gate
+        F-MOD-012-rework-01:
+        - quality_gate
         F-MOD-013:
         - quality_gate
+        F-MOD-013-rework-01:
+        - quality_gate
         F-MOD-014:
+        - quality_gate
+        F-MOD-014-rework-01:
         - quality_gate
         F-MOD-015:
         - quality_gate
@@ -554,6 +659,59 @@ checkpoint_configuration:
     - All automated system checks pass
     - User demo completed without critical issues
     - No blocking feedback items remain unaddressed
+  - id: UCR-010
+    after_wave: 18
+    covered_features:
+    - F-MOD-000
+    - F-MOD-002-rework-01
+    - F-MOD-002-rework-02
+    - F-MOD-001
+    - F-MOD-002
+    - F-MOD-007
+    - F-MOD-003
+    - F-MOD-008
+    - F-MOD-009
+    - F-MOD-015
+    - F-MOD-017
+    - F-MOD-016
+    - F-MOD-004
+    - F-MOD-005
+    - F-MOD-006
+    - F-MOD-010
+    - F-MOD-011
+    - F-MOD-014
+    - F-MOD-012
+    - F-MOD-013
+    - F-MOD-011-rework-01
+    - F-MOD-004-rework-01
+    - F-MOD-011-rework-02
+    - F-MOD-002-rework-03
+    - F-MOD-004-rework-02
+    - F-MOD-002-rework-04
+    - F-MOD-004-rework-03
+    - F-MOD-002-rework-05
+    - F-MOD-000-rework-01
+    - F-MOD-002-rework-06
+    - F-MOD-005-rework-01
+    - F-MOD-006-rework-01
+    - F-MOD-008-rework-01
+    - F-MOD-009-rework-01
+    - F-MOD-010-rework-01
+    - F-MOD-012-rework-01
+    - F-MOD-013-rework-01
+    - F-MOD-014-rework-01
+    demo_checklist:
+    - System starts successfully
+    - All covered features are functional
+    - User can execute primary workflows
+    feedback_questions:
+    - Are the implemented features meeting expectations?
+    - Is any functionality missing or incorrect?
+    - Are there performance or usability concerns?
+    success_criteria:
+    - All automated system checks pass
+    - User demo completed without critical issues
+    - No blocking feedback items remain unaddressed
   standards:
     loaded: false
     sources: []
@@ -563,6 +721,8 @@ checkpoint_configuration:
       F-MOD-002: 80.0
       F-MOD-003: 80.0
       F-MOD-004: 80.0
+      F-MOD-009: 80.0
+      F-MOD-015: 80.0
   user_notification:
     always_notify:
     - critical_violations
