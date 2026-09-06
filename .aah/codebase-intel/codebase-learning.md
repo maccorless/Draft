@@ -3,8 +3,9 @@
 **Project**: Draft (Fantasy Football Auction Draft Platform)
 **Profiled**: 2026-08-31 (plan-mode synthesis)
 **Refreshed**: 2026-09-04 (build phase, F-MOD-000 through F-MOD-017 landed, 10/18 features passing per progress log)
+**Refreshed**: 2026-09-06 (catch-up pass, wave 18 label — 590 commits behind, diagram files brought current; feature set unchanged at F-MOD-000 through F-MOD-017 all `done`, F-MOD-000-rework-01 `implementing`)
 **Primary Language**: TypeScript
-**Codebase Size**: 114 TypeScript/TSX/JS files tracked in codemap (server/src, web/src, shared-types/src)
+**Codebase Size**: 234 files tracked in codemap (148 .ts, 74 .tsx, 12 .js — server/src, web/src, shared-types/src)
 
 ---
 
@@ -199,7 +200,7 @@ See §4's route table. WS message types confirmed in code (`server/src/ws/auctio
 |------|-------------|--------|------------|
 | `engine.ts` size | ~1290+ lines, many concerns (bid, nominate, award, match, timers, roster-full gate) in one file | Medium — readability/maintainability, not correctness | Medium |
 | Draft Room nomination UX | Nomination is search-box-only (`nominateSearch`/`availablePlayers` in `web/src/screens/draft-room/index.tsx`) — no persistent filterable/sortable player list; being addressed by UF-17-07 | Medium — usability gap, not correctness | High (confirmed by code read) |
-| Codebase intel staleness | This document and the diagram files were last fully synthesized at plan-mode (pre-implementation); resolved auto-nomination gap and refreshed the Auto-Agent/roster-full rows as of 2026-09-05 (wave 17 fixes) | Medium — future refreshes should prioritize a fuller re-read once the module set stabilizes | High |
+| Codebase intel staleness | Resolved 2026-09-06: `codebase-structure.md`, `architecture-diagram.md`, `data-model-diagram.md`, `data-flow-diagram.md`, and `dependency-graph.md` had been stuck at their plan-mode `[PLANNED]` content since 2026-08-31 despite the codebase having grown from 114 to 234 tracked files; this refresh rewrote all five against the actual `server/db/schema/index.ts` (32 tables), `server/src/`, and `web/src/` trees. `tech-stack.md`, `dependency-map.md`, and this document were already current. | Low going forward — but confirms the pending-changes counter (22 queued, all `.aah/architecture/schema/*.yaml`, none of them source code) is not a reliable signal that markdown intel stayed in sync; run refresh proactively after waves, not just on counter thresholds | High |
 
 ---
 
