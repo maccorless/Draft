@@ -1,0 +1,96 @@
+{
+  "wave": 17,
+  "timestamp": "2026-09-06T01:42:39.383922+00:00",
+  "overall_passed": false,
+  "runtime_mode": "docker",
+  "port": 0,
+  "checks": {
+    "module_validation": {
+      "check": "module_validation",
+      "wave": 17,
+      "timestamp": "2026-09-06T01:42:34Z",
+      "passed": true,
+      "details": {
+        "message": "npx tsc --noEmit exited 0 with no diagnostics across monorepo (server/, web/, shared-types/)",
+        "module_count": 3,
+        "passed_count": 3,
+        "failed_count": 0
+      }
+    },
+    "startup_validation": {
+      "check": "startup_validation",
+      "wave": 17,
+      "timestamp": "2026-09-06T01:42:34Z",
+      "passed": false,
+      "details": {
+        "message": "Docker is not installed on this host (docker: command not found; docker info fails), so no container network can be built/run for this Node/Fastify+Postgres+ws stack. Additionally the language adapter (core.build.lang_checks.cli describe --kind start) returned supported:false for this project, so no live startup command could be resolved even outside Docker. Per protocol, Start-and-Keep-Running mode cannot proceed past containerization strategy selection without usable Docker; no retained process exists.",
+        "container_name": null,
+        "port": null,
+        "runtime_mode": "docker"
+      }
+    },
+    "smoke_tests": {
+      "check": "smoke_tests",
+      "wave": 17,
+      "timestamp": "2026-09-06T01:42:34Z",
+      "passed": false,
+      "details": {
+        "message": "not reached \u2014 step 4 (containerization strategy) failed: Docker unavailable",
+        "steps_total": 0,
+        "steps_passed": 0,
+        "step_results": []
+      }
+    },
+    "health_check": {
+      "check": "health_check",
+      "wave": 17,
+      "timestamp": "2026-09-06T01:42:34Z",
+      "passed": false,
+      "details": {
+        "message": "not reached \u2014 step 4 (containerization strategy) failed: Docker unavailable",
+        "issues": [
+          "Docker unavailable; no running instance to probe /health against"
+        ],
+        "issue_count": 1
+      }
+    }
+  },
+  "summary": {
+    "total_checks": 4,
+    "passed": 1,
+    "failed": 3
+  },
+  "subject": {
+    "branch": "integration/wave-17",
+    "commit_sha": "26a3b46849ff7e627c3558cfcb8d0f102767443441e8be458b283744915b59b1"
+  },
+  "runtime_criteria_sha256": "1ad87f2266882e3f9377b3b747d2f49bc69a4dbe75a47821cf2ec5e3a0e93d83",
+  "fix_category": "user_required",
+  "attestation": {
+    "method": "subprocess",
+    "command": [
+      "aah",
+      "run",
+      "core.build.write_runtime_results",
+      "--project-path",
+      "/Users/kcorless/Projects/Software/Draft",
+      "--wave",
+      "17",
+      "--results-json",
+      "{\n  \"module_validation\": {\n    \"check\": \"module_validation\",\n    \"wave\": 17,\n    \"timestamp\": \"2026-09-06T01:42:34Z\",\n    \"passed\": true,\n    \"details\": {\"message\": \"npx tsc --noEmit exited 0 with no diagnostics across monorepo (server/, web/, shared-types/)\", \"module_count\": 3, \"passed_count\": 3, \"failed_count\": 0}\n  },\n  \"startup_validation\": {\n    \"check\": \"startup_validation\",\n    \"wave\": 17,\n    \"timestamp\": \"2026-09-06T01:42:34Z\",\n    \"passed\": false,\n    \"details\": {\"message\": \"Docker is not installed on this host (docker: command not found; docker info fails), so no container network can be built/run for this Node/Fastify+Postgres+ws stack. Additionally the language adapter (core.build.lang_checks.cli describe --kind start) returned supported:false for this project, so no live startup command could be resolved even outside Docker. Per protocol, Start-and-Keep-Running mode cannot proceed past containerization strategy selection without usable Docker; no retained process exists.\", \"container_name\": null, \"port\": null, \"runtime_mode\": \"docker\"}\n  },\n  \"smoke_tests\": {\n    \"check\": \"smoke_tests\",\n    \"wave\": 17,\n    \"timestamp\": \"2026-09-06T01:42:34Z\",\n    \"passed\": false,\n    \"details\": {\"message\": \"not reached \u2014 step 4 (containerization strategy) failed: Docker unavailable\", \"steps_total\": 0, \"steps_passed\": 0, \"step_results\": []}\n  },\n  \"health_check\": {\n    \"check\": \"health_check\",\n    \"wave\": 17,\n    \"timestamp\": \"2026-09-06T01:42:34Z\",\n    \"passed\": false,\n    \"details\": {\"message\": \"not reached \u2014 step 4 (containerization strategy) failed: Docker unavailable\", \"issues\": [\"Docker unavailable; no running instance to probe /health against\"], \"issue_count\": 1}\n  }\n}",
+      "--runtime-mode",
+      "docker",
+      "--fix-category",
+      "user_required"
+    ],
+    "exit_code": 0,
+    "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "duration_ms": 0,
+    "host_pid": 57608,
+    "timestamp": "2026-09-06T01:42:39.438173+00:00",
+    "session_secret_sha256": "866ac2d0a3e1b61fe17f129b52fb8463e1b44f606eb1edf0b7269fd88971a035",
+    "schema_version": 1,
+    "signature": "158bf512ec6fafb893a9f0e8749629ad2cc655abb76898d5500de33ee73b421f"
+  }
+}
