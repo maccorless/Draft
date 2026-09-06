@@ -96,8 +96,9 @@
         "F-MOD-002-rework-05"
       ],
       "attempts": 1,
-      "status": "in_progress",
-      "triggered_at": "2026-09-05T21:23:20.718267+00:00"
+      "status": "resolved",
+      "triggered_at": "2026-09-05T21:23:20.718267+00:00",
+      "resolved_at": "2026-09-06T01:32:58.248233+00:00"
     }
   ]
 }

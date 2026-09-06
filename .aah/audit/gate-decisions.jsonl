@@ -1,0 +1,4 @@
+{"decision": "refire", "gate": "project_standards", "reason": "missing_or_unverified", "schema_version": 1, "ts": "2026-09-06T01:36:23.528404+00:00", "wave": 17}
+{"decision": "pass", "gate": "project_standards", "reason": "whole-codebase standards passed", "schema_version": 1, "ts": "2026-09-06T01:36:38.475510+00:00", "wave": 17}
+{"decision": "refire", "gate": "regression", "reason": "subject_branch_mismatch", "schema_version": 1, "ts": "2026-09-06T01:36:38.504105+00:00", "wave": 17}
+{"decision": "pass", "gate": "project_standards", "reason": "whole-codebase standards passed", "schema_version": 1, "ts": "2026-09-06T01:41:34.027354+00:00", "wave": 17}
