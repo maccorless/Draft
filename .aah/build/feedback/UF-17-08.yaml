@@ -1,0 +1,187 @@
+feedback_id: UF-17-08
+wave: 17
+source: user
+started_at: '2026-09-06T02:57:00Z'
+feedback_details: |
+  Full gap-review punch list from a dedicated audit session (documented in
+  todo.md at the project root), covering bugs, missing PRD scope, and UI polish
+  across the whole app. User has already resolved every scope ambiguity via
+  direct Q&A — nothing below is a guess:
+
+  ## Bugs (todo.md §0)
+  - Starting budget stored/displayed wrong (~$200,249 instead of $200) — looks
+    like a dollars/cents (minor-units) conversion defect in League Setup's save
+    or display path. Needs root-cause, not just a data fix.
+  - Fixed header (identity/logout pill, top-right) overlaps page content across
+    multiple screens, and at some viewport widths makes buttons fully
+    unclickable (reproduced: Commissioner Console's "Create Draft" button was
+    unclickable at ~1280px). Also hides Draft Room's already-implemented
+    "War Room ↗" link (draft-room__war-room-link, target=_blank) — fixing this
+    layout bug surfaces an existing feature, no new code needed for that part.
+  - 403 Forbidden fetching /leagues/:id/players as an Owner during a running
+    draft (console-visible, impact on the Draft Room player list unclear —
+    needs investigation).
+
+  ## Draft Room (todo.md §1)
+  - No pre-draft manual entry point: Lobby only auto-redirects to Draft Room
+    once RUNNING/PAUSED; before that an owner has no way to open it. User
+    decision: Draft Room should use the SAME shell in this pre-draft state
+    (team strip/roster/budgets populated, nomination/bid controls idle with a
+    "waiting for draft to start" message) — not a separate view. Add a
+    persistent Lobby CTA that doesn't wait for RUNNING, and verify the shell
+    degrades gracefully with zero picks made / no active auction.
+  - All-picks history feed (ESPN-style "Picks" sidebar) — persistent feed of
+    every pick made so far (player, team, price), not just the current
+    auction's "Recent Bids". User-confirmed, in scope.
+  - Round-by-round Board view (ESPN-style) — auction drafts don't have fixed
+    "rounds" like snake drafts, so "round" needs a design decision at
+    implementation time (e.g. "Nth pick made by each team" or a chronological
+    grid). Feature itself is confirmed wanted.
+  - Roster panel enhancement: bye week + season/projected points columns.
+    Player data already carries bye_week and projected_points — likely
+    display-only, no new data needed.
+  - Anti-snipe extension has no client-visible indicator (server extends the
+    deadline but never signals the client why).
+  - No Whammy event display anywhere client-side (server broadcasts
+    WHAMMY_APPLIED; useAuctionSocket.ts has no case for it).
+  - Zone F scarcity indicator only shows own-team open slots, not league-wide.
+  - Recent Bids ladder missing bid type (Match vs custom) and
+    time-remaining-when-bid-arrived.
+  - Zone A doesn't compactly show a customized Owner Target Value (only in the
+    detail popover).
+
+  ## War Room (todo.md §2)
+  - Do Not Draft has zero UI — backend fully built
+    (server/src/draft/do-not-draft.ts, working GET/POST/DELETE) but never
+    wired to War Room. Likely a fast win (existing API, new small panel).
+  - Market Context missing AAV-baseline comparison ("actual vs AAV %") and
+    "remaining players by tier".
+  - Recent Activity metrics endpoint (war-room.ts) missing unique-bidder count
+    and Primary-AAV-difference; useAuctionSocket already tracks a
+    unique-bidder count elsewhere — likely just needs wiring through.
+  - Player Intelligence panel missing prior-season stats (present in Draft
+    Room's popover, absent here despite IA spec listing it for War Room too).
+  - Comparable Remaining table missing projection and My Target columns (only
+    Player/Tier/AAV shown).
+  - Watch List missing AAV/custom-Target/status columns (data already carries
+    AAV).
+  - Nomination Queue missing opening price and availability (data already
+    carries AAV).
+  - Targets tab always shows customized-only; needs a toggle for
+    customized-vs-all-tracked.
+  - (Optional/low priority) League Roster/Budget Grid doesn't highlight teams
+    with open compatible slots / highest budget during active bidding.
+
+  ## Commissioner Console / Lobby / Auth (todo.md §3)
+  - "Teams" nav section is a literal <ComingSoon> placeholder — no way to
+    add/remove a team from a league through the app at all (teams only exist
+    via the dev seed script). Blocks any real non-seeded league.
+  - Ambiguity Resolution screen (AmbiguityResolution.tsx) is fully built but
+    dead code — App.tsx's CommissionerRoute never passes it
+    ambiguousRows/onResolveAmbiguity. Likely a fast wiring fix, not new
+    feature work.
+  - Login role selector only offers Commissioner/Owner — no Host option, even
+    though backend + League Setup's password generator fully support HOST.
+  - Rollback preview shows the reversed-picks list and a plain-language cost
+    statement, but not the PRD-required detailed per-pick/per-team
+    budget/roster/Whammy-effect breakdown before confirming.
+  - Draft summary email delivery (POST /report/email) is a backend stub that
+    only logs intent — no real send (SendGrid or equivalent explicitly
+    deferred). The "email report" button in Draft Complete currently does
+    nothing real.
+  - Lobby's Target Values tab is read-only — no control to set/edit an Owner
+    Target Value from the Lobby.
+
+  ## Four full-scope workstreams — CONFIRMED IN SCOPE by explicit user decision
+  (not gaps to log-and-defer — build these out fully):
+
+  1. ESPN post-draft roster transfer (todo.md §4): Team→ESPN-team mapping step
+     (none exists), reconciliation tracking ("mark transfer confirmed" state —
+     no schema/endpoints exist), canonical JSON export (PRD wants JSON + CSV +
+     ESPN worksheet as three distinct outputs; only the CSV worksheet exists),
+     guided step-through of ESPN's Offline Draft entry flow (currently just a
+     CSV download button), ambiguous-mapping flagging for the transfer step
+     itself (distinct from dataset-import ambiguity resolution).
+
+  2. Anti-snipe penalty system (todo.md §5): full punitive system per PRD, not
+     just deadline extension — penalty modes (informational/warning/
+     enforcement), qualifying-late-bid counter per team, penalty duration
+     applied against a team's later PlayerAuctions, visible penalty indicator
+     in Draft Room/War Room. No penalty/sniping_event concept exists anywhere
+     in engine.ts or schema today — new schema plus new engine logic.
+
+  3. Bid telemetry & analytics (todo.md §6): bid_attempts table has 11 of ~20
+     PRD §34 fields — missing client-displayed bid, client/server auction
+     version, client click time, server processing/acceptance time,
+     time-remaining-at-receipt, measured latency, became-high-bidder flag,
+     timer-reset flag, sniping classification, session/device identifier,
+     idempotency key. Bid analytics (§35) has zero implementation, blocked by
+     this telemetry gap — sequence analytics after telemetry. Also: verify JWT
+     token expiry (~48h) is actually enforced at verify-time (auth_epoch
+     revocation confirmed checked everywhere; the exp claim itself was not
+     confirmed — targeted follow-up, not confirmed broken).
+
+  4. Whammy auto-trigger (todo.md §7): probability/weight-based automatic
+     triggering in addition to the existing manual trigger. No probability/
+     weight/auto-trigger logic exists anywhere in server/src/draft/whammy.ts
+     today (100% commissioner-manual). Client-side Whammy event display (Draft
+     Room gap above) is the same underlying gap from the display angle.
+
+  ## General UI/UX polish (todo.md §8)
+  Confirmed via hands-on testing: generic system font in places, large
+  unstyled whitespace blocks (Lobby), plain HTML table styling in dense
+  screens, no visual hierarchy distinguishing primary/secondary actions, plus
+  the header-overlap bug in the bugs section above. Needs a real design pass
+  (frontend-design or ui-ux-pro-max skill) — user's own framing was "we will
+  need to use a UI skill" — recommend treating as its own sprint-level
+  workstream rather than folding polish into each feature piecemeal.
+
+  Full detail for every item above (file:line references, IA/PRD section
+  citations, DONE-vs-MISSING inventories) is in /Users/kcorless/Projects/Software/Draft/todo.md.
+steps:
+- phase: plan
+  completed_at: null
+  affected_modules:
+  - MOD-000
+  - MOD-002
+  - MOD-004
+  - MOD-005
+  - MOD-006
+  - MOD-008
+  - MOD-009
+  - MOD-010
+  - MOD-011
+  - MOD-012
+  - MOD-013
+  - MOD-014
+  - MOD-016
+  blast_radius_features:
+  - F-MOD-000
+  - F-MOD-001
+  - F-MOD-002
+  - F-MOD-002-rework-01
+  - F-MOD-002-rework-02
+  - F-MOD-002-rework-03
+  - F-MOD-002-rework-04
+  - F-MOD-002-rework-05
+  - F-MOD-003
+  - F-MOD-004
+  - F-MOD-004-rework-01
+  - F-MOD-004-rework-02
+  - F-MOD-004-rework-03
+  - F-MOD-005
+  - F-MOD-006
+  - F-MOD-007
+  - F-MOD-008
+  - F-MOD-009
+  - F-MOD-010
+  - F-MOD-011
+  - F-MOD-011-rework-01
+  - F-MOD-011-rework-02
+  - F-MOD-012
+  - F-MOD-013
+  - F-MOD-014
+  - F-MOD-015
+  - F-MOD-016
+  - F-MOD-017
+status: in_progress
