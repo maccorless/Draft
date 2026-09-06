@@ -102,6 +102,32 @@ produces:
     schema_file: schema/MOD-006-api-schema.yaml
     request_schema: {}
     response_schema: EmailDispatchResponse
+
+  # Post-launch addition — ESPN transfer workflow (PRD §37)
+  - operation_id: listEspnTeamMappings
+    schema_file: schema/MOD-006-api-schema.yaml
+    request_schema: {}
+    response_schema: EspnTeamMappingList
+
+  - operation_id: setEspnTeamMapping
+    schema_file: schema/MOD-006-api-schema.yaml
+    request_schema: EspnTeamMappingUpdate
+    response_schema: EspnTeamMapping
+
+  - operation_id: getCanonicalExport
+    schema_file: schema/MOD-006-api-schema.yaml
+    request_schema: {}
+    response_schema: CanonicalExport
+
+  - operation_id: getReconciliationStatus
+    schema_file: schema/MOD-006-api-schema.yaml
+    request_schema: {}
+    response_schema: ReconciliationStatus
+
+  - operation_id: confirmReconciliationItem
+    schema_file: schema/MOD-006-api-schema.yaml
+    request_schema: {}
+    response_schema: ReconciliationItemEntry
 ```
 
 ## Required Env Variables
