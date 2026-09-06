@@ -1,0 +1,1 @@
+Missing required environment keys ['SENDGRID_FROM_EMAIL']: add values to the project root .env (see .env.example), then re-run.
