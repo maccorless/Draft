@@ -115,6 +115,8 @@ Draft/                                   # project root
 | `/drafts/:draftId/teams/:teamId/auto-agent` | PUT | `auction/auto-agent-routes.ts` | Enable/disable Auto-Agent |
 | `/drafts/:draftId/teams/:teamId/control-mode` | PATCH | `auction/auto-agent-routes.ts` | MANUAL/AUTO_AGENT switch |
 | `/drafts/:draftId/corrections` | POST | `draft/corrections.ts` | Price correction (in-place) or rollback trigger |
+| `/drafts/:draftId/rollback/preview` | GET | `draft/corrections.ts` | Read-only rollback dry-run: per-pick budget/roster/Whammy impact + current `state_version` for staleness detection (F-MOD-005-rework-01) |
+| `/leagues/:leagueId/players` | GET | `player/routes.ts` | Persistent player list; now `requireLeagueMember` (was `requireCommissioner`, was 403-ing Owners) |
 | `/drafts/:draftId/report` | GET | `draft/reports.ts` | DraftSummaryReport (COMPLETE drafts only) |
 | `/drafts/:draftId/espn-worksheet` | GET | `draft/reports.ts` | CSV export for ESPN roster transfer |
 | `/drafts/:draftId/report/email` | POST | `draft/reports.ts` | SendGrid email stub (commissioner only) |
