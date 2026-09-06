@@ -150,12 +150,109 @@ erDiagram
     }
 
     DraftDataset ||--o{ PlayerAuction : "scopes players for"
+    DraftDataset ||--o{ PlayerAavSource : "carries multi-source AAVs for"
     DraftDataset {
         uuid id PK
         uuid league_id FK
+        uuid draft_id
         enum status
         int version
         timestamp frozen_at
+        string primary_aav_source
+        string secondary_aav_source
+    }
+
+    Player ||--o{ PlayerAavSource : "priced by"
+    Player {
+        uuid id PK
+        string name
+        string position
+        string nfl_team
+        string espn_player_id
+        int bye_week
+        string injury_status
+        jsonb prior_season_stats
+    }
+
+    PlayerAavSource {
+        uuid id PK
+        uuid dataset_id FK
+        uuid player_id FK
+        int aav_minor
+        decimal projected_points
+        int tier
+        string source
+    }
+
+    WhammyConfiguration ||--o{ WhammyEvent : "governs"
+    WhammyConfiguration {
+        uuid id PK
+        uuid league_id FK
+        bool enabled
+        int max_amount_minor
+        text_array allowed_event_types
+        bool commissioner_approval_required
+    }
+
+    WhammyEvent ||--o| BudgetLedgerEntry : "produces"
+    WhammyEvent {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        int amount_minor
+        string description
+        enum status "PENDING_APPROVAL | APPLIED | REJECTED | REVERSED"
+    }
+
+    AutoAgentConfiguration {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        bool enabled
+        decimal max_over_base_pct
+        decimal random_variance_pct
+        decimal bench_value_pct
+        bool prioritize_starters
+        bool use_owner_target_when_customized
+        bool fallback_to_primary_aav
+    }
+
+    NominatorMatchRight {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        bool used
+        timestamp used_at
+    }
+
+    WatchListEntry {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        uuid dataset_player_id FK
+    }
+
+    NominationQueueEntry {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        uuid dataset_player_id FK
+        int queue_position
+    }
+
+    DoNotDraftEntry {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        uuid dataset_player_id FK
+    }
+
+    OwnerPlayerTarget {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        uuid dataset_player_id FK
+        int target_value_minor
     }
 ```
 
