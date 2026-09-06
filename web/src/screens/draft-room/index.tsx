@@ -22,7 +22,7 @@ interface DraftRoomProps {
   token: string;
   teamId: string | null;
   /** Optional — when 'COMMISSIONER', the in-room Pause Draft action is shown (UF-01-03 item 3). */
-  role?: 'COMMISSIONER' | 'OWNER';
+  role?: 'COMMISSIONER' | 'OWNER' | 'HOST';
 }
 
 interface RosterSlotDef {

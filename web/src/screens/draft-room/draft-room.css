@@ -11,7 +11,10 @@
   background: var(--color-chrome);
   background-image: linear-gradient(180deg, var(--color-chrome-raised) 0%, var(--color-chrome) 70%);
   box-shadow: var(--shadow-chrome);
-  padding: var(--space-3) var(--space-6);
+  /* Extra right padding keeps the health cluster (War Room link, pause
+     button, connection status) clear of the fixed identity/logout pill,
+     which overlaps this topbar's top-right corner. */
+  padding: var(--space-3) calc(var(--space-6) + 180px) var(--space-3) var(--space-6);
   display: flex;
   align-items: center;
   justify-content: space-between;

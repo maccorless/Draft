@@ -26,7 +26,7 @@ interface League { id: string; name: string }
 interface Team { id: string; name: string; draft_order: number }
 interface AuthState {
   token: string;
-  role: 'COMMISSIONER' | 'OWNER';
+  role: 'COMMISSIONER' | 'OWNER' | 'HOST';
   leagueId: string;
   leagueName: string;
   teamId?: string;
@@ -118,7 +118,7 @@ export function LeagueLogin({
   onAuth: (auth: AuthState) => void;
 }) {
   const [leagueId, setLeagueId] = useState(leagues[0]?.id ?? '');
-  const [role, setRole] = useState<'COMMISSIONER' | 'OWNER'>('COMMISSIONER');
+  const [role, setRole] = useState<'COMMISSIONER' | 'OWNER' | 'HOST'>('COMMISSIONER');
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamId, setTeamId] = useState('');
   const [teamsError, setTeamsError] = useState('');
@@ -196,11 +196,12 @@ export function LeagueLogin({
         <select
           id="role-select"
           value={role}
-          onChange={e => setRole(e.target.value as 'COMMISSIONER' | 'OWNER')}
+          onChange={e => setRole(e.target.value as 'COMMISSIONER' | 'OWNER' | 'HOST')}
           className="auth-screen__input"
         >
           <option value="COMMISSIONER">Commissioner</option>
           <option value="OWNER">Owner</option>
+          <option value="HOST">Host</option>
         </select>
         {role === 'OWNER' && (
           <>
@@ -244,7 +245,9 @@ export function LeagueLogin({
 
 export function LogoutButton({ auth, onLogout }: { auth: AuthState; onLogout: () => void }) {
   const identityLabel =
-    auth.role === 'COMMISSIONER' ? 'Commissioner' : `Owner · ${auth.teamName ?? 'My Team'}`;
+    auth.role === 'COMMISSIONER' ? 'Commissioner'
+    : auth.role === 'HOST' ? 'Host'
+    : `Owner · ${auth.teamName ?? 'My Team'}`;
 
   return (
     <div className="app-logout">
@@ -635,18 +638,20 @@ export function App() {
   return (
     <BrowserRouter>
       <LogoutButton auth={auth} onLogout={handleLogout} />
-      <Routes>
-        <Route path="/" element={
-          auth.role === 'COMMISSIONER'
-            ? <Navigate to="/commissioner" replace />
-            : <Navigate to="/lobby" replace />
-        } />
-        <Route path="/commissioner" element={<CommissionerRoute auth={auth} onStaleSession={handleLogout} />} />
-        <Route path="/lobby" element={<DraftGateway auth={auth} onStaleSession={handleLogout} />} />
-        <Route path="/draft-room" element={<DraftRoomRoute auth={auth} />} />
-        <Route path="/war-room" element={<WarRoomRoute auth={auth} />} />
-        <Route path="/draft-complete" element={<DraftCompleteRoute auth={auth} />} />
-      </Routes>
+      <div className="app-content">
+        <Routes>
+          <Route path="/" element={
+            auth.role === 'COMMISSIONER' || auth.role === 'HOST'
+              ? <Navigate to="/commissioner" replace />
+              : <Navigate to="/lobby" replace />
+          } />
+          <Route path="/commissioner" element={<CommissionerRoute auth={auth} onStaleSession={handleLogout} />} />
+          <Route path="/lobby" element={<DraftGateway auth={auth} onStaleSession={handleLogout} />} />
+          <Route path="/draft-room" element={<DraftRoomRoute auth={auth} />} />
+          <Route path="/war-room" element={<WarRoomRoute auth={auth} />} />
+          <Route path="/draft-complete" element={<DraftCompleteRoute auth={auth} />} />
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }
