@@ -117,6 +117,10 @@ elsewhere.
   reversed pick additionally shows the budget amount returned to that team and the roster slot it
   vacates, and shows the associated Whammy interaction (amount and team) for any pick whose sequence
   has one.
+- Given a rollback preview was fetched via MOD-005's `GET /drafts/:draftId/rollback/preview` and its
+  returned `state_version`, when the commissioner is about to confirm the rollback, then the UI
+  re-fetches the preview if the draft's current `state_version` has advanced since the preview was
+  computed, rather than confirming against a stale preview.
 - Given the draft is not currently `PAUSED`, when the commissioner confirms a rollback, then the UI
   pauses the draft before submitting `POST /drafts/:draftId/rollback`.
 - Given a rollback request with `{count}`, when the server returns `200` with `rolled_back` and
@@ -164,6 +168,10 @@ api_contracts:
       schema_file: schema/MOD-005-api-schema.yaml
       request_schema: RollbackRequest
       response_schema: RollbackResponse
+    - operation_id: previewRollback
+      schema_file: schema/MOD-005-api-schema.yaml
+      request_schema: "(none — GET with a `count` query parameter, no request body)"
+      response_schema: RollbackPreviewResponse
     - operation_id: triggerWhammy
       schema_file: schema/MOD-009-api-schema.yaml
       request_schema: WhammyRequest

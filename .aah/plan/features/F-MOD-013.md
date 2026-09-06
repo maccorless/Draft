@@ -70,6 +70,27 @@ api_contracts:
       schema_file: schema/MOD-006-api-schema.yaml
       request_schema: {}
       response_schema: DraftSummaryReport
+  consumes:
+    - operation_id: listEspnTeamMappings
+      schema_file: schema/MOD-006-api-schema.yaml
+      request_schema: "(none)"
+      response_schema: "ProviderTeamMapping[]"
+    - operation_id: setEspnTeamMapping
+      schema_file: schema/MOD-006-api-schema.yaml
+      request_schema: ProviderTeamMappingRequest
+      response_schema: ProviderTeamMapping
+    - operation_id: getCanonicalExport
+      schema_file: schema/MOD-006-api-schema.yaml
+      request_schema: "(none)"
+      response_schema: CanonicalExport
+    - operation_id: getReconciliationStatus
+      schema_file: schema/MOD-006-api-schema.yaml
+      request_schema: "(none)"
+      response_schema: ReconciliationStatusResponse
+    - operation_id: confirmReconciliationItem
+      schema_file: schema/MOD-006-api-schema.yaml
+      request_schema: "(none)"
+      response_schema: ReconciliationItem
 ```
 
 ## Test Config

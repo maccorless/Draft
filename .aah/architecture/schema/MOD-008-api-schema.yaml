@@ -128,6 +128,21 @@ paths:
         "200":
           description: Queue reordered
 
+  /drafts/{draftId}/activity:
+    get:
+      operationId: getRecentActivity
+      summary: Recent draft activity feed (active auctions + recently resolved picks) for War Room
+      tags: [war-room]
+      parameters:
+        - $ref: "#/components/parameters/draftId"
+      responses:
+        "200":
+          description: Recent activity rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecentActivityResponse"
+
 x-websocket-events:
   description: |
     War Room sync: a secondary browser window opened by the same owner connects to
@@ -277,3 +292,43 @@ components:
           type: string
         message:
           type: string
+
+    RecentActivityEntry:
+      type: object
+      properties:
+        acquisition_id:
+          type: string
+          format: uuid
+        player_name:
+          type: string
+        position:
+          type: string
+        price_minor:
+          type: integer
+        resolution_sequence:
+          type: integer
+        team_id:
+          type: string
+          format: uuid
+        team_name:
+          type: string
+        awarded_at:
+          type: string
+          format: date-time
+        bid_count:
+          type: integer
+        unique_bidder_count:
+          type: integer
+          description: Distinct teams that placed at least one bid on this PlayerAuction
+        aav_diff_minor:
+          type: integer
+          description: price_minor minus the frozen dataset's Primary AAV for this player (positive = paid over AAV)
+
+    RecentActivityResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentActivityEntry"

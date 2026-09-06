@@ -132,7 +132,7 @@ components:
       properties:
         role:
           type: string
-          enum: [COMMISSIONER, OWNER]
+          enum: [COMMISSIONER, HOST, OWNER]
         team_id:
           type: string
           format: uuid

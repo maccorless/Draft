@@ -132,9 +132,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ReconciliationItem"
+                $ref: "#/components/schemas/ReconciliationStatusResponse"
 
   /drafts/{draftId}/reconciliation/{reconciliationItemId}/confirm:
     post:
@@ -310,6 +308,23 @@ components:
             team_id:
               type: string
               format: uuid
+            candidates:
+              type: array
+              description: Near-match ESPN team names for an unmapped/unverified team, for the commissioner to pick from
+              items:
+                type: string
+
+    ReconciliationStatusResponse:
+      type: object
+      required: [items, all_confirmed]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconciliationItem"
+        all_confirmed:
+          type: boolean
+          description: True once every ReconciliationItem for this draft's ExportJob is CONFIRMED
 
     CanonicalExportAcquisition:
       type: object

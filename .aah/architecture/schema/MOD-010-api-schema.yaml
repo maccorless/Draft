@@ -59,6 +59,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/TeamSummary"
 
+    delete:
+      operationId: deleteTeam
+      summary: Commissioner removes a team from the league
+      tags: [league-setup]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: Team removed
+        "409":
+          description: League's draft has left CREATED status — teams can no longer be removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /leagues/{leagueId}/passwords/generate:
     post:
       operationId: generatePasswords
@@ -119,24 +136,6 @@ paths:
       responses:
         "200":
           description: Whammy configuration saved
-
-  /leagues/{leagueId}/teams/{teamId}:
-    delete:
-      operationId: deleteTeam
-      summary: Commissioner removes a team from the league
-      tags: [league-setup]
-      parameters:
-        - $ref: "#/components/parameters/leagueId"
-        - $ref: "#/components/parameters/teamId"
-      responses:
-        "200":
-          description: Team removed
-        "409":
-          description: League's draft has left CREATED status — teams can no longer be removed
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
   /leagues/{leagueId}/datasets/{datasetId}/ambiguities/resolve:
     post:

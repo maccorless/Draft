@@ -60,8 +60,8 @@ This module adds the optional Whammy mechanic: commissioner-triggered budget eve
 - Given `WhammyConfiguration.commissioner_approval_required = true` and an eligible `WhammyDefinition` fires, then a `WhammyEvent(status=PENDING_APPROVAL, definition_id=<that definition>)` is created with no budget effect and no broadcast yet, and the existing `approveWhammy`/`rejectWhammy` endpoints apply/reject it exactly as they do for a manually-triggered `WhammyEvent` — no new approval endpoint is added for auto-triggered events.
 - Given `WhammyConfiguration.commissioner_approval_required = false` and an eligible `WhammyDefinition` fires, then `applyWhammy` runs in one transaction (`WhammyEvent(status=APPLIED, definition_id=<that definition>)` + `BudgetLedgerEntry` + `DraftEvent(WHAMMY_APPLIED)`), and after commit the server broadcasts `WHAMMY_APPLIED` with the same `{team_id, amount_minor, description, new_remaining_budget_minor}` payload shape used by manual triggers — verify with a test asserting a MOD-002/MOD-008-style WS listener receives an indistinguishable event for an auto-triggered vs. a manually-triggered Whammy.
 - Given a `WhammyDefinition` with `budget_delta_minor` set (a budget-affecting type), when it auto-fires at pick resolution, then the target team is the team just awarded the player in that resolution; given a `WhammyDefinition` with no `budget_delta_minor` (message/offline-action only), when it auto-fires, then `WhammyEvent.team_id` is `null` and no `BudgetLedgerEntry` is created (mirrors "Budget delta? No -> No financial mutation" in `state-machine-flows.md §16`).
-- Given a commissioner submits `POST /leagues/:id/whammy-definitions` with `name`, `type`, `budget_delta_minor`, `trigger_rule_json`, `weight`, `display_message`, and optionally `offline_action_text`, then a `WhammyDefinition` row is created scoped to that league's `WhammyConfiguration`; `GET /leagues/:id/whammy-definitions` lists them and `PATCH /leagues/:id/whammy-definitions/:definitionId` updates `trigger_rule_json`, `weight`, `display_message`, `offline_action_text`, or `active` (not `type`/`budget_delta_minor`, which are immutable once any `WhammyEvent` references the definition, to keep historical `WhammyEvent` rows meaningful).
-- Given a non-commissioner JWT, when any of `POST`/`GET`/`PATCH /leagues/:id/whammy-definitions*` is called, then the server returns a 403 and no `WhammyDefinition` state is written or returned.
+- Given a commissioner submits `POST /leagues/:id/whammy-definitions` with `name`, `type`, `budget_delta_minor`, `trigger_rule_json`, `weight`, `display_message`, and optionally `offline_action_text`, then a `WhammyDefinition` row is created scoped to that league's `WhammyConfiguration`; `GET /leagues/:id/whammy-definitions` lists them (bare array) and `PUT /leagues/:id/whammy-definitions/:definitionId` replaces the definition's full editable payload (`name`, `type`, `budget_delta_minor`, `trigger_rule_json`, `weight`, `display_message`, `offline_action_text` — the same required-field shape `POST` accepts).
+- Given a non-commissioner JWT, when any of `POST`/`GET`/`PUT /leagues/:id/whammy-definitions*` is called, then the server returns a 403 and no `WhammyDefinition` state is written or returned.
 
 ## Layers
 
@@ -104,21 +104,20 @@ produces:
   - operation_id: createWhammyDefinition
     schema_file: schema/MOD-009-api-schema.yaml
     request_schema: WhammyDefinitionRequest
-    response_schema: WhammyDefinitionResponse
+    response_schema: WhammyDefinition
 
   - operation_id: listWhammyDefinitions
     schema_file: schema/MOD-009-api-schema.yaml
     request_schema: "(none)"
-    response_schema: |
-      definitions: WhammyDefinitionResponse[]
+    response_schema: "WhammyDefinition[] (bare array)"
 
   - operation_id: updateWhammyDefinition
     schema_file: schema/MOD-009-api-schema.yaml
-    request_schema: WhammyDefinitionUpdateRequest
-    response_schema: WhammyDefinitionResponse
+    request_schema: WhammyDefinitionRequest
+    response_schema: WhammyDefinition
 ```
 
-New/changed endpoints added by this gap-review scope (auto-trigger, `POST /leagues/:id/whammy-definitions`, `GET /leagues/:id/whammy-definitions`, `PATCH /leagues/:id/whammy-definitions/:definitionId`) must be added to `schema/MOD-009-api-schema.yaml` alongside the existing `triggerWhammy`/`approveWhammy`/`rejectWhammy` paths; the `WHAMMY_APPLIED` WS event schema is unchanged — auto-triggered Whammys reuse it verbatim.
+New/changed endpoints added by this gap-review scope (auto-trigger, `POST /leagues/:id/whammy-definitions`, `GET /leagues/:id/whammy-definitions`, `PUT /leagues/:id/whammy-definitions/:definitionId`) have been added to `schema/MOD-009-api-schema.yaml` alongside the existing `triggerWhammy`/`approveWhammy`/`rejectWhammy` paths; the `WHAMMY_APPLIED` WS event schema is unchanged — auto-triggered Whammys reuse it verbatim.
 
 ## Required Env Variables
 
