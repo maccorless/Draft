@@ -413,7 +413,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPK5Weg",
         "url": "https://github.com/maccorless/Draft/issues/1"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     },
     {
@@ -429,7 +429,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPK5aXQ",
         "url": "https://github.com/maccorless/Draft/issues/3"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     },
     {
@@ -461,7 +461,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPK5enQ",
         "url": "https://github.com/maccorless/Draft/issues/6"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     },
     {
@@ -493,7 +493,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPK5gnQ",
         "url": "https://github.com/maccorless/Draft/issues/7"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     },
     {
@@ -525,7 +525,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPK5kxQ",
         "url": "https://github.com/maccorless/Draft/issues/9"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     },
     {
@@ -557,7 +557,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPK5maw",
         "url": "https://github.com/maccorless/Draft/issues/10"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     },
     {
@@ -589,7 +589,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPsuTzw",
         "url": "https://github.com/maccorless/Draft/issues/17"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     },
     {
@@ -621,7 +621,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPsIWKQ",
         "url": "https://github.com/maccorless/Draft/issues/14"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     },
     {
@@ -653,7 +653,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPsTZGA",
         "url": "https://github.com/maccorless/Draft/issues/15"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     },
     {
@@ -685,7 +685,7 @@
         "node_id": "I_kwDOUI9K_M8AAAABPshbvg",
         "url": "https://github.com/maccorless/Draft/issues/16"
       },
-      "detected_at": "lifecycle-update",
+      "detected_at": "sync",
       "status": "open"
     }
   ]
