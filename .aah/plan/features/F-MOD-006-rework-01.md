@@ -200,6 +200,12 @@ produces:
 
 ## Test Config
 
-- command: DATABASE_URL=postgres://localhost/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! NODE_ENV=test SENDGRID_API_KEY=test-key SENDGRID_FROM_EMAIL=test@example.com npx vitest run --reporter=verbose server/src/__tests__/F-MOD-006-rework-01_transfer_and_email.test.ts
+- command: DATABASE_URL=postgres://localhost/draft_test JWT_SECRET=test-secret-for-vitest-at-least-32-chars-long!! NODE_ENV=test SENDGRID_API_KEY=test-key SENDGRID_FROM_EMAIL=test@example.com npx vitest run --reporter=verbose server/src/__tests__/F-MOD-006_reports.test.ts server/src/__tests__/F-MOD-006-rework-01_transfer_and_email.test.ts
 - test_paths:
+  - server/src/__tests__/F-MOD-006_reports.test.ts
   - server/src/__tests__/F-MOD-006-rework-01_transfer_and_email.test.ts
+
+Note: `run_feature_tests` resolves this feature's Test Config via `## Spec
+File` (F-MOD-006.md), matching the pattern used by other reworks in this
+build — this section documents intent but the config actually executed
+lives on F-MOD-006.md.
