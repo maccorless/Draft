@@ -57,6 +57,24 @@ the existing manual-award path (MOD-011 Live Interventions), with the first (err
 fields editable before re-award so the commissioner can fix it, then continue clicking through the
 rest unchanged.
 
+**Detailed rollback preview (post-launch gap review; PRD §31.1).** PRD §31.1 lists what a rollback
+restores per undone pick: the player, the winning team's budget (via a reversing ledger entry), the
+roster entry (removed — i.e. the roster slot it occupied is vacated), nomination order, Match state,
+team-completion state, and any Whammy financial effects tied to that pick's sequence. The rollback
+preview described above must show this full per-pick/per-team breakdown, not just player/team/price,
+before the commissioner confirms: for each pick that will be reversed, the budget amount returned to
+that team, which roster slot is vacated (starter slot name or bench), and, when that pick's sequence
+has an associated Whammy ledger entry, the Whammy interaction being unwound (amount and team). Source
+this from whatever `POST /drafts/:draftId/rollback`'s dry-run/preview surface exposes once MOD-005's
+rework lands — check MOD-005's updated feature spec and `server/src/draft/corrections.ts` for the
+exact preview endpoint/response shape (as of this writing `corrections.ts`'s rollback response only
+returns `{acquisition_id, player_name, team_id, price_minor}` per pick with no roster-slot or Whammy
+detail and no separate preview-only call, so this UI work depends on that MOD-005 rework landing
+first) rather than assuming a shape; if no dedicated preview call exists, derive the roster-slot and
+budget-returned figures from already-available per-team roster/budget state the same way the existing
+preview derives its cost statement, and omit the Whammy line only when the pick has no associated
+Whammy entry.
+
 **Whammy panel (PRD §33, IA §9.5).** A trigger form (team selector, signed dollar amount, required
 description) calls `POST /drafts/:draftId/whammy` with `{team_id, amount_minor, description}`. The
 response is one of two shapes and the UI must branch on it: an immediate application

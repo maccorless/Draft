@@ -36,7 +36,7 @@ This module therefore adds a read-only preview endpoint, `GET /drafts/:draftId/r
 - Rollback transaction sequence: `application-flow.md §9` (full Rollback Flow sequence diagram)
 - Event type names: `knowledge/state-machine-flows.md §19` (PRICE_CORRECTED, ROLLBACK_STARTED, ROLLBACK_APPLIED, ACQUISITION_SUPERSEDED)
 - PRD acceptance scenario: `knowledge/PRD.md §31` (corrections/rollback), `knowledge/PRD.md §44` (acceptance scenarios)
-- API schema: `schema/MOD-005-api-schema.yaml` (correctPrice, rollbackPicks operations)
+- API schema: `schema/MOD-005-api-schema.yaml` (correctPrice, rollbackPicks operations; `previewRollback` is new — not yet defined in this file, see `## API Contracts`)
 
 **UI screens (Commissioner Console additions):**
 
