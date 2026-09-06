@@ -823,7 +823,7 @@
         "F-MOD-002"
       ],
       "spec_file": "F-MOD-002.md",
-      "passes": false
+      "passes": true
     },
     {
       "status": "done",
