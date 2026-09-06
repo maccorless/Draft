@@ -8,8 +8,10 @@
  *   cp .env.example .env
  */
 
-// SENDGRID_API_KEY and FANTASYPROS_API_KEY are optional — features fail gracefully without them
-const REQUIRED = ['DATABASE_URL', 'JWT_SECRET', 'NODE_ENV'];
+// FANTASYPROS_API_KEY is optional — that feature fails gracefully without it.
+// SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are required — F-MOD-006-rework-01 sends
+// real email via SendGrid and cannot silently no-op on a missing sender identity.
+const REQUIRED = ['DATABASE_URL', 'JWT_SECRET', 'NODE_ENV', 'SENDGRID_API_KEY', 'SENDGRID_FROM_EMAIL'];
 
 const missing = REQUIRED.filter((name) => !process.env[name]);
 

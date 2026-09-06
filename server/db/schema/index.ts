@@ -55,6 +55,27 @@ export const datasetStatusEnum = pgEnum('dataset_status', [
   'FROZEN',
 ]);
 
+export const exportJobStatusEnum = pgEnum('export_job_status', [
+  'PENDING',
+  'VALIDATED',
+  'GENERATED',
+  'FAILED',
+]);
+
+export const reconciliationItemStatusEnum = pgEnum('reconciliation_item_status', [
+  'PENDING',
+  'CONFIRMED',
+  'AMBIGUOUS',
+  'FAILED',
+]);
+
+export const reportDeliveryStatusEnum = pgEnum('report_delivery_status', [
+  'PENDING',
+  'SENT',
+  'FAILED',
+  'SKIPPED_EMAIL_DISABLED',
+]);
+
 // ─── League & Configuration ───────────────────────────────────────────────────
 
 export const users = pgTable('users', {
@@ -77,6 +98,11 @@ export const leagues = pgTable('leagues', {
   name_lock: boolean('name_lock').notNull().default(false),
   scheduled_draft_start_at: timestamp('scheduled_draft_start_at', { withTimezone: true }),
   status_message: text('status_message'),
+  // Commissioner's contact address for the league-wide DraftSummaryReport
+  // email (F-MOD-006-rework-01). No per-user account model exists yet
+  // (CLAUDE.md #12 — auth is password-based, not account-based), so this
+  // lives on the league row rather than a `users.email` join.
+  commissioner_email: text('commissioner_email'),
   created_at: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -95,6 +121,8 @@ export const teams = pgTable('teams', {
   nomination_audio_url: text('nomination_audio_url'),
   starting_budget_override_minor: integer('starting_budget_override_minor'),
   name_lock: boolean('name_lock').notNull().default(false),
+  // Recipient for that team's DraftTeamReport email (F-MOD-006-rework-01).
+  owner_email: text('owner_email'),
 });
 
 export const memberships = pgTable('memberships', {
@@ -501,4 +529,75 @@ export const ownerTargetValues = pgTable('owner_target_values', {
     .notNull()
     .references(() => players.id),
   target_value_minor: integer('target_value_minor').notNull(),
+});
+
+// ─── ESPN Transfer & Report Delivery (F-MOD-006-rework-01) ───────────────────
+
+export const providerTeamMappings = pgTable('provider_team_mappings', {
+  league_id: uuid('league_id')
+    .notNull()
+    .references(() => leagues.id),
+  provider_code: text('provider_code').notNull(),
+  team_id: uuid('team_id')
+    .notNull()
+    .references(() => teams.id),
+  external_team_id: text('external_team_id'),
+  external_team_name: text('external_team_name'),
+  verified: boolean('verified').notNull().default(false),
+}, (table) => [
+  unique('provider_team_mappings_pk').on(
+    table.league_id,
+    table.provider_code,
+    table.team_id,
+  ),
+]);
+
+export const exportJobs = pgTable('export_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  draft_id: uuid('draft_id')
+    .notNull()
+    .references(() => drafts.id),
+  provider_code: text('provider_code').notNull(),
+  schema_version: text('schema_version').notNull(),
+  status: exportJobStatusEnum('status').notNull().default('PENDING'),
+  artifact_uri: text('artifact_uri'),
+  artifact_checksum: text('artifact_checksum'),
+  validation_json: jsonb('validation_json').notNull().default({}),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => [
+  unique('export_jobs_draft_provider_unique').on(table.draft_id, table.provider_code),
+]);
+
+export const reconciliationItems = pgTable('reconciliation_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  export_job_id: uuid('export_job_id')
+    .notNull()
+    .references(() => exportJobs.id),
+  team_id: uuid('team_id')
+    .notNull()
+    .references(() => teams.id),
+  player_id: uuid('player_id')
+    .notNull()
+    .references(() => players.id),
+  recommended_target_slot: text('recommended_target_slot'),
+  status: reconciliationItemStatusEnum('status').notNull().default('PENDING'),
+  confirmed_by_user_id: uuid('confirmed_by_user_id'),
+  confirmed_at: timestamp('confirmed_at', { withTimezone: true }),
+});
+
+export const reportDeliveryAttempts = pgTable('report_delivery_attempts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  draft_id: uuid('draft_id')
+    .notNull()
+    .references(() => drafts.id),
+  team_id: uuid('team_id').references(() => teams.id),
+  recipient_email: text('recipient_email').notNull(),
+  status: reportDeliveryStatusEnum('status').notNull().default('PENDING'),
+  sent_at: timestamp('sent_at', { withTimezone: true }),
+  error_detail: text('error_detail'),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });

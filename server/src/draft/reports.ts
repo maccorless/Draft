@@ -15,6 +15,8 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
 
 import { resolveEffectivePrimarySource } from '../player/aav-resolution.js';
+import { sendMail } from './sendgrid.js';
+import { ensureEspnExportJob } from './espn-transfer.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,7 +32,7 @@ type DraftParams = { draftId: string };
 // ─── Auth helpers ─────────────────────────────────────────────────────────────
 
 /** Validates any authenticated league member (COMMISSIONER or OWNER). */
-async function requireLeagueMember(
+export async function requireDraftLeagueMember(
   server: FastifyInstance,
   sql: postgres.Sql,
   req: FastifyRequest<{ Params: DraftParams }>,
@@ -82,13 +84,13 @@ async function requireLeagueMember(
 }
 
 /** Validates commissioner JWT + auth_epoch + league_id match. */
-async function requireCommissioner(
+export async function requireDraftCommissioner(
   server: FastifyInstance,
   sql: postgres.Sql,
   req: FastifyRequest<{ Params: DraftParams }>,
   reply: FastifyReply,
 ): Promise<{ draft: { id: string; league_id: string; status: string; completed_at: Date | null }; claims: TokenClaims } | null> {
-  const ctx = await requireLeagueMember(server, sql, req, reply);
+  const ctx = await requireDraftLeagueMember(server, sql, req, reply);
   if (!ctx) return null;
 
   if (ctx.claims.role !== 'COMMISSIONER') {
@@ -322,6 +324,33 @@ function csvEscape(value: string): string {
   return value;
 }
 
+// ─── Email rendering ──────────────────────────────────────────────────────────
+
+/** DraftTeamReport (owner view): one team's own pick list, spend, and budget. */
+function renderTeamReportText(report: DraftSummaryReport, team: TeamEntry): string {
+  const lines = [
+    `Draft Summary for ${team.team_name}`,
+    `Remaining budget: ${team.final_budget_minor} (minor units)`,
+    '',
+    'Acquisitions:',
+    ...team.acquisitions.map(
+      (a) => `  ${a.player_name} (${a.position}) — ${a.price_minor} minor units — ${a.roster_slot}`,
+    ),
+  ];
+  return lines.join('\n');
+}
+
+/** DraftSummaryReport (league-wide view): every team side by side. */
+function renderLeagueReportText(report: DraftSummaryReport): string {
+  const lines = [`League Draft Summary — Draft ${report.draft_id}`, ''];
+  for (const team of report.teams) {
+    lines.push(
+      `${team.team_name}: budget remaining ${team.final_budget_minor}, ${team.acquisitions.length} players`,
+    );
+  }
+  return lines.join('\n');
+}
+
 // ─── Route registration ────────────────────────────────────────────────────────
 
 export async function registerReportRoutes(
@@ -339,7 +368,7 @@ export async function registerReportRoutes(
   server.get<{ Params: DraftParams }>(
     '/drafts/:draftId/report',
     async (req, reply) => {
-      const ctx = await requireLeagueMember(server, sql, req, reply);
+      const ctx = await requireDraftLeagueMember(server, sql, req, reply);
       if (!ctx) return;
       const { draft } = ctx;
 
@@ -365,7 +394,7 @@ export async function registerReportRoutes(
   server.get<{ Params: DraftParams }>(
     '/drafts/:draftId/espn-worksheet',
     async (req, reply) => {
-      const ctx = await requireLeagueMember(server, sql, req, reply);
+      const ctx = await requireDraftLeagueMember(server, sql, req, reply);
       if (!ctx) return;
       const { draft } = ctx;
 
@@ -377,6 +406,15 @@ export async function registerReportRoutes(
       }
 
       const csv = await generateEspnCsv(sql, draft.id);
+
+      // Seeds the ExportJob + ReconciliationItem rows if this is the first
+      // export path to succeed for this draft (PRD §37 step 1/6). Best-effort:
+      // a roster-integrity failure here doesn't block the worksheet download —
+      // that's canonical-export's job to surface — it just means no
+      // reconciliation rows exist yet until the integrity issue is fixed.
+      await ensureEspnExportJob(sql, draft.id).catch((err) => {
+        server.log.warn({ err, draft_id: draft.id }, '[reports] espn export-job seeding failed');
+      });
 
       reply
         .header('Content-Type', 'text/csv; charset=utf-8')
@@ -391,28 +429,94 @@ export async function registerReportRoutes(
   /**
    * POST /drafts/:draftId/report/email
    *
-   * Commissioner-only. Stub that logs dispatch intent and returns 202.
-   * Until Phase 9 wire-up, the SendGrid call is replaced by a log statement.
-   * Email delivery failure must never affect in-app report availability (EXTRACTED-038).
+   * Commissioner-only. Sends real email via SendGrid: each team with a
+   * non-empty owner_email gets its DraftTeamReport (owner view); the
+   * commissioner's commissioner_email gets the league-wide DraftSummaryReport.
+   * Every attempted send writes a ReportDeliveryAttempt row. A per-recipient
+   * failure is caught and recorded — it never blocks other recipients or
+   * in-app report availability (EXTRACTED-038). `recipients` reflects
+   * attempted sends (rows written), not confirmed deliveries.
    */
   server.post<{ Params: DraftParams }>(
     '/drafts/:draftId/report/email',
     async (req, reply) => {
-      const ctx = await requireCommissioner(server, sql, req, reply);
+      const ctx = await requireDraftCommissioner(server, sql, req, reply);
       if (!ctx) return;
       const { draft } = ctx;
 
-      // Count teams in this league (recipients)
-      const [countRow] = await sql<[{ recipients: number }]>`
-        SELECT COUNT(*)::int AS recipients FROM teams WHERE league_id = ${draft.league_id}
-      `;
-      const recipients = countRow?.recipients ?? 0;
+      if (draft.status !== 'COMPLETE') {
+        return reply.status(409).send({
+          code: 'DRAFT_NOT_COMPLETE',
+          message: 'Draft must be COMPLETE to email the report',
+        });
+      }
 
-      // ponytail: SendGrid stub — log the dispatch attempt; real wire-up in Phase 9.
-      server.log.info(
-        { draft_id: draft.id, recipients, sendgrid_key_set: !!process.env['SENDGRID_API_KEY'] },
-        '[reports] email dispatch stub — SendGrid wire-up deferred to Phase 9',
-      );
+      const report = await generateReport(sql, draft.id);
+
+      const teamRows = await sql<Array<{ team_id: string; owner_email: string | null }>>`
+        SELECT id AS team_id, owner_email FROM teams WHERE league_id = ${draft.league_id}
+      `;
+      const [leagueRow] = await sql<[{ commissioner_email: string | null }]>`
+        SELECT commissioner_email FROM leagues WHERE id = ${draft.league_id}
+      `;
+
+      let recipients = 0;
+
+      for (const t of teamRows) {
+        const team = report.teams.find((entry) => entry.team_id === t.team_id);
+        if (!t.owner_email) {
+          await sql`
+            INSERT INTO report_delivery_attempts (draft_id, team_id, recipient_email, status)
+            VALUES (${draft.id}, ${t.team_id}, ${''}, 'SKIPPED_EMAIL_DISABLED')
+          `;
+          continue;
+        }
+        recipients++;
+        const [attempt] = await sql<[{ id: string }]>`
+          INSERT INTO report_delivery_attempts (draft_id, team_id, recipient_email, status)
+          VALUES (${draft.id}, ${t.team_id}, ${t.owner_email}, 'PENDING')
+          RETURNING id
+        `;
+        const result = team
+          ? await sendMail({
+              to: t.owner_email,
+              subject: `Your draft summary — ${report.draft_id}`,
+              text: renderTeamReportText(report, team),
+            })
+          : { ok: false, errorDetail: 'Team not found in report' };
+        if (result.ok) {
+          await sql`
+            UPDATE report_delivery_attempts SET status = 'SENT', sent_at = NOW() WHERE id = ${attempt!.id}
+          `;
+        } else {
+          await sql`
+            UPDATE report_delivery_attempts SET status = 'FAILED', error_detail = ${result.errorDetail ?? ''} WHERE id = ${attempt!.id}
+          `;
+        }
+      }
+
+      if (leagueRow?.commissioner_email) {
+        recipients++;
+        const [attempt] = await sql<[{ id: string }]>`
+          INSERT INTO report_delivery_attempts (draft_id, team_id, recipient_email, status)
+          VALUES (${draft.id}, ${null}, ${leagueRow.commissioner_email}, 'PENDING')
+          RETURNING id
+        `;
+        const result = await sendMail({
+          to: leagueRow.commissioner_email,
+          subject: `League draft summary — ${report.draft_id}`,
+          text: renderLeagueReportText(report),
+        });
+        if (result.ok) {
+          await sql`
+            UPDATE report_delivery_attempts SET status = 'SENT', sent_at = NOW() WHERE id = ${attempt!.id}
+          `;
+        } else {
+          await sql`
+            UPDATE report_delivery_attempts SET status = 'FAILED', error_detail = ${result.errorDetail ?? ''} WHERE id = ${attempt!.id}
+          `;
+        }
+      }
 
       return reply.status(202).send({ accepted: true, recipients });
     },

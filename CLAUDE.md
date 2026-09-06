@@ -81,6 +81,16 @@ npm run build                     # tsc + vite build, whole workspace
 - **`web/src/App.tsx`'s `DevIdentityPicker`** (dev-only one-click sign-in as Commissioner or any team) has hardcoded passwords that must exactly match `server/db/seed-data.ts`'s constants (`SITE_PASSWORD`, `COMMISSIONER_PASSWORD`, `TEAM_PASSWORD`). If either changes independently, dev login breaks silently with no obvious error.
 - **On restart, a `RUNNING` draft always comes back `PAUSED`** (see constraint 4 above) — don't mistake this for a bug during manual/dogfood testing.
 
+### No per-user account rows yet (`users`/`memberships` unused)
+
+`data-model.md` §3.2 describes a `User`+`Membership` row created per commissioner/team/host at
+league setup, with `User.email` as the eventual identity. That wiring doesn't exist yet — auth is
+purely password-based per CLAUDE.md #12, and login never creates or looks up a `users` row. Until
+that lands, any feature needing to email a role directly (not a team) should add its own nullable
+column on `leagues` (see `leagues.commissioner_email`, F-MOD-006-rework-01) rather than fabricating
+a `User.id`. Same applies to any "confirmed/actioned by" field — leave it `null` instead of guessing
+an identity from the JWT.
+
 ### Auth hook convention (`server/src/league/auth-hook.ts`)
 
 `requireCommissioner` enforces COMMISSIONER role plus epoch-checked scope. For

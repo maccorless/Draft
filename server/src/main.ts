@@ -25,6 +25,7 @@ import { triggerAutoAgentBidsOnNomination } from './auction/auto-agent.js';
 import { registerCorrectionRoutes } from './draft/corrections.js';
 import { registerDraftControlRoutes } from './draft/draft-control.js';
 import { registerReportRoutes } from './draft/reports.js';
+import { registerEspnTransferRoutes } from './draft/espn-transfer.js';
 import { registerStrategyRoutes } from './draft/strategy.js';
 import { registerDoNotDraftRoutes } from './draft/do-not-draft.js';
 import { registerWhammyRoutes } from './draft/whammy.js';
@@ -141,6 +142,7 @@ export async function buildServer() {
   await registerCorrectionRoutes(server, sql);
   await registerDraftControlRoutes(server, sql);
   await registerReportRoutes(server, sql);
+  await registerEspnTransferRoutes(server, sql);
   await registerStrategyRoutes(server, sql);
   await registerDoNotDraftRoutes(server, sql);
   await registerWhammyRoutes(server, sql);

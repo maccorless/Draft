@@ -17,6 +17,8 @@ process.env['JWT_SECRET'] =
 process.env['NODE_ENV'] = process.env['NODE_ENV'] ?? 'test';
 process.env['SENDGRID_API_KEY'] =
   process.env['SENDGRID_API_KEY'] ?? 'test-sendgrid-key-placeholder';
+process.env['SENDGRID_FROM_EMAIL'] =
+  process.env['SENDGRID_FROM_EMAIL'] ?? 'test-sender@example.com';
 
 const DATABASE_URL = process.env['DATABASE_URL'];
 const SKIP_DB = !DATABASE_URL;
@@ -415,9 +417,9 @@ describe.skipIf(SKIP_DB)('F-MOD-006 draft completion and reports', () => {
     expect(res.statusCode).toBe(401);
   }, 15000);
 
-  // ─── Test: POST /drafts/:id/report/email stub returns 202 ───────────────────
+  // ─── Test: POST /drafts/:id/report/email returns 202, skips teams with no email ──
 
-  it('F_MOD_006_email_stub_returns_202_with_recipients_count', async () => {
+  it('F_MOD_006_email_returns_202_and_skips_teams_without_owner_email', async () => {
     await createCompleteDraft();
 
     const res = await server.inject({
@@ -429,8 +431,14 @@ describe.skipIf(SKIP_DB)('F-MOD-006 draft completion and reports', () => {
     expect(res.statusCode).toBe(202);
     const body = res.json<{ accepted: boolean; recipients: number }>();
     expect(body.accepted).toBe(true);
-    // 2 teams in the league
-    expect(body.recipients).toBe(2);
+    // Neither team has owner_email nor the league a commissioner_email — 0 attempted sends.
+    expect(body.recipients).toBe(0);
+
+    const rows = await sql<Array<{ status: string }>>`
+      SELECT status FROM report_delivery_attempts WHERE draft_id = ${draftId}
+    `;
+    expect(rows.length).toBe(2);
+    expect(rows.every((r) => r.status === 'SKIPPED_EMAIL_DISABLED')).toBe(true);
   }, 15000);
 
   // ─── Test: email requires commissioner role ──────────────────────────────────
