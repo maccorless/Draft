@@ -1,7 +1,5 @@
 # Data Model
 
-> **Note:** Pre-implementation. All entities are `[PLANNED]`. Derived from `data-model.md`.
-
 ## Overview
 
 State-stored (not event-sourced) Postgres schema. Live rows (`DraftTeamState`, `PlayerAuction`, `Acquisition`, `RosterEntry`, ledger) are authoritative truth. `DraftEvent` is append-only audit log and WS reconnect replay source — not used for arbitrary state reconstruction. Money is integer minor units (cents). Rollback appends compensating rows; history is never mutated.
@@ -15,7 +13,8 @@ erDiagram
     League ||--o| AuctionConfiguration : "configured by"
     League ||--o| ScoringConfiguration : "configured by"
     League ||--o{ Draft : hosts
-    League ||--o{ WhammyConfiguration : "may have"
+    League ||--o| WhammyConfiguration : "may have"
+    League ||--o{ DraftDataset : owns
 
     League {
         uuid id PK
@@ -35,6 +34,7 @@ erDiagram
     Team ||--o{ DoNotDraftEntry : "owns"
     Team ||--o{ OwnerPlayerTarget : "owns"
     Team ||--o| AutoAgentConfiguration : "configures"
+    Team ||--o| NominatorMatchRight : "granted one per auction"
     Team {
         uuid id PK
         uuid league_id FK
