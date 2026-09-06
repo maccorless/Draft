@@ -14,6 +14,55 @@
         }
       ],
       "note": "Retroactive repair: orchestrator wave/tier tracking was never advanced during original build (all 18 waves built directly on develop, bypassing integration-branch ceremony). This entry truthfully records that no feature branches exist to clean up for wave 16 \u2014 it does not assert any test/regression evidence."
+    },
+    {
+      "timestamp": "2026-09-06T02:56:43.000833+00:00",
+      "wave": 17,
+      "trigger": "manual_cleanup_bypassed_promote_script",
+      "integration_branch": "integration/wave-17",
+      "develop_head": "5467180abc2f86c042bb6f76123f6361d2f7bcd8",
+      "branches_deleted": [
+        {
+          "branch": "feature/F-MOD-002-rework-05",
+          "sha_at_delete": "7b8a72d",
+          "feature_id": "F-MOD-002-rework-05"
+        }
+      ],
+      "branches_skipped": [
+        {
+          "branch": "(not found for F-MOD-013)",
+          "reason": "branch not found \u2014 feature was built directly on develop, no isolated feature branch was ever created"
+        },
+        {
+          "branch": "(not found for F-MOD-011-rework-01)",
+          "reason": "branch not found \u2014 feature was built directly on develop, no isolated feature branch was ever created"
+        },
+        {
+          "branch": "(not found for F-MOD-004-rework-01)",
+          "reason": "branch not found \u2014 feature was built directly on develop, no isolated feature branch was ever created"
+        },
+        {
+          "branch": "(not found for F-MOD-011-rework-02)",
+          "reason": "branch not found \u2014 feature was built directly on develop, no isolated feature branch was ever created"
+        },
+        {
+          "branch": "(not found for F-MOD-002-rework-03)",
+          "reason": "branch not found \u2014 feature was built directly on develop, no isolated feature branch was ever created"
+        },
+        {
+          "branch": "(not found for F-MOD-004-rework-02)",
+          "reason": "branch not found \u2014 feature was built directly on develop, no isolated feature branch was ever created"
+        },
+        {
+          "branch": "(not found for F-MOD-002-rework-04)",
+          "reason": "branch not found \u2014 feature was built directly on develop, no isolated feature branch was ever created"
+        },
+        {
+          "branch": "(not found for F-MOD-004-rework-03)",
+          "reason": "branch not found \u2014 feature was built directly on develop, no isolated feature branch was ever created"
+        }
+      ],
+      "note": "F-MOD-002-rework-05 (this session) had a real feature branch and worktree, actually removed via git worktree remove + git branch -d (safe delete, was fully merged). The other 8 wave-17 features were built directly on develop in earlier sessions with no isolated branch, so nothing exists to clean up for them."
     }
   ]
 }
