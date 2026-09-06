@@ -301,6 +301,13 @@ and must not require any other module to be built first.
     Room link, pause button, connection status) are visible and not obscured by the identity/logout
     pill.
 
+## Test Config
+
+- command: npx vitest run --project web web/src/__tests__/F-MOD-000-rework-01_host_login.test.tsx web/src/__tests__/F-MOD-000-rework-01_logout_pill_layout.test.tsx
+- test_paths:
+  - web/src/__tests__/F-MOD-000-rework-01_host_login.test.tsx
+  - web/src/__tests__/F-MOD-000-rework-01_logout_pill_layout.test.tsx
+
 ## Api Contracts
 ```yaml
 produces:
