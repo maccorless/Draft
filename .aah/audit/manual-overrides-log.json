@@ -1,0 +1,15 @@
+{
+  "overrides": [
+    {
+      "timestamp": "2026-09-06T02:55:56.425455+00:00",
+      "wave": 17,
+      "gate": "run_system_checkpoint",
+      "decision": "user_approved_bypass",
+      "reason": "Runtime checkpoint (aah-runtime-validator) failed with fix_category=user_required: no Docker binary available in this environment, and the Node/Fastify monorepo has no CLI --port-flag start command the dockerless path could inject a dynamic port into (server reads PORT via env var only). This is an environment limitation, not a code defect: module_validation (tsc --noEmit) passed clean. Supporting evidence that the app is healthy: full cumulative regression suite passed 44/44 test files, 451/451 tests, 0 failures, on integration/wave-17 (see .aah/build/test-results/regression-latest.json); the same code was also hands-on browser-tested earlier in this session (Commissioner Console, Draft Room, War Room, live Auto-Agent bidding all confirmed working against a real Postgres-backed backend). User explicitly chose to bypass this gate for wave 17 rather than install Docker or build a fixed-port dockerless start-command workaround, to prioritize moving to new sprint work.",
+      "evidence_refs": [
+        ".aah/build/test-results/regression-latest.json",
+        ".aah/build/runtime-results/wave-17-all.json"
+      ]
+    }
+  ]
+}
