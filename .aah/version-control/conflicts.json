@@ -94,7 +94,7 @@
         "url": "https://github.com/maccorless/Draft/issues/6"
       },
       "detected_at": "sync",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-006-status",
@@ -110,7 +110,7 @@
         "url": "https://github.com/maccorless/Draft/issues/7"
       },
       "detected_at": "sync",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-007-status",
@@ -142,7 +142,7 @@
         "url": "https://github.com/maccorless/Draft/issues/9"
       },
       "detected_at": "sync",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-009-status",
@@ -158,7 +158,7 @@
         "url": "https://github.com/maccorless/Draft/issues/10"
       },
       "detected_at": "sync",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-002-rework-01-description",
@@ -750,7 +750,7 @@
         "url": "https://github.com/maccorless/Draft/issues/17"
       },
       "detected_at": "sync",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-012-status",
@@ -766,7 +766,7 @@
         "url": "https://github.com/maccorless/Draft/issues/14"
       },
       "detected_at": "sync",
-      "status": "open"
+      "status": "resolved"
     },
     {
       "conflict_id": "CF-F-MOD-013-status",

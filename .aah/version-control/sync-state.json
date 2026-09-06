@@ -143,9 +143,9 @@
           "status": "done"
         }
       },
-      "remote_updated_at": "2026-09-06T03:25:55Z",
-      "lifecycle": "planned",
-      "status_label": "aah:planned"
+      "remote_updated_at": "2026-09-06T12:24:02Z",
+      "lifecycle": "done",
+      "status_label": "aah:done"
     },
     "F-MOD-006": {
       "remote_ref": {
@@ -167,9 +167,9 @@
           "status": "done"
         }
       },
-      "remote_updated_at": "2026-09-06T03:25:57Z",
-      "lifecycle": "planned",
-      "status_label": "aah:planned"
+      "remote_updated_at": "2026-09-06T12:23:57Z",
+      "lifecycle": "done",
+      "status_label": "aah:done"
     },
     "F-MOD-007": {
       "remote_ref": {
@@ -215,9 +215,9 @@
           "status": "done"
         }
       },
-      "remote_updated_at": "2026-09-06T03:26:00Z",
-      "lifecycle": "planned",
-      "status_label": "aah:planned"
+      "remote_updated_at": "2026-09-06T12:24:07Z",
+      "lifecycle": "done",
+      "status_label": "aah:done"
     },
     "F-MOD-009": {
       "remote_ref": {
@@ -239,9 +239,9 @@
           "status": "done"
         }
       },
-      "remote_updated_at": "2026-09-06T03:26:02Z",
-      "lifecycle": "planned",
-      "status_label": "aah:planned"
+      "remote_updated_at": "2026-09-06T12:24:12Z",
+      "lifecycle": "done",
+      "status_label": "aah:done"
     },
     "F-MOD-016": {
       "remote_ref": {
@@ -340,9 +340,9 @@
           "status": "done"
         }
       },
-      "remote_updated_at": "2026-09-06T03:26:07Z",
-      "lifecycle": "planned",
-      "status_label": "aah:planned"
+      "remote_updated_at": "2026-09-06T12:24:21Z",
+      "lifecycle": "done",
+      "status_label": "aah:done"
     },
     "F-MOD-013": {
       "remote_ref": {
@@ -418,9 +418,9 @@
           "status": "implementing"
         }
       },
-      "remote_updated_at": "2026-09-06T03:26:05Z",
+      "remote_updated_at": "2026-09-06T12:24:17Z",
       "lifecycle": "implementing",
-      "status_label": "aah:implementing"
+      "status_label": "aah:in_progress"
     },
     "F-MOD-017": {
       "remote_ref": {
