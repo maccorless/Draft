@@ -15,7 +15,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
 import { z } from 'zod';
-import { broadcast } from '../auction/engine.js';
+import { broadcast, getOrCreateRuntime } from '../auction/engine.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -688,11 +688,13 @@ export async function evaluateWhammyAutoTrigger(
     return;
   }
 
+  const pauseUntilMs = await applyWhammyPause(sql, draftId);
+
   if (teamId) {
     const result = await applyWhammy(sql, draftId, teamId, budgetDelta, description, null, selected.id, triggerEventSequence);
     broadcast(draftId, {
       type: 'WHAMMY_APPLIED',
-      payload: { team_id: teamId, amount_minor: budgetDelta, description, new_remaining_budget_minor: result.newRemainingBudgetMinor },
+      payload: { team_id: teamId, amount_minor: budgetDelta, description, new_remaining_budget_minor: result.newRemainingBudgetMinor, pause_until_ms: pauseUntilMs },
     });
   } else {
     // Message-only definition (no budget delta): no ledger entry, no budget
@@ -703,7 +705,42 @@ export async function evaluateWhammyAutoTrigger(
     `;
     broadcast(draftId, {
       type: 'WHAMMY_APPLIED',
-      payload: { team_id: null, amount_minor: 0, description, new_remaining_budget_minor: null },
+      payload: { team_id: null, amount_minor: 0, description, new_remaining_budget_minor: null, pause_until_ms: pauseUntilMs },
     });
   }
+  broadcast(draftId, { type: 'DRAFT_STATUS_CHANGED', payload: { draft_id: draftId, status: 'PAUSED' } });
+}
+
+const WHAMMY_PAUSE_MS = 20_000;
+
+async function applyWhammyPause(sql: postgres.Sql, draftId: string): Promise<number> {
+  const resumeAt = new Date(Date.now() + WHAMMY_PAUSE_MS);
+  await sql`
+    UPDATE drafts SET status = 'PAUSED', whammy_resume_at = ${resumeAt.toISOString()}
+    WHERE id = ${draftId}
+  `;
+  scheduleWhammyResume(sql, draftId, resumeAt);
+  return resumeAt.getTime();
+}
+
+export function scheduleWhammyResume(sql: postgres.Sql, draftId: string, resumeAt: Date): void {
+  const rt = getOrCreateRuntime(draftId);
+  if (rt.whammyResumeTimer) clearTimeout(rt.whammyResumeTimer);
+  const delayMs = Math.max(0, resumeAt.getTime() - Date.now());
+  rt.whammyResumeTimer = setTimeout(async () => {
+    rt.whammyResumeTimer = null;
+    try {
+      // Only resume if still paused by this whammy (not paused by commissioner separately)
+      const [row] = await sql<[{ whammy_resume_at: Date | null; status: string }]>`
+        SELECT whammy_resume_at, status FROM drafts WHERE id = ${draftId} LIMIT 1
+      `;
+      if (!row || row.status !== 'PAUSED') return;
+      const storedAt = row.whammy_resume_at ? new Date(row.whammy_resume_at as unknown as string | Date) : null;
+      if (!storedAt || storedAt.getTime() > Date.now() + 500) return; // not yet due
+      await sql`UPDATE drafts SET status = 'RUNNING', whammy_resume_at = NULL WHERE id = ${draftId} AND status = 'PAUSED'`;
+      broadcast(draftId, { type: 'DRAFT_STATUS_CHANGED', payload: { draft_id: draftId, status: 'RUNNING' } });
+    } catch (err) {
+      console.error('[whammy] auto-resume failed:', err);
+    }
+  }, delayMs);
 }

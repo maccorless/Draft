@@ -33,6 +33,7 @@ export interface DraftRuntime {
    * or system) or a new turn is dispatched. At most one pending at a time.
    */
   nominationTimer: ReturnType<typeof setTimeout> | null;
+  whammyResumeTimer: ReturnType<typeof setTimeout> | null;
 }
 
 // ─── Per-draft runtimes (keyed by draft_id) ──────────────────────────────────
@@ -55,6 +56,7 @@ export function getOrCreateRuntime(draftId: string): DraftRuntime {
       teamSessions: new Map(),
       graceTimers: new Map(),
       nominationTimer: null,
+      whammyResumeTimer: null,
     };
     draftRuntimes.set(draftId, rt);
   }

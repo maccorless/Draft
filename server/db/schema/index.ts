@@ -262,6 +262,7 @@ export const drafts = pgTable('drafts', {
   scheduled_at: timestamp('scheduled_at', { withTimezone: true }),
   started_at: timestamp('started_at', { withTimezone: true }),
   completed_at: timestamp('completed_at', { withTimezone: true }),
+  whammy_resume_at: timestamp('whammy_resume_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

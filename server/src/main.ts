@@ -28,7 +28,7 @@ import { registerReportRoutes } from './draft/reports.js';
 import { registerEspnTransferRoutes } from './draft/espn-transfer.js';
 import { registerStrategyRoutes } from './draft/strategy.js';
 import { registerDoNotDraftRoutes } from './draft/do-not-draft.js';
-import { registerWhammyRoutes } from './draft/whammy.js';
+import { registerWhammyRoutes, scheduleWhammyResume } from './draft/whammy.js';
 import { registerWarRoomRoutes } from './draft/war-room.js';
 import { registerTeamMediaRoutes } from './team-media/routes.js';
 import { registerDevRoutes } from './dev/routes.js';
@@ -177,6 +177,15 @@ export async function buildServer() {
 
 if (process.argv[1]?.endsWith('main.ts') || process.argv[1]?.endsWith('main.js')) {
   await recoverRunningDrafts();
+
+  // Re-arm whammy auto-resume timers for any PAUSED drafts awaiting resume after restart.
+  const whammyPaused = await sql<{ id: string; whammy_resume_at: Date }[]>`
+    SELECT id, whammy_resume_at FROM drafts
+    WHERE status = 'PAUSED' AND whammy_resume_at IS NOT NULL
+  `;
+  for (const draft of whammyPaused) {
+    scheduleWhammyResume(sql, draft.id, new Date(draft.whammy_resume_at as unknown as string | Date));
+  }
 
   const server = await buildServer();
   try {
