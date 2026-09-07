@@ -327,6 +327,9 @@ export const bidAttempts = pgTable('bid_attempts', {
     .notNull(),
   accepted: boolean('accepted').notNull(),
   rejection_reason: text('rejection_reason'),
+  client_click_time_ms: integer('client_click_time_ms'),
+  client_displayed_bid_minor: integer('client_displayed_bid_minor'),
+  client_auction_version: integer('client_auction_version'),
 });
 
 export const draftEvents = pgTable('draft_events', {

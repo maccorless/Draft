@@ -92,6 +92,13 @@
       "when": 1789500000000,
       "tag": "0012_anti_snipe_penalty",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789600000000,
+      "tag": "0013_bid_attempt_telemetry",
+      "breakpoints": true
     }
   ]
 }

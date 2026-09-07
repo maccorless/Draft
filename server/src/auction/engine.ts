@@ -249,6 +249,9 @@ export interface BidCommandPayload {
   bid_type: 'ABSOLUTE' | 'RELATIVE' | 'NOMINATOR_MATCH';
   expected_current_bid_minor?: number;
   expected_auction_version?: number;
+  client_click_time_ms?: number | null;
+  client_displayed_bid_minor?: number | null;
+  client_auction_version?: number | null;
 }
 
 export interface BidContext {
@@ -380,14 +383,18 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
         INSERT INTO bid_attempts
           (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
            expected_current_bid_minor, expected_auction_version,
-           server_receipt_time, accepted, rejection_reason)
+           server_receipt_time, accepted, rejection_reason,
+           client_click_time_ms, client_displayed_bid_minor, client_auction_version)
         VALUES
           (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
            ${command.bid_type},
            ${command.expected_current_bid_minor ?? null},
            ${command.expected_auction_version ?? null},
            ${serverReceiptTime.toISOString()},
-           false, 'STALE_STATE')
+           false, 'STALE_STATE',
+           ${command.client_click_time_ms ?? null},
+           ${command.client_displayed_bid_minor ?? null},
+           ${command.client_auction_version ?? null})
       `;
       broadcast(draftId, {
         type: 'BID_REJECTED',
@@ -406,11 +413,15 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     await sql`
       INSERT INTO bid_attempts
         (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
-         server_receipt_time, accepted, rejection_reason)
+         server_receipt_time, accepted, rejection_reason,
+         client_click_time_ms, client_displayed_bid_minor, client_auction_version)
       VALUES
         (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
          ${command.bid_type}, ${serverReceiptTime.toISOString()},
-         false, 'BID_TOO_LOW')
+         false, 'BID_TOO_LOW',
+         ${command.client_click_time_ms ?? null},
+         ${command.client_displayed_bid_minor ?? null},
+         ${command.client_auction_version ?? null})
     `;
     broadcast(draftId, {
       type: 'BID_REJECTED',
@@ -459,11 +470,15 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     await sql`
       INSERT INTO bid_attempts
         (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
-         server_receipt_time, accepted, rejection_reason)
+         server_receipt_time, accepted, rejection_reason,
+         client_click_time_ms, client_displayed_bid_minor, client_auction_version)
       VALUES
         (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
          ${command.bid_type}, ${serverReceiptTime.toISOString()},
-         false, 'ROSTER_FULL')
+         false, 'ROSTER_FULL',
+         ${command.client_click_time_ms ?? null},
+         ${command.client_displayed_bid_minor ?? null},
+         ${command.client_auction_version ?? null})
     `;
     broadcast(draftId, {
       type: 'BID_REJECTED',
@@ -486,11 +501,15 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     await sql`
       INSERT INTO bid_attempts
         (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
-         server_receipt_time, accepted, rejection_reason)
+         server_receipt_time, accepted, rejection_reason,
+         client_click_time_ms, client_displayed_bid_minor, client_auction_version)
       VALUES
         (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
          ${command.bid_type}, ${serverReceiptTime.toISOString()},
-         false, 'NO_ELIGIBLE_SLOT')
+         false, 'NO_ELIGIBLE_SLOT',
+         ${command.client_click_time_ms ?? null},
+         ${command.client_displayed_bid_minor ?? null},
+         ${command.client_auction_version ?? null})
     `;
     broadcast(draftId, {
       type: 'BID_REJECTED',
@@ -511,11 +530,15 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     await sql`
       INSERT INTO bid_attempts
         (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
-         server_receipt_time, accepted, rejection_reason)
+         server_receipt_time, accepted, rejection_reason,
+         client_click_time_ms, client_displayed_bid_minor, client_auction_version)
       VALUES
         (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
          ${command.bid_type}, ${serverReceiptTime.toISOString()},
-         false, 'EXCEEDS_MAX_LEGAL_BID')
+         false, 'EXCEEDS_MAX_LEGAL_BID',
+         ${command.client_click_time_ms ?? null},
+         ${command.client_displayed_bid_minor ?? null},
+         ${command.client_auction_version ?? null})
     `;
     broadcast(draftId, {
       type: 'BID_REJECTED',
@@ -540,11 +563,15 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
         await sql`
           INSERT INTO bid_attempts
             (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
-             server_receipt_time, accepted, rejection_reason)
+             server_receipt_time, accepted, rejection_reason,
+             client_click_time_ms, client_displayed_bid_minor, client_auction_version)
           VALUES
             (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
              ${command.bid_type}, ${serverReceiptTime.toISOString()},
-             false, 'ANTI_SNIPE_PENALTY')
+             false, 'ANTI_SNIPE_PENALTY',
+             ${command.client_click_time_ms ?? null},
+             ${command.client_displayed_bid_minor ?? null},
+             ${command.client_auction_version ?? null})
         `;
         broadcast(draftId, {
           type: 'BID_REJECTED',
@@ -626,14 +653,18 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
         INSERT INTO bid_attempts
           (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
            expected_current_bid_minor, expected_auction_version,
-           server_receipt_time, accepted, rejection_reason)
+           server_receipt_time, accepted, rejection_reason,
+           client_click_time_ms, client_displayed_bid_minor, client_auction_version)
         VALUES
           (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
            ${command.bid_type},
            ${command.expected_current_bid_minor ?? null},
            ${command.expected_auction_version ?? null},
            ${serverReceiptTime.toISOString()},
-           true, null)
+           true, null,
+           ${command.client_click_time_ms ?? null},
+           ${command.client_displayed_bid_minor ?? null},
+           ${command.client_auction_version ?? null})
       `;
 
       // UPDATE strike/penalty state if anti-snipe fired for a manual bid
