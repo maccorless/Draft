@@ -1085,6 +1085,40 @@ async function advanceNominationTurn(
 }
 
 /**
+ * Resolves the team currently on the clock: the first ELIGIBLE team
+ * (required_remaining_spots > 0) starting at nomination_cursor. Shared by
+ * triggerCurrentNominationTurn (dispatch) and processPassNomination
+ * (ownership check) so both agree on who "the current nominator" is.
+ */
+async function resolveCurrentNominatorTeamId(
+  sql: postgres.Sql,
+  draftId: string,
+  leagueId: string,
+): Promise<string | null> {
+  const draftRows = await sql<[{ nomination_cursor: number }]>`
+    SELECT nomination_cursor FROM drafts WHERE id = ${draftId} LIMIT 1
+  `;
+  const draft = draftRows[0];
+  if (!draft) return null;
+
+  const teamsRows = await sql<Array<{ id: string }>>`
+    SELECT id FROM teams WHERE league_id = ${leagueId} ORDER BY draft_order ASC
+  `;
+  if (teamsRows.length === 0) return null;
+
+  const stateMap = await loadNominationTurnStates(sql, draftId);
+
+  for (let i = 0; i < teamsRows.length; i++) {
+    const idx = (draft.nomination_cursor + i) % teamsRows.length;
+    const candidate = teamsRows[idx]!;
+    const state = stateMap.get(candidate.id);
+    if (state && state.required_remaining_spots <= 0) continue;
+    return candidate.id;
+  }
+  return null;
+}
+
+/**
  * Dispatches the CURRENT nomination_cursor's turn without advancing it — used
  * once, right after DRAFT_STARTED, to close the gap where a draft with every
  * team on AUTO_AGENT would otherwise never nominate a first player.
@@ -1094,27 +1128,11 @@ export async function triggerCurrentNominationTurn(
   draftId: string,
   leagueId: string,
 ): Promise<void> {
-  const draftRows = await sql<[{ nomination_cursor: number }]>`
-    SELECT nomination_cursor FROM drafts WHERE id = ${draftId} LIMIT 1
-  `;
-  const draft = draftRows[0];
-  if (!draft) return;
-
-  const teamsRows = await sql<Array<{ id: string }>>`
-    SELECT id FROM teams WHERE league_id = ${leagueId} ORDER BY draft_order ASC
-  `;
-  if (teamsRows.length === 0) return;
-
+  const currentTeamId = await resolveCurrentNominatorTeamId(sql, draftId, leagueId);
+  if (!currentTeamId) return;
   const stateMap = await loadNominationTurnStates(sql, draftId);
-
-  for (let i = 0; i < teamsRows.length; i++) {
-    const idx = (draft.nomination_cursor + i) % teamsRows.length;
-    const candidate = teamsRows[idx]!;
-    const state = stateMap.get(candidate.id);
-    if (state && state.required_remaining_spots <= 0) continue;
-    await dispatchNominationTurn(sql, draftId, leagueId, candidate.id, state?.control_mode ?? 'MANUAL');
-    return;
-  }
+  const state = stateMap.get(currentTeamId);
+  await dispatchNominationTurn(sql, draftId, leagueId, currentTeamId, state?.control_mode ?? 'MANUAL');
 }
 
 export async function processPassNomination(
@@ -1128,10 +1146,15 @@ export async function processPassNomination(
   `;
   const draft = draftRows[0];
   if (!draft || draft.league_id !== leagueId || draft.status !== 'RUNNING') return;
-  // NOTE: pre-existing gap, unrelated to this refactor — teamId isn't checked
-  // against the current nominator, so any team can currently pass on another's
-  // turn. Preserved as-is; not part of this fix's scope.
-  void teamId;
+
+  // Only the team currently on the clock may pass its own turn. This
+  // command runs through the per-draft serialized queue (constraint #4), so
+  // this read-then-advance is not racing another PASS_NOMINATION/NOMINATE
+  // call for the same draft — only a concurrent award resolution could, and
+  // that is addressed separately by processAwardCycle's per-draft scoping.
+  const currentNominatorTeamId = await resolveCurrentNominatorTeamId(sql, draftId, leagueId);
+  if (!currentNominatorTeamId || currentNominatorTeamId !== teamId) return;
+
   await advanceNominationTurn(sql, draftId, leagueId);
 }
 

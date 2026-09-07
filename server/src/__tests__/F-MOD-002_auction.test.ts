@@ -1118,6 +1118,33 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     // team3 is cleaned up by afterEach's `DELETE FROM teams WHERE league_id = ...`.
   }, 10000);
 
+  // ── Code-review P1: PASS_NOMINATION must reject a non-nominator team ──────
+
+  it('test_F_MOD_002_pass_nomination_rejects_non_nominator', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    // team1 (draft_order 0) is the current nominator. team2 sending
+    // PASS_NOMINATION must not advance the cursor — only the current
+    // nominator may pass their own turn.
+    const ws2 = await connectAndAuth(serverPort, draftId, team2Token);
+    ws2.send(JSON.stringify({ type: 'PASS_NOMINATION', payload: {} }));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    ws2.close();
+
+    const [row] = await sql<[{ nomination_cursor: number }]>`
+      SELECT nomination_cursor FROM drafts WHERE id = ${draftId}
+    `;
+    expect(row!.nomination_cursor).toBe(0);
+
+    // The legitimate nominator (team1) can still pass normally afterward.
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const turnChanged = await sendAndReceive(ws1, { type: 'PASS_NOMINATION', payload: {} });
+    expect(turnChanged.type).toBe('NOMINATION_TURN_CHANGED');
+    expect(turnChanged.payload?.['current_nominator_team_id']).toBe(team2Id);
+    ws1.close();
+  }, 10000);
+
   // ── F-MOD-002-rework-02: dollar-formatted BID_REJECTED reasons ────────────
   // UF-01-03 item 1: engine.ts interpolated raw *_minor cents directly into
   // user-facing "reason" strings (e.g. "Bid 2600 must exceed current 2600").
