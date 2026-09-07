@@ -1,13 +1,13 @@
 {
-  "total_all_tokens": 3675304667,
-  "total_io_tokens": 5601249,
-  "total_cache_tokens": 3669703418,
-  "total_input_tokens": 25675,
-  "total_output_tokens": 5575574,
-  "total_cache_read_tokens": 3595179874,
-  "total_cache_creation_tokens": 74523544,
-  "session_count": 11,
-  "updated_at": "2026-09-07T04:20:05.505819+00:00",
+  "total_all_tokens": 3677039056,
+  "total_io_tokens": 5606978,
+  "total_cache_tokens": 3671432078,
+  "total_input_tokens": 25719,
+  "total_output_tokens": 5581259,
+  "total_cache_read_tokens": 3596744910,
+  "total_cache_creation_tokens": 74687168,
+  "session_count": 12,
+  "updated_at": "2026-09-07T12:16:03.223780+00:00",
   "sessions": [
     {
       "session_id": "dc397d7e-8283-48fd-8eaa-dfc2dad9e4a1",
@@ -344,19 +344,43 @@
           "total_all_tokens": 36317474
         }
       }
+    },
+    {
+      "session_id": "27f8470d-cd85-46fc-b1e8-a78fea501971",
+      "timestamp": "2026-09-07T12:16:03.223780+00:00",
+      "input_tokens": 44,
+      "output_tokens": 5685,
+      "cache_read_input_tokens": 1565036,
+      "cache_creation_input_tokens": 163624,
+      "total_io_tokens": 5729,
+      "total_cache_tokens": 1728660,
+      "total_all_tokens": 1734389,
+      "main_thread_tokens": 1734389,
+      "subagent_tokens": 0,
+      "by_phase": {
+        "build": {
+          "input_tokens": 44,
+          "output_tokens": 5685,
+          "cache_read_input_tokens": 1565036,
+          "cache_creation_input_tokens": 163624,
+          "total_io_tokens": 5729,
+          "total_cache_tokens": 1728660,
+          "total_all_tokens": 1734389
+        }
+      }
     }
   ],
   "models": [
     {
       "model": "claude-sonnet-5",
-      "sessions": 5,
-      "input_tokens": 10180,
-      "output_tokens": 1897081,
-      "cache_read_input_tokens": 1411193288,
-      "cache_creation_input_tokens": 20912900,
-      "total_io_tokens": 1907261,
-      "total_cache_tokens": 1432106188,
-      "total_all_tokens": 1434013449
+      "sessions": 6,
+      "input_tokens": 10224,
+      "output_tokens": 1902766,
+      "cache_read_input_tokens": 1412758324,
+      "cache_creation_input_tokens": 21076524,
+      "total_io_tokens": 1912990,
+      "total_cache_tokens": 1433834848,
+      "total_all_tokens": 1435747838
     },
     {
       "model": "claude-sonnet-4-6",
