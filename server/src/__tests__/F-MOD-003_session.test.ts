@@ -512,6 +512,71 @@ describe.skipIf(SKIP_DB)('F-MOD-003 session reconnect and multi-draft isolation'
     expect(snapshot).toHaveProperty('current_auction');
   }, 10000);
 
+  // ─── Test 9b: OWNER session-route auth uses teams.auth_epoch, not leagues' ───
+
+  it('test_F_MOD_003_owner_epoch_survives_commissioner_password_change', async () => {
+    const { leagueId, draftId, team1Token } = await setupDraft();
+
+    // Bumping the commissioner/league password must not revoke an OWNER's
+    // still-valid team token (F1 fix: session routes must check
+    // teams.auth_epoch for OWNER, not leagues.auth_epoch).
+    await sql`UPDATE leagues SET auth_epoch = auth_epoch + 1 WHERE id = ${leagueId}`;
+
+    const listRes = await server.inject({
+      method: 'GET',
+      url: `/leagues/${leagueId}/drafts`,
+      headers: { authorization: `Bearer ${team1Token}` },
+    });
+    expect(listRes.statusCode).toBe(200);
+
+    const stateRes = await server.inject({
+      method: 'GET',
+      url: `/drafts/${draftId}/state`,
+      headers: { authorization: `Bearer ${team1Token}` },
+    });
+    expect(stateRes.statusCode).toBe(200);
+  }, 10000);
+
+  it('test_F_MOD_003_owner_epoch_revoked_on_own_password_change', async () => {
+    const { leagueId, draftId, team1Id, team1Token } = await setupDraft();
+
+    // Bumping this team's own auth_epoch (owner password change / explicit
+    // revoke) must reject the now-stale token, even though leagues.auth_epoch
+    // is unchanged (F1 fix: this was the false-positive-valid case).
+    await sql`UPDATE teams SET auth_epoch = auth_epoch + 1 WHERE id = ${team1Id}`;
+
+    const listRes = await server.inject({
+      method: 'GET',
+      url: `/leagues/${leagueId}/drafts`,
+      headers: { authorization: `Bearer ${team1Token}` },
+    });
+    expect(listRes.statusCode).toBe(401);
+    expect(listRes.json<{ code: string }>().code).toBe('TOKEN_REVOKED');
+
+    const stateRes = await server.inject({
+      method: 'GET',
+      url: `/drafts/${draftId}/state`,
+      headers: { authorization: `Bearer ${team1Token}` },
+    });
+    expect(stateRes.statusCode).toBe(401);
+    expect(stateRes.json<{ code: string }>().code).toBe('TOKEN_REVOKED');
+  }, 10000);
+
+  it('test_F_MOD_003_commissioner_epoch_still_checked_against_league', async () => {
+    const { leagueId, draftId, commToken } = await setupDraft();
+
+    // Regression check: non-OWNER tokens must keep checking leagues.auth_epoch.
+    await sql`UPDATE leagues SET auth_epoch = auth_epoch + 1 WHERE id = ${leagueId}`;
+
+    const res = await server.inject({
+      method: 'GET',
+      url: `/leagues/${leagueId}/drafts`,
+      headers: { authorization: `Bearer ${commToken}` },
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json<{ code: string }>().code).toBe('TOKEN_REVOKED');
+  }, 10000);
+
   // ─── Test 10: STATE_SNAPSHOT includes active auction when one is open ────────
 
   it('test_F_MOD_003_snapshot_includes_active_auction', async () => {
