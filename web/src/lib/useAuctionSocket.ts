@@ -59,6 +59,7 @@ export interface WhammyNotice {
 export interface AwardEntry {
   player_auction_id: string;
   player_name: string;
+  position: string;
   winning_team_id: string;
   price_minor: number;
   roster_slot: string;
@@ -89,6 +90,8 @@ interface AuctionState {
   currentNominatorTeamId: string | null;
   nominationDeadlineTs: number | null;
   recentAwards: AwardEntry[];
+  /** Full picks history (all PLAYER_AWARDED events, no cap), newest first. */
+  picks: AwardEntry[];
   asOfSequence: number;
   lastError: { code: string; reason: string } | null;
   nominationAudioCue: NominationAudioCue | null;
@@ -109,6 +112,7 @@ const initialState: AuctionState = {
   currentNominatorTeamId: null,
   nominationDeadlineTs: null,
   recentAwards: [],
+  picks: [],
   asOfSequence: -1,
   lastError: null,
   nominationAudioCue: null,
@@ -286,6 +290,7 @@ function reducer(state: AuctionState, action: Action): AuctionState {
       const award: AwardEntry = {
         player_auction_id: String(p['player_auction_id']),
         player_name: String(p['player_name']),
+        position: String(p['position'] ?? ''),
         winning_team_id: String(p['winning_team_id']),
         price_minor: Number(p['price_minor']),
         roster_slot: String(p['roster_slot']),
@@ -302,6 +307,7 @@ function reducer(state: AuctionState, action: Action): AuctionState {
         currentAuction: null,
         bidLadder: [],
         recentAwards: [award, ...state.recentAwards].slice(0, 15),
+        picks: [award, ...state.picks],
         teams: prevTeam
           ? {
               ...state.teams,

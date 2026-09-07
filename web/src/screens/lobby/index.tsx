@@ -1,26 +1,15 @@
 /**
- * Pre-Draft Lobby — landing screen shown to authenticated owners before the
- * draft starts. Displays league name, scheduled start time (or status
- * message), team name, a commissioner status-message section, and the team
- * presentation media control (MOD-015). Primary navigation ("Draft Prep" /
- * "Enter Draft Room" / "Open War Room") is rendered by the caller
- * (App.tsx's DraftGateway) since it depends on whether an active draft
- * exists — see F-MOD-014_enter_draft_room_link.test.tsx.
- * Per screen-information-architecture.md §0.1. Prep tools (Watch List,
- * Nomination Queue, Target Values, Auto-Agent, Do Not Draft, and the full
- * filterable/sortable player pool) live on the separate Draft Prep screen
- * (web/src/screens/draft-prep/).
+ * Pre-Draft Lobby — shown to authenticated owners before the draft starts.
+ * Displays: league name, scheduled start time (or status message), team name,
+ * a commissioner status-message section, prep-tool tabs (mirroring War Room's
+ * "My Preparation" tabs plus Auto-Agent and Do Not Draft), and the team
+ * presentation media control (MOD-015).
+ * Per screen-information-architecture.md §0.1.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { TeamMediaUpload, type TeamMedia } from '../../components/TeamMediaUpload.js';
 import './lobby.css';
-
-async function authedJson<T>(url: string, token: string): Promise<T> {
-  const res = await fetch(url, { headers: { authorization: `Bearer ${token}` } });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json() as Promise<T>;
-}
 
 export interface LobbyProps {
   leagueName: string;
@@ -60,6 +49,80 @@ function formatScheduledTime(
   });
 }
 
+async function authedJson<T>(url: string, token: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    headers: { authorization: `Bearer ${token}`, ...(init?.headers ?? {}) },
+  });
+  if (!res.ok) throw new Error(`${res.status}`);
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+interface WatchlistItem {
+  dataset_player_id: string;
+  player_name: string;
+  position: string;
+}
+
+interface QueueItem {
+  dataset_player_id: string;
+  queue_position: number;
+  player_name: string;
+  position: string;
+}
+
+interface TargetItem {
+  dataset_player_id: string;
+  target_value_minor: number;
+  player_name: string;
+  position: string;
+}
+
+interface DoNotDraftEntry {
+  player_id: string;
+  player_name?: string;
+}
+
+// Per-player willingness ceiling configuration (F-MOD-004-rework-02;
+// state-machine-flows.md §11 / data-model.md §10.5). Defaults mirror the
+// server's DEFAULT_AUTO_AGENT_CONFIG so the panel starts AAV-anchored, not a
+// flat percentage of total budget.
+interface AutoAgentConfigState {
+  use_owner_target_when_customized: boolean;
+  fallback_to_primary_aav: boolean;
+  max_over_base_pct: number;
+  random_variance_pct: number;
+  bench_value_pct: number;
+  prioritize_starters: boolean;
+}
+
+const DEFAULT_AUTO_AGENT_CONFIG: AutoAgentConfigState = {
+  use_owner_target_when_customized: true,
+  fallback_to_primary_aav: true,
+  max_over_base_pct: 0.25,
+  random_variance_pct: 0.25,
+  bench_value_pct: 0.5,
+  prioritize_starters: true,
+};
+
+interface DatasetPlayer {
+  player_id: string;
+  dataset_entry_id: string;
+  name: string;
+  position: string;
+}
+
+type PrepTab = 'watchlist' | 'queue' | 'targets' | 'auto-agent' | 'do-not-draft';
+
+const PREP_TABS: Array<{ id: PrepTab; label: string }> = [
+  { id: 'watchlist', label: 'Watch List' },
+  { id: 'queue', label: 'Nomination Queue' },
+  { id: 'targets', label: 'Target Values' },
+  { id: 'auto-agent', label: 'Auto-Agent' },
+  { id: 'do-not-draft', label: 'Do Not Draft' },
+];
+
 export function Lobby({
   leagueName,
   teamName,
@@ -72,24 +135,199 @@ export function Lobby({
   statusMessage,
 }: LobbyProps): React.ReactElement {
   const timeText = formatScheduledTime(scheduledAt, draftStatus);
+  const canUseDraftTools = Boolean(draftId && teamId && token);
+
+  const [prepTab, setPrepTab] = useState<PrepTab>('watchlist');
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [targets, setTargets] = useState<TargetItem[]>([]);
+  const [doNotDraft, setDoNotDraft] = useState<DoNotDraftEntry[]>([]);
+  const [players, setPlayers] = useState<DatasetPlayer[]>([]);
+  const [autoAgentConfig, setAutoAgentConfig] = useState<AutoAgentConfigState>(DEFAULT_AUTO_AGENT_CONFIG);
+  const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
+  const [editingTargetValue, setEditingTargetValue] = useState('');
+  const [newTargetPlayerId, setNewTargetPlayerId] = useState('');
+  const [newTargetValue, setNewTargetValue] = useState('');
   const [media, setMedia] = useState<TeamMedia>({ icon_url: null, nomination_audio_url: null });
+
+  const refreshWatchlist = useMemo(
+    () => () => {
+      if (!canUseDraftTools) return;
+      authedJson<{ watchlist: WatchlistItem[] }>(`/drafts/${draftId}/teams/${teamId}/watchlist`, token!)
+        .then((d) => setWatchlist(d.watchlist ?? []))
+        .catch(() => {});
+    },
+    [canUseDraftTools, draftId, teamId, token],
+  );
+  const refreshQueue = useMemo(
+    () => () => {
+      if (!canUseDraftTools) return;
+      authedJson<{ queue: QueueItem[] }>(`/drafts/${draftId}/teams/${teamId}/nomination-queue`, token!)
+        .then((d) => setQueue(d.queue ?? []))
+        .catch(() => {});
+    },
+    [canUseDraftTools, draftId, teamId, token],
+  );
+  const refreshTargets = useMemo(
+    () => () => {
+      if (!canUseDraftTools) return;
+      authedJson<{ targets: TargetItem[] }>(`/drafts/${draftId}/teams/${teamId}/target-values`, token!)
+        .then((d) => setTargets(d.targets ?? []))
+        .catch(() => {});
+    },
+    [canUseDraftTools, draftId, teamId, token],
+  );
+  const refreshDoNotDraft = useMemo(
+    () => () => {
+      if (!canUseDraftTools) return;
+      authedJson<{ entries: DoNotDraftEntry[] }>(`/drafts/${draftId}/teams/${teamId}/do-not-draft`, token!)
+        .then((d) => setDoNotDraft(d.entries ?? []))
+        .catch(() => {});
+    },
+    [canUseDraftTools, draftId, teamId, token],
+  );
+
+  useEffect(() => {
+    refreshWatchlist();
+    refreshQueue();
+    refreshTargets();
+    refreshDoNotDraft();
+  }, [refreshWatchlist, refreshQueue, refreshTargets, refreshDoNotDraft]);
+
+  useEffect(() => {
+    if (!leagueId || !token) return;
+    authedJson<{ players: DatasetPlayer[] }>(`/leagues/${leagueId}/players`, token)
+      .then((d) => setPlayers(d.players ?? []))
+      .catch(() => {});
+  }, [leagueId, token]);
 
   // Seed the media control with whatever's already stored, so a returning
   // owner sees "Replace"/"Remove" instead of "Upload" for media they already
   // set. There's no standalone GET for a single team's media (F-MOD-015 only
   // has POST/DELETE) — the roster grid (already owner-accessible) carries it.
   useEffect(() => {
-    if (!leagueId || !teamId || !token || !draftId) return;
+    if (!canUseDraftTools) return;
     authedJson<{ teams: Array<{ team_id: string; icon_url: string | null }> }>(
       `/drafts/${draftId}/roster-grid`,
-      token,
+      token!,
     )
       .then((d) => {
         const mine = d.teams?.find((t) => t.team_id === teamId);
         if (mine) setMedia((prev) => ({ ...prev, icon_url: mine.icon_url }));
       })
       .catch(() => {});
-  }, [leagueId, teamId, token, draftId]);
+  }, [canUseDraftTools, draftId, teamId, token]);
+
+  function removeFromWatchlist(playerId: string): void {
+    if (!canUseDraftTools) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/watchlist/${playerId}`, token!, { method: 'DELETE' })
+      .then(refreshWatchlist)
+      .catch(() => {});
+  }
+
+  function addToWatchlist(playerId: string): void {
+    if (!canUseDraftTools || !playerId) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/watchlist`, token!, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ dataset_player_id: playerId }),
+    })
+      .then(refreshWatchlist)
+      .catch(() => {});
+  }
+
+  function removeFromQueue(playerId: string): void {
+    if (!canUseDraftTools) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/nomination-queue/${playerId}`, token!, { method: 'DELETE' })
+      .then(refreshQueue)
+      .catch(() => {});
+  }
+
+  function addToQueue(playerId: string): void {
+    if (!canUseDraftTools || !playerId) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/nomination-queue`, token!, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ dataset_player_id: playerId }),
+    })
+      .then(refreshQueue)
+      .catch(() => {});
+  }
+
+  function reorderQueue(newOrder: string[]): void {
+    if (!canUseDraftTools) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/nomination-queue`, token!, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ ordered_player_ids: newOrder }),
+    })
+      .then(refreshQueue)
+      .catch(() => {});
+  }
+
+  function moveQueueItem(index: number, dir: -1 | 1): void {
+    const next = [...queue];
+    const swapIdx = index + dir;
+    if (swapIdx < 0 || swapIdx >= next.length) return;
+    [next[index], next[swapIdx]] = [next[swapIdx]!, next[index]!];
+    reorderQueue(next.map((q) => q.dataset_player_id));
+  }
+
+  function saveTarget(playerId: string, dollarStr: string): void {
+    if (!canUseDraftTools || !playerId) return;
+    const amount = Math.round(parseFloat(dollarStr) * 100);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/target-values`, token!, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ targets: [{ dataset_player_id: playerId, target_value_minor: amount }] }),
+    })
+      .then(refreshTargets)
+      .catch(() => {});
+  }
+
+  function addToDoNotDraft(playerId: string): void {
+    if (!canUseDraftTools || !playerId) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/do-not-draft`, token!, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ player_id: playerId }),
+    })
+      .then(refreshDoNotDraft)
+      .catch(() => {});
+  }
+
+  function removeFromDoNotDraft(playerId: string): void {
+    if (!canUseDraftTools) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/do-not-draft/${playerId}`, token!, { method: 'DELETE' })
+      .then(refreshDoNotDraft)
+      .catch(() => {});
+  }
+
+  function submitAutoAgentConfig(e: React.FormEvent): void {
+    e.preventDefault();
+    if (!canUseDraftTools) return;
+    authedJson<{ team_id: string } & AutoAgentConfigState>(
+      `/drafts/${draftId}/teams/${teamId}/auto-agent`,
+      token!,
+      {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(autoAgentConfig),
+      },
+    )
+      // No GET endpoint exists for auto-agent config (F-MOD-004 only exposes
+      // PUT/PATCH) — the PUT response itself is the "read back" source of truth.
+      .then((d) => setAutoAgentConfig({
+        use_owner_target_when_customized: d.use_owner_target_when_customized,
+        fallback_to_primary_aav: d.fallback_to_primary_aav,
+        max_over_base_pct: d.max_over_base_pct,
+        random_variance_pct: d.random_variance_pct,
+        bench_value_pct: d.bench_value_pct,
+        prioritize_starters: d.prioritize_starters,
+      }))
+      .catch(() => {});
+  }
 
   return (
     <main className="lobby">
@@ -119,6 +357,307 @@ export function Lobby({
           <TeamMediaUpload leagueId={leagueId} teamId={teamId} token={token} media={media} onChange={setMedia} />
         </section>
       )}
+
+      <section className="lobby__prep" aria-label="Prep Tools">
+        <div className="lobby__prep-tabs" role="tablist">
+          {PREP_TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={prepTab === t.id}
+              className={prepTab === t.id ? 'lobby__prep-tab--active' : ''}
+              onClick={() => setPrepTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {!canUseDraftTools ? (
+          <p className="lobby__prep-unavailable">
+            Prep tools become available once the draft has been created.
+          </p>
+        ) : (
+          <>
+            {prepTab === 'watchlist' && (
+              <ul className="lobby__prep-list">
+                {watchlist.length === 0 && <li className="lobby__idle-small">Nothing watched yet.</li>}
+                {watchlist.map((w) => (
+                  <li key={w.dataset_player_id} className="lobby__prep-item">
+                    <span>{w.player_name}</span>
+                    <button aria-label={`Remove ${w.player_name} from watch list`} onClick={() => removeFromWatchlist(w.dataset_player_id)}>
+                      Remove
+                    </button>
+                  </li>
+                ))}
+                <PlayerPicker
+                  players={players}
+                  excludeIds={watchlist.map((w) => w.dataset_player_id)}
+                  onAdd={addToWatchlist}
+                  addLabel="Add to Watch List"
+                />
+              </ul>
+            )}
+
+            {prepTab === 'queue' && (
+              <ul className="lobby__prep-list">
+                {queue.length === 0 && <li className="lobby__idle-small">Queue is empty.</li>}
+                {queue.map((q, i) => (
+                  <li key={q.dataset_player_id} className="lobby__prep-item">
+                    <span>{i + 1}. {q.player_name}</span>
+                    <div>
+                      <button aria-label="Move up" onClick={() => moveQueueItem(i, -1)} disabled={i === 0}>↑</button>
+                      <button aria-label="Move down" onClick={() => moveQueueItem(i, 1)} disabled={i === queue.length - 1}>↓</button>
+                      <button aria-label={`Remove ${q.player_name} from queue`} onClick={() => removeFromQueue(q.dataset_player_id)}>
+                        Remove
+                      </button>
+                    </div>
+                  </li>
+                ))}
+                <PlayerPicker
+                  players={players}
+                  excludeIds={queue.map((q) => q.dataset_player_id)}
+                  onAdd={addToQueue}
+                  addLabel="Add to Queue"
+                />
+              </ul>
+            )}
+
+            {prepTab === 'targets' && (
+              <ul className="lobby__prep-list">
+                {targets.length === 0 && <li className="lobby__idle-small">No custom targets set.</li>}
+                {targets.map((t) => (
+                  <li key={t.dataset_player_id} className="lobby__prep-item">
+                    <span>{t.player_name}</span>
+                    {editingTargetId === t.dataset_player_id ? (
+                      <input
+                        type="number"
+                        min={1}
+                        autoFocus
+                        value={editingTargetValue}
+                        onChange={(e) => setEditingTargetValue(e.target.value)}
+                        onBlur={() => {
+                          saveTarget(t.dataset_player_id, editingTargetValue);
+                          setEditingTargetId(null);
+                          setEditingTargetValue('');
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            saveTarget(t.dataset_player_id, editingTargetValue);
+                            setEditingTargetId(null);
+                            setEditingTargetValue('');
+                          } else if (e.key === 'Escape') {
+                            setEditingTargetId(null);
+                            setEditingTargetValue('');
+                          }
+                        }}
+                        style={{ width: 80 }}
+                        aria-label={`Target value for ${t.player_name}`}
+                      />
+                    ) : (
+                      <button
+                        className="lobby__target-value-btn"
+                        onClick={() => {
+                          setEditingTargetId(t.dataset_player_id);
+                          setEditingTargetValue(String(Math.round(t.target_value_minor / 100)));
+                        }}
+                        title="Click to edit"
+                      >
+                        ${Math.round(t.target_value_minor / 100)}
+                      </button>
+                    )}
+                  </li>
+                ))}
+                {/* Add Target: pick a player without a custom target */}
+                {(() => {
+                  const withoutTarget = players.filter(
+                    (p) => !targets.some((t) => t.dataset_player_id === p.dataset_entry_id),
+                  );
+                  if (withoutTarget.length === 0) return null;
+                  return (
+                    <li className="lobby__prep-item lobby__prep-add-target">
+                      <select
+                        aria-label="Player to target"
+                        value={newTargetPlayerId}
+                        onChange={(e) => setNewTargetPlayerId(e.target.value)}
+                      >
+                        <option value="">Add Target…</option>
+                        {withoutTarget.map((p) => (
+                          <option key={p.dataset_entry_id} value={p.dataset_entry_id}>
+                            {p.name} ({p.position})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={1}
+                        placeholder="$"
+                        value={newTargetValue}
+                        onChange={(e) => setNewTargetValue(e.target.value)}
+                        style={{ width: 60 }}
+                        aria-label="Target dollar amount"
+                      />
+                      <button
+                        onClick={() => {
+                          saveTarget(newTargetPlayerId, newTargetValue);
+                          setNewTargetPlayerId('');
+                          setNewTargetValue('');
+                        }}
+                        disabled={!newTargetPlayerId || !newTargetValue}
+                      >
+                        Save
+                      </button>
+                    </li>
+                  );
+                })()}
+              </ul>
+            )}
+
+            {prepTab === 'auto-agent' && (
+              <form className="lobby__auto-agent-form" onSubmit={submitAutoAgentConfig}>
+                <label htmlFor="max-over-base-slider">
+                  Max over base ({Math.round(autoAgentConfig.max_over_base_pct * 100)}%)
+                </label>
+                <input
+                  id="max-over-base-slider"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={autoAgentConfig.max_over_base_pct}
+                  onChange={(e) =>
+                    setAutoAgentConfig((c) => ({ ...c, max_over_base_pct: parseFloat(e.target.value) }))
+                  }
+                />
+
+                <label htmlFor="random-variance-slider">
+                  Random variance (±{Math.round(autoAgentConfig.random_variance_pct * 100)}%)
+                </label>
+                <input
+                  id="random-variance-slider"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={autoAgentConfig.random_variance_pct}
+                  onChange={(e) =>
+                    setAutoAgentConfig((c) => ({ ...c, random_variance_pct: parseFloat(e.target.value) }))
+                  }
+                />
+
+                <label htmlFor="bench-value-slider">
+                  Bench discount ({Math.round(autoAgentConfig.bench_value_pct * 100)}%)
+                </label>
+                <input
+                  id="bench-value-slider"
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={autoAgentConfig.bench_value_pct}
+                  onChange={(e) =>
+                    setAutoAgentConfig((c) => ({ ...c, bench_value_pct: parseFloat(e.target.value) }))
+                  }
+                />
+
+                <label htmlFor="prioritize-starters-toggle">
+                  <input
+                    id="prioritize-starters-toggle"
+                    type="checkbox"
+                    checked={autoAgentConfig.prioritize_starters}
+                    onChange={(e) =>
+                      setAutoAgentConfig((c) => ({ ...c, prioritize_starters: e.target.checked }))
+                    }
+                  />
+                  Prioritize starters
+                </label>
+
+                <label htmlFor="use-owner-target-toggle">
+                  <input
+                    id="use-owner-target-toggle"
+                    type="checkbox"
+                    checked={autoAgentConfig.use_owner_target_when_customized}
+                    onChange={(e) =>
+                      setAutoAgentConfig((c) => ({ ...c, use_owner_target_when_customized: e.target.checked }))
+                    }
+                  />
+                  Use my Target Value when set
+                </label>
+
+                <label htmlFor="fallback-primary-aav-toggle">
+                  <input
+                    id="fallback-primary-aav-toggle"
+                    type="checkbox"
+                    checked={autoAgentConfig.fallback_to_primary_aav}
+                    onChange={(e) =>
+                      setAutoAgentConfig((c) => ({ ...c, fallback_to_primary_aav: e.target.checked }))
+                    }
+                  />
+                  Fall back to Primary AAV
+                </label>
+
+                <button type="submit">Save</button>
+              </form>
+            )}
+
+            {prepTab === 'do-not-draft' && (
+              <ul className="lobby__prep-list">
+                {doNotDraft.length === 0 && <li className="lobby__idle-small">No players on your Do Not Draft list.</li>}
+                {doNotDraft.map((d) => (
+                  <li key={d.player_id} className="lobby__prep-item">
+                    <span>{d.player_name ?? d.player_id}</span>
+                    <button aria-label={`Remove ${d.player_name ?? d.player_id} from Do Not Draft`} onClick={() => removeFromDoNotDraft(d.player_id)}>
+                      Remove
+                    </button>
+                  </li>
+                ))}
+                <PlayerPicker
+                  players={players}
+                  excludeIds={doNotDraft.map((d) => d.player_id)}
+                  onAdd={addToDoNotDraft}
+                  addLabel="Add to Do Not Draft"
+                />
+              </ul>
+            )}
+          </>
+        )}
+      </section>
     </main>
+  );
+}
+
+function PlayerPicker({
+  players,
+  excludeIds,
+  onAdd,
+  addLabel,
+}: {
+  players: DatasetPlayer[];
+  excludeIds: string[];
+  onAdd: (playerId: string) => void;
+  addLabel: string;
+}): React.ReactElement | null {
+  const [selected, setSelected] = useState('');
+  const available = players.filter((p) => !excludeIds.includes(p.dataset_entry_id));
+  if (available.length === 0) return null;
+
+  return (
+    <li className="lobby__prep-item">
+      <select aria-label={addLabel} value={selected} onChange={(e) => setSelected(e.target.value)}>
+        <option value="">Select a player…</option>
+        {available.map((p) => (
+          <option key={p.dataset_entry_id} value={p.dataset_entry_id}>{p.name}</option>
+        ))}
+      </select>
+      <button
+        onClick={() => {
+          onAdd(selected);
+          setSelected('');
+        }}
+        disabled={!selected}
+      >
+        {addLabel}
+      </button>
+    </li>
   );
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## Sprint 2
+
+| Date | ID | Description |
+|------|----|-------------|
+| 2026-09-07 | R-1 | Feat: Draft summary metrics (§36.1–36.3) wired to Draft Complete screen; bid analytics endpoint with per-team counts, snipe events, latency histogram; SendGrid email delivery for owners and commissioner |
+
 ## Sprint 1
 
 | Date | ID | Description |

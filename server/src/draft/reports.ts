@@ -1,8 +1,9 @@
 /**
  * F-MOD-006 Report routes:
- *   GET  /drafts/:draftId/report          — DraftSummaryReport (any league member)
- *   GET  /drafts/:draftId/espn-worksheet  — CSV export (any league member)
- *   POST /drafts/:draftId/report/email    — SendGrid stub (commissioner only)
+ *   GET  /drafts/:draftId/report               — DraftSummaryReport (any league member)
+ *   GET  /drafts/:draftId/espn-worksheet        — CSV export (any league member)
+ *   GET  /drafts/:draftId/analytics/bids        — Bid analytics (any league member)
+ *   POST /drafts/:draftId/report/email          — SendGrid delivery (commissioner only)
  *
  * Behavioral constraints:
  * - Reports are read-only queries — no mutations, no new state.
@@ -13,6 +14,7 @@
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
+import type { MailDataRequired, MailService } from '@sendgrid/mail';
 
 import { resolveEffectivePrimarySource } from '../player/aav-resolution.js';
 import { sendMail } from './sendgrid.js';
@@ -351,6 +353,196 @@ function renderLeagueReportText(report: DraftSummaryReport): string {
   return lines.join('\n');
 }
 
+// ─── Bid analytics ─────────────────────────────────────────────────────────────
+
+// Latency histogram buckets — boundaries in ms
+const LATENCY_BUCKETS = [
+  { label: '<50ms', max: 50 },
+  { label: '50-100ms', min: 50, max: 100 },
+  { label: '100-200ms', min: 100, max: 200 },
+  { label: '200-500ms', min: 200, max: 500 },
+  { label: '500ms+', min: 500 },
+] as const;
+
+interface BidAnalytics {
+  draft_id: string;
+  per_team: Array<{
+    team_id: string;
+    team_name: string;
+    total_bids: number;
+    match_bids: number;
+    absolute_bids: number;
+  }>;
+  snipe_event_count: number;
+  latency_histogram: Array<{ bucket: string; count: number }>;
+}
+
+async function generateBidAnalytics(sql: postgres.Sql, draftId: string): Promise<BidAnalytics> {
+  // Per-team bid counts
+  const teamBids = await sql<Array<{
+    team_id: string;
+    team_name: string;
+    total_bids: number;
+    match_bids: number;
+    absolute_bids: number;
+  }>>`
+    SELECT
+      t.id   AS team_id,
+      t.name AS team_name,
+      COUNT(ba.id)::int AS total_bids,
+      COUNT(ba.id) FILTER (WHERE ba.bid_type = 'NOMINATOR_MATCH')::int AS match_bids,
+      COUNT(ba.id) FILTER (WHERE ba.bid_type = 'ABSOLUTE')::int AS absolute_bids
+    FROM teams t
+    JOIN draft_team_states dts ON dts.team_id = t.id AND dts.draft_id = ${draftId}
+    LEFT JOIN bid_attempts ba ON ba.team_id = t.id AND ba.draft_id = ${draftId}
+    GROUP BY t.id, t.name
+    ORDER BY t.draft_order ASC
+  `;
+
+  // Snipe events: draft_events where the bid caused an anti-snipe extension.
+  // The engine writes anti_snipe_extended: true into the draft_event payload
+  // for every accepted bid that extended the deadline.
+  const [snipeRow] = await sql<[{ count: number }]>`
+    SELECT COUNT(*)::int AS count FROM draft_events
+    WHERE draft_id = ${draftId}
+      AND payload->>'anti_snipe_extended' = 'true'
+  `;
+  const snipeEventCount = snipeRow?.count ?? 0;
+
+  // Latency histogram from client_click_time_ms (S-2 field).
+  // Null entries are skipped — pre-S-2 bids and Auto-Agent bids have no client data.
+  const latencyRows = await sql<Array<{ ms: number }>>`
+    SELECT client_click_time_ms AS ms FROM bid_attempts
+    WHERE draft_id = ${draftId} AND client_click_time_ms IS NOT NULL
+  `;
+
+  const histogram = LATENCY_BUCKETS.map(({ label, ...bounds }) => {
+    const count = latencyRows.filter(({ ms }) => {
+      const minOk = 'min' in bounds ? ms >= bounds.min : true;
+      const maxOk = 'max' in bounds ? ms < bounds.max : true;
+      return minOk && maxOk;
+    }).length;
+    return { bucket: label, count };
+  });
+
+  return {
+    draft_id: draftId,
+    per_team: teamBids,
+    snipe_event_count: snipeEventCount,
+    latency_histogram: histogram,
+  };
+}
+
+// ─── Email helpers ─────────────────────────────────────────────────────────────
+
+function teamReportHtml(team: TeamEntry): string {
+  const totalSpend = team.acquisitions.reduce((s, a) => s + a.price_minor, 0);
+  const rows = team.acquisitions
+    .map(
+      (a) =>
+        `<tr><td>${a.player_name}</td><td>${a.position}</td><td>${a.roster_slot}</td><td>$${Math.round(a.price_minor / 100)}</td></tr>`,
+    )
+    .join('');
+
+  const eff = team.aav_efficiency_pct >= 0
+    ? `+${team.aav_efficiency_pct.toFixed(1)}%`
+    : `${team.aav_efficiency_pct.toFixed(1)}%`;
+
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;color:#222">
+<h2>${team.team_name} — Draft Summary</h2>
+<table border="0" cellpadding="4">
+  <tr><th align="left">Total spend</th><td>$${Math.round(totalSpend / 100)}</td></tr>
+  <tr><th align="left">Remaining budget</th><td>$${Math.round(team.final_budget_minor / 100)}</td></tr>
+  <tr><th align="left">Projected starter points</th><td>${team.projected_starter_points.toFixed(1)}</td></tr>
+  <tr><th align="left">Roster depth score (${team.roster_depth_score.calculation_version})</th><td>${team.roster_depth_score.value.toFixed(1)}</td></tr>
+  <tr><th align="left">AAV efficiency</th><td>${eff}</td></tr>
+</table>
+<h3>Picks</h3>
+<table border="1" cellpadding="4" cellspacing="0">
+  <thead><tr><th>Player</th><th>Pos</th><th>Slot</th><th>Price</th></tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+</body></html>`;
+}
+
+function leagueSummaryHtml(report: DraftSummaryReport): string {
+  const teamRows = report.teams
+    .map(
+      (t) => {
+        const eff = t.aav_efficiency_pct >= 0
+          ? `+${t.aav_efficiency_pct.toFixed(1)}%`
+          : `${t.aav_efficiency_pct.toFixed(1)}%`;
+        return `<tr>
+          <td>${t.team_name}</td>
+          <td>${t.acquisitions.length}</td>
+          <td>$${Math.round(t.acquisitions.reduce((s, a) => s + a.price_minor, 0) / 100)}</td>
+          <td>$${Math.round(t.final_budget_minor / 100)}</td>
+          <td>${t.projected_starter_points.toFixed(1)}</td>
+          <td>${t.roster_depth_score.value.toFixed(1)}</td>
+          <td>${eff}</td>
+        </tr>`;
+      },
+    )
+    .join('');
+
+  return `<!DOCTYPE html><html><body style="font-family:sans-serif;color:#222">
+<h2>Draft Complete — League Summary</h2>
+<p>Completed: ${new Date(report.completed_at).toLocaleString()}</p>
+<table border="1" cellpadding="4" cellspacing="0">
+  <thead><tr>
+    <th>Team</th><th>Picks</th><th>Spent</th><th>Remaining</th>
+    <th>Starter Pts</th><th>Depth Score</th><th>AAV Efficiency</th>
+  </tr></thead>
+  <tbody>${teamRows}</tbody>
+</table>
+<p>League spend: $${Math.round(report.league_totals.spend_minor / 100)} against $${Math.round(report.league_totals.aav_minor / 100)} AAV.</p>
+</body></html>`;
+}
+
+/**
+ * Sends one email via SendGrid and records the attempt.
+ * Never throws — on failure logs + records FAILED.
+ */
+async function sendReportEmail(opts: {
+  sql: postgres.Sql;
+  server: FastifyInstance;
+  draftId: string;
+  teamId: string | null;
+  recipientEmail: string;
+  subject: string;
+  html: string;
+  fromEmail: string;
+  sgMail: MailService;
+}): Promise<void> {
+  // Insert PENDING row first
+  const [attempt] = await opts.sql<[{ id: string }]>`
+    INSERT INTO report_delivery_attempts (draft_id, team_id, recipient_email, status)
+    VALUES (${opts.draftId}, ${opts.teamId}, ${opts.recipientEmail}, 'PENDING')
+    RETURNING id
+  `;
+
+  try {
+    await opts.sgMail.send({
+      to: opts.recipientEmail,
+      from: opts.fromEmail,
+      subject: opts.subject,
+      html: opts.html,
+    } satisfies MailDataRequired);
+    await opts.sql`
+      UPDATE report_delivery_attempts
+      SET status = 'SENT', sent_at = NOW()
+      WHERE id = ${attempt.id}
+    `;
+  } catch (err) {
+    opts.server.log.error({ err, draft_id: opts.draftId, recipient: opts.recipientEmail }, '[reports] email send failed');
+    await opts.sql`
+      UPDATE report_delivery_attempts
+      SET status = 'FAILED', error_detail = ${String(err)}
+      WHERE id = ${attempt.id}
+    `;
+  }
+}
+
 // ─── Route registration ────────────────────────────────────────────────────────
 
 export async function registerReportRoutes(
@@ -423,6 +615,31 @@ export async function registerReportRoutes(
           `attachment; filename="espn-worksheet-${draft.id}.csv"`,
         )
         .send(csv);
+    },
+  );
+
+  /**
+   * GET /drafts/:draftId/analytics/bids
+   *
+   * Bid analytics: per-team bid counts, snipe event count, latency histogram.
+   * Any authenticated league member can call this (same auth as /report).
+   */
+  server.get<{ Params: DraftParams }>(
+    '/drafts/:draftId/analytics/bids',
+    async (req, reply) => {
+      const ctx = await requireDraftLeagueMember(server, sql, req, reply);
+      if (!ctx) return;
+      const { draft } = ctx;
+
+      if (draft.status !== 'COMPLETE') {
+        return reply.status(409).send({
+          code: 'DRAFT_NOT_COMPLETE',
+          message: 'Draft must be COMPLETE to retrieve bid analytics',
+        });
+      }
+
+      const analytics = await generateBidAnalytics(sql, draft.id);
+      return reply.send(analytics);
     },
   );
 

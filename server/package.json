@@ -17,6 +17,7 @@
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/websocket": "^11.3.0",
     "@node-rs/bcrypt": "^1.10.4",
+    "@sendgrid/mail": "^8.1.6",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.12.1",
     "pdfjs-dist": "^6.3.289",

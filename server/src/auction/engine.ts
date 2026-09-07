@@ -1583,6 +1583,7 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
          ${auction.current_leader_id}, ${auctionId},
          ${JSON.stringify({
            player_name: auction.player_name,
+           position: auction.player_position,
            winning_team_id: auction.current_leader_id,
            price_minor: auction.current_bid_minor,
            roster_slot: slot?.slotLabel ?? 'BN',
@@ -1633,6 +1634,7 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
     payload: {
       player_auction_id: auctionId,
       player_name: auction.player_name,
+      position: auction.player_position,
       winning_team_id: auction.current_leader_id,
       price_minor: auction.current_bid_minor,
       roster_slot: slot?.slotLabel ?? 'BN',
