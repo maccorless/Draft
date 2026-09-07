@@ -10,13 +10,14 @@ import React, { useState } from 'react';
 import { Gear, UploadSimple, Gavel, ArrowCounterClockwise, UsersThree } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 
-import { DatasetImport, type ImportResult } from './DatasetImport.js';
+import { DatasetImport } from './DatasetImport.js';
 import { AmbiguityResolution } from './AmbiguityResolution.js';
 import type { AmbiguousRow } from './AmbiguityResolution.js';
 import { DevTools } from './DevTools.js';
 import { DraftControl } from './DraftControl.js';
 import { Corrections } from './Corrections.js';
 import { LeagueSetup } from './LeagueSetup.js';
+import { TeamsTab } from './Teams.js';
 import './commissioner-console.css';
 
 export type DatasetStatus = 'DRAFT' | 'VALIDATED' | 'FROZEN';
@@ -99,7 +100,6 @@ interface CommissionerConsoleProps {
   onCreateDraft?: () => void;
   ambiguousRows?: AmbiguousRow[];
   onResolveAmbiguity?: (resolutions: Record<number, string | 'skip'>) => void;
-  onImportComplete?: (result: ImportResult) => void;
   /** Active draft to operate, if one exists (F-MOD-011 Draft Control section). */
   draftId?: string | null;
 }
@@ -112,7 +112,6 @@ export function CommissionerConsole({
   onCreateDraft,
   ambiguousRows,
   onResolveAmbiguity,
-  onImportComplete,
   draftId,
 }: CommissionerConsoleProps = {}): React.ReactElement {
   const [activeSection, setActiveSection] =
@@ -166,7 +165,7 @@ export function CommissionerConsole({
           {activeSection === 'dataset-import' && (
             <>
               {leagueId && datasetId && token ? (
-                <DatasetImport leagueId={leagueId} datasetId={datasetId} token={token} onImportComplete={onImportComplete} />
+                <DatasetImport leagueId={leagueId} datasetId={datasetId} token={token} />
               ) : (
                 <ComingSoon label="Dataset Import" />
               )}
@@ -196,7 +195,7 @@ export function CommissionerConsole({
           )}
           {activeSection === 'teams' && (
             leagueId && token ? (
-              <LeagueSetup leagueId={leagueId} token={token} datasetId={datasetId} />
+              <TeamsTab leagueId={leagueId} token={token} />
             ) : (
               <ComingSoon label="Teams" />
             )

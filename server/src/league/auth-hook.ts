@@ -2,7 +2,7 @@
  * Auth preHandler factory — validates the JWT and enforces:
  * 1. The token's league_id matches the route's :leagueId param.
  * 2. The token's auth_epoch matches the current auth_epoch for its scope
- *    (leagues.auth_epoch for COMMISSIONER/HOST, teams.auth_epoch for OWNER).
+ *    (leagues.auth_epoch for COMMISSIONER, teams.auth_epoch for OWNER).
  *
  * Returns a FastifyRawRequestHookHandler compatible with Fastify's preHandler option.
  */
@@ -102,7 +102,7 @@ export function requireCommissioner(
 }
 
 /**
- * Any valid league member (COMMISSIONER, HOST, or OWNER) — same scope/epoch
+ * Any valid league member (COMMISSIONER or OWNER) — same scope/epoch
  * checks as requireCommissioner, but does not require the COMMISSIONER role.
  * Used by presentation/read endpoints an owner's Lobby needs (e.g. GET
  * /leagues/:leagueId's status_message and scheduled_draft_start_at), never

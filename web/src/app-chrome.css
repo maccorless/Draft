@@ -1,3 +1,13 @@
+/* Reserves vertical space so the fixed identity/logout pill (top-right,
+   ~40px tall + its 12px top offset) never overlaps page content that
+   starts at the very top of the viewport (e.g. sticky/topbar headers on
+   initial render). Screens whose top-right header content sits directly
+   under the pill's horizontal band additionally reserve width there —
+   see .commissioner-console__header-inner and .draft-room__topbar. */
+.app-content {
+  padding-top: var(--header-height);
+}
+
 .app-logout {
   position: fixed;
   top: var(--space-3);
@@ -11,16 +21,6 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
-}
-
-/* Reserves vertical space so the fixed identity/logout pill (top-right,
-   ~40px tall + its 12px top offset) never overlaps page content that
-   starts at the very top of the viewport (e.g. sticky/topbar headers on
-   initial render). Screens whose top-right header content sits directly
-   under the pill's horizontal band additionally reserve width there —
-   see .commissioner-console__header-inner and .draft-room__topbar. */
-.app-content {
-  padding-top: 64px;
 }
 
 .app-logout__identity {

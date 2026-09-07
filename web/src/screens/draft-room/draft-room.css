@@ -102,57 +102,6 @@
   letter-spacing: 0.04em;
 }
 
-/* ── Team-by-team strip (UF-17-07 item 2) ──────────────────────────────────── */
-
-.draft-room__team-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  max-width: 1400px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.draft-room__team-strip-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-xs);
-}
-
-.draft-room__team-strip-item--leading {
-  border-color: var(--color-accent);
-  background: var(--color-surface-alt);
-}
-
-.draft-room__team-strip-icon {
-  width: 1rem;
-  height: 1rem;
-  object-fit: cover;
-  border-radius: var(--radius-sm);
-}
-
-.draft-room__team-strip-name {
-  color: var(--color-text);
-  font-weight: var(--font-weight-semibold);
-}
-
-.draft-room__team-strip-budget {
-  font-family: var(--font-mono);
-  color: var(--color-text-muted);
-}
-
-.draft-room__team-strip-bid {
-  font-family: var(--font-mono);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-accent);
-}
-
 /* ── Layout: team context | active auction | recent bids ──────────────────── */
 
 .draft-room__layout {
@@ -300,7 +249,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-5) var(--space-6);
+  padding: var(--space-8) var(--space-6);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -308,23 +257,8 @@
   gap: var(--space-5);
 }
 
-/* Everything above "Available Players" — the current nomination/bid area.
-   Fixed height + centered content so switching between "waiting" / "your
-   turn to nominate" / an active auction never resizes the panel around it,
-   and it reads as one compact, constant-size instrument panel rather than
-   the tallest possible stack of optional badges. */
-.draft-room__bid-area {
-  width: 100%;
-  height: 280px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
-  overflow: hidden;
-}
-
 .draft-room__no-auction {
+  padding: var(--space-10) 0;
   color: var(--color-text-subtle);
 }
 
@@ -350,147 +284,57 @@
   margin: 0;
 }
 
-.draft-room__nominate-hint {
-  color: var(--color-text-subtle);
-  font-size: var(--text-sm);
-  margin: 0;
-}
-
-/* ── Persistent player list panel (UF-17-07 item 1) ────────────────────────── */
-
-.draft-room__player-list {
+.draft-room__nominate-search {
   width: 100%;
-  margin-top: var(--space-6);
-  padding-top: var(--space-5);
-  border-top: 1px solid var(--color-border);
-  text-align: left;
-}
-
-.draft-room__player-list-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-
-.draft-room__player-list-tab {
-  min-height: 32px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--font-weight-semibold);
-}
-
-.draft-room__player-list-tab--active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-text-on-accent);
-}
-
-.draft-room__player-list-search {
-  width: 100%;
-  min-height: 40px;
-  margin-bottom: var(--space-3);
+  min-height: 44px;
   padding: var(--space-2) var(--space-4);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-md);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   background: var(--color-surface);
   color: var(--color-text);
 }
 
-/* Fixed height (not max-height) so this panel is always the same size —
-   internal scroll handles overflow, and it doesn't shrink as players get
-   drafted off the list. */
-.draft-room__player-list-table-wrap {
-  height: 360px;
-  overflow-y: auto;
+.draft-room__nominate-results {
+  width: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  overflow: hidden;
 }
 
-.draft-room__player-list-table {
+.draft-room__nominate-result {
   width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-}
-
-.draft-room__player-list-table thead th {
-  position: sticky;
-  top: 0;
+  min-height: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   text-align: left;
-  color: var(--color-text-subtle);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--color-border-strong);
-  white-space: nowrap;
 }
 
-.draft-room__player-list-sortable {
-  cursor: pointer;
-  user-select: none;
-}
-
-.draft-room__player-list-sortable:hover {
-  color: var(--color-text);
-}
-
-.draft-room__player-list-row td {
-  padding: var(--space-1) var(--space-3);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.draft-room__player-list-row:last-child td {
+.draft-room__nominate-result:last-child {
   border-bottom: none;
 }
 
-.draft-room__player-list-row:hover td {
+.draft-room__nominate-result:hover {
   background: var(--color-surface-alt);
 }
 
-.draft-room__player-list-row-btn {
-  min-height: 40px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--color-text);
-  font-weight: var(--font-weight-semibold);
-  text-align: left;
-  cursor: pointer;
-}
-
-.draft-room__player-list-row-btn:hover:not(:disabled) {
-  text-decoration: underline;
-}
-
-.draft-room__player-list-row-btn:disabled {
-  cursor: default;
-  color: var(--color-text-muted);
-  font-weight: var(--font-weight-regular);
-}
-
-.draft-room__player-list-num {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+.draft-room__nominate-meta {
+  font-size: var(--text-xs);
   color: var(--color-text-subtle);
-}
-
-.draft-room__player-list-empty {
-  text-align: center;
-  color: var(--color-text-subtle);
-  padding: var(--space-5) 0;
 }
 
 .draft-room__player-name {
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  font-size: 2.75rem;
   letter-spacing: 0.01em;
   color: var(--color-text);
   margin: 0;
@@ -530,27 +374,10 @@
   vertical-align: middle;
 }
 
-.draft-room__player-stats-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin: var(--space-1) 0 0;
-}
-
-.draft-room__player-aav,
-.draft-room__player-proj-points,
-.draft-room__player-bye {
+.draft-room__player-aav {
   font-family: var(--font-mono);
   color: var(--color-text-subtle);
   font-size: var(--text-sm);
-}
-
-/* Reserved-height slot so "My Target" appearing/disappearing (only set for
-   some players) never shifts the bid area's fixed height. */
-.draft-room__my-target-slot {
-  min-height: 1.4em;
   margin: var(--space-1) 0 0;
 }
 
@@ -570,7 +397,7 @@
 
 .draft-room__current-bid {
   font-family: var(--font-mono);
-  font-size: 2.25rem;
+  font-size: 4rem;
   font-weight: var(--font-weight-semibold);
   line-height: 1;
   color: var(--color-text);
@@ -578,24 +405,15 @@
 
 .draft-room__leader {
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
 }
 
 .draft-room__timer {
   font-family: var(--font-mono);
-  font-size: var(--text-lg);
+  font-size: var(--text-2xl);
   color: var(--color-text-muted);
-  margin-top: var(--space-1);
+  margin-top: var(--space-2);
   transition: color var(--transition-base);
-}
-
-.draft-room__status-strip {
-  width: 100%;
-  max-width: 420px;
-}
-
-.draft-room__bid-footer {
-  min-height: 1.4em;
 }
 
 .draft-room__timer--urgent {
@@ -943,4 +761,88 @@
 .draft-room__popover-idle {
   color: var(--color-text-subtle);
   font-size: var(--text-sm);
+}
+
+/* ── Whammy overlay ──────────────────────────────────────────────────────── */
+
+.draft-room__whammy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.draft-room__whammy-body {
+  background: var(--color-chrome-raised, #1e2330);
+  border: 2px solid var(--color-led-amber, #ffb02e);
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-8, 2rem) var(--space-10, 2.5rem);
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+}
+
+.draft-room__whammy-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-led-amber, #ffb02e);
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-2);
+}
+
+.draft-room__whammy-team {
+  font-size: var(--text-lg, 1.125rem);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-2);
+}
+
+.draft-room__whammy-desc {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-2);
+}
+
+.draft-room__whammy-amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl, 1.25rem);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-3);
+}
+
+.draft-room__whammy-countdown {
+  font-size: var(--text-sm);
+  color: var(--color-led-amber, #ffb02e);
+  margin: 0;
+}
+
+/* ── Anti-snipe badge ────────────────────────────────────────────────────── */
+
+.draft-room__anti-snipe-badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  background: rgba(255, 152, 0, 0.15);
+  border: 1px solid rgba(255, 152, 0, 0.4);
+  border-radius: var(--radius-pill);
+  color: var(--color-led-amber, #ffb02e);
+  font-size: var(--text-xs);
+  margin-bottom: var(--space-2);
+}
+
+/* ── Penalty badge in bid ladder ─────────────────────────────────────────── */
+
+.draft-room__bid-penalty-badge {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.4);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-led-red, #f44336);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  margin-left: var(--space-1);
 }

@@ -52,6 +52,7 @@ export interface WhammyNotice {
   team_id: string;
   amount_minor: number;
   description: string;
+  pause_until_ms: number | null;
   receivedAt: number;
 }
 
@@ -93,6 +94,9 @@ interface AuctionState {
   nominationAudioCue: NominationAudioCue | null;
   antiSnipeNotice: AntiSnipeNotice | null;
   whammyNotice: WhammyNotice | null;
+  latencyMs: number | null;
+  /** Team IDs that currently have an active anti-snipe penalty. */
+  penalizedTeamIds: Set<string>;
 }
 
 const initialState: AuctionState = {
@@ -110,6 +114,8 @@ const initialState: AuctionState = {
   nominationAudioCue: null,
   antiSnipeNotice: null,
   whammyNotice: null,
+  latencyMs: null,
+  penalizedTeamIds: new Set(),
 };
 
 type Action =
@@ -196,8 +202,7 @@ function reducer(state: AuctionState, action: Action): AuctionState {
         at_ts: Date.now(),
         is_match: false,
         // Only MATCH or a custom absolute jump is notable enough to show a
-        // bid-type indicator (per screen-information-architecture.md §2.2);
-        // a plain +$1 relative bid stays untagged.
+        // bid-type indicator; a plain +$1 relative bid stays untagged.
         bid_type: bidType === 'RELATIVE' ? null : bidType,
         ms_remaining_at_receipt:
           p['ms_remaining_at_receipt'] == null ? null : Number(p['ms_remaining_at_receipt']),
@@ -212,8 +217,29 @@ function reducer(state: AuctionState, action: Action): AuctionState {
           rebid_deadline_ts: Number(p['rebid_deadline_ts']),
         },
         bidLadder: [entry, ...state.bidLadder].slice(0, 10),
+        // ponytail: anti-snipe from BID_ACCEPTED flag kept alongside the discrete
+        // ANTI_SNIPE_EXTENSION event so either path updates the notice.
         antiSnipeNotice: p['anti_snipe_extended'] === true ? { receivedAt: Date.now() } : state.antiSnipeNotice,
       };
+    }
+
+    case 'ANTI_SNIPE_EXTENSION': {
+      // Discrete event: server extended the deadline due to a late bid.
+      return { ...state, antiSnipeNotice: { receivedAt: Date.now() } };
+    }
+
+    case 'ANTI_SNIPE_PENALTY_APPLIED': {
+      const teamId = String(p['team_id'] ?? '');
+      const next = new Set(state.penalizedTeamIds);
+      next.add(teamId);
+      return { ...state, penalizedTeamIds: next };
+    }
+
+    case 'ANTI_SNIPE_PENALTY_EXPIRED': {
+      const teamId = String(p['team_id'] ?? '');
+      const next = new Set(state.penalizedTeamIds);
+      next.delete(teamId);
+      return { ...state, penalizedTeamIds: next };
     }
 
     case 'WHAMMY_APPLIED': {
@@ -231,9 +257,16 @@ function reducer(state: AuctionState, action: Action): AuctionState {
           team_id: teamId,
           amount_minor: Number(p['amount_minor'] ?? 0),
           description: String(p['description'] ?? ''),
+          pause_until_ms: (p['pause_until_ms'] as number | null) ?? null,
           receivedAt: Date.now(),
         },
       };
+    }
+
+    case 'PONG': {
+      // RTT = round-trip from when we sent PING to now.
+      const rtt = Date.now() - Number(p['client_time_ms'] ?? Date.now());
+      return { ...state, latencyMs: Math.max(0, rtt) };
     }
 
     case 'NOMINATOR_MATCH_USED': {
@@ -376,6 +409,10 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
     // regardless of timing.
     let cancelled = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    // ponytail: ping interval cleared on close/error/cleanup to avoid sending
+    // PINGs on a dead socket. Server PING/PONG handler is a separate task —
+    // if PONG never arrives, latencyMs stays null (ConnectionBadge shows grey).
+    let pingInterval: ReturnType<typeof setInterval> | null = null;
 
     function connect(): void {
       if (cancelled) return;
@@ -390,6 +427,13 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
           type: 'AUTHENTICATE',
           payload: { token, last_seen_sequence: lastSeenSeqRef.current },
         }));
+        // Start latency measurement: send PING every 5s.
+        if (pingInterval) clearInterval(pingInterval);
+        pingInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'PING', payload: { client_time_ms: Date.now() } }));
+          }
+        }, 5000);
       };
 
       ws.onmessage = (event: MessageEvent<string>) => {
@@ -407,6 +451,7 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
       };
 
       ws.onclose = () => {
+        if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
         if (cancelled || wsRef.current !== ws) return;
         dispatch({ type: 'CONNECTION', status: 'reconnecting' });
         const delay = Math.min(1000 * 2 ** reconnectAttemptRef.current, 15000);
@@ -415,6 +460,7 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
       };
 
       ws.onerror = () => {
+        if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
         ws.close();
       };
     }
@@ -424,6 +470,7 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
     return () => {
       cancelled = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pingInterval) clearInterval(pingInterval);
       wsRef.current?.close();
       wsRef.current = null;
       dispatch({ type: 'CONNECTION', status: 'closed' });

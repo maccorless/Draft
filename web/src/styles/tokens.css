@@ -116,6 +116,8 @@
 
   /* ── Layout ──────────────────────────────────────────────────────────── */
   --content-max-width: 1120px;
+  /* pill: top 12px + ~40px height → 52px minimum; 64px gives breathing room */
+  --header-height: 64px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -34,6 +34,7 @@ export const UpdateLeagueRequestSchema = z.object({
 export type UpdateLeagueRequest = z.infer<typeof UpdateLeagueRequestSchema>;
 
 export const UpdateTeamRequestSchema = z.object({
+  name: z.string().min(1).optional(),
   starting_budget_override_minor: z.number().int().nullable().optional(),
   name_lock: z.boolean().optional(),
   draft_order: z.number().int().min(1).optional(),

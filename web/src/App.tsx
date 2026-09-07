@@ -10,13 +10,10 @@ const styles = {
 };
 import './screens/auth/auth.css';
 import './app-chrome.css';
-import './screens/lobby/lobby-cta.css';
 import { Lobby } from './screens/lobby/index.js';
 import { CommissionerConsole } from './screens/commissioner/index.js';
-import type { AmbiguousRow } from './screens/commissioner/AmbiguityResolution.js';
 import { DraftRoom } from './screens/draft-room/index.js';
 import { WarRoom } from './screens/war-room/index.js';
-import { DraftPrep } from './screens/draft-prep/index.js';
 import { DraftComplete, type DraftSummaryReport } from './screens/draft-complete/index.js';
 
 // Relative — goes through Vite's dev proxy (web/vite.config.ts) to the backend,
@@ -29,7 +26,7 @@ interface League { id: string; name: string }
 interface Team { id: string; name: string; draft_order: number }
 interface AuthState {
   token: string;
-  role: 'COMMISSIONER' | 'OWNER' | 'HOST';
+  role: 'COMMISSIONER' | 'OWNER';
   leagueId: string;
   leagueName: string;
   teamId?: string;
@@ -121,7 +118,7 @@ export function LeagueLogin({
   onAuth: (auth: AuthState) => void;
 }) {
   const [leagueId, setLeagueId] = useState(leagues[0]?.id ?? '');
-  const [role, setRole] = useState<'COMMISSIONER' | 'OWNER' | 'HOST'>('COMMISSIONER');
+  const [role, setRole] = useState<'COMMISSIONER' | 'OWNER'>('COMMISSIONER');
   const [teams, setTeams] = useState<Team[]>([]);
   const [teamId, setTeamId] = useState('');
   const [teamsError, setTeamsError] = useState('');
@@ -199,12 +196,11 @@ export function LeagueLogin({
         <select
           id="role-select"
           value={role}
-          onChange={e => setRole(e.target.value as 'COMMISSIONER' | 'OWNER' | 'HOST')}
+          onChange={e => setRole(e.target.value as 'COMMISSIONER' | 'OWNER')}
           className="auth-screen__input"
         >
           <option value="COMMISSIONER">Commissioner</option>
           <option value="OWNER">Owner</option>
-          <option value="HOST">Host</option>
         </select>
         {role === 'OWNER' && (
           <>
@@ -248,9 +244,7 @@ export function LeagueLogin({
 
 export function LogoutButton({ auth, onLogout }: { auth: AuthState; onLogout: () => void }) {
   const identityLabel =
-    auth.role === 'COMMISSIONER' ? 'Commissioner'
-    : auth.role === 'HOST' ? 'Host'
-    : `Owner · ${auth.teamName ?? 'My Team'}`;
+    auth.role === 'COMMISSIONER' ? 'Commissioner' : `Owner · ${auth.teamName ?? 'My Team'}`;
 
   return (
     <div className="app-logout">
@@ -269,26 +263,6 @@ export function CommissionerRoute({ auth, onStaleSession }: { auth: AuthState; o
   const [datasetStatus, setDatasetStatus] = useState<'DRAFT' | 'VALIDATED' | 'FROZEN' | null>(null);
   const [draftId, setDraftId] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [ambiguousRows, setAmbiguousRows] = useState<AmbiguousRow[]>([]);
-
-  function handleImportComplete(result: { ambiguous_rows?: AmbiguousRow[] }): void {
-    setAmbiguousRows(result.ambiguous_rows ?? []);
-  }
-
-  function handleResolveAmbiguity(resolutions: Record<number, string | 'skip'>): void {
-    if (!datasetId) return;
-    fetch(`${API}/leagues/${auth.leagueId}/datasets/${datasetId}/ambiguities/resolve`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
-      body: JSON.stringify({ resolutions }),
-    })
-      .then(res => {
-        if (!res.ok) return;
-        const resolvedRows = new Set(Object.keys(resolutions).map(Number));
-        setAmbiguousRows(prev => prev.filter(r => !resolvedRows.has(r.row_number)));
-      })
-      .catch(() => {});
-  }
 
   React.useEffect(() => {
     fetch(`${API}/leagues/${auth.leagueId}/datasets`, {
@@ -336,9 +310,6 @@ export function CommissionerRoute({ auth, onStaleSession }: { auth: AuthState; o
       datasetId={datasetId}
       datasetStatus={datasetStatus}
       draftId={draftId}
-      ambiguousRows={ambiguousRows}
-      onResolveAmbiguity={handleResolveAmbiguity}
-      onImportComplete={handleImportComplete}
     />
   );
 }
@@ -429,16 +400,13 @@ export function DraftGateway({ auth, onStaleSession }: { auth: AuthState; onStal
         statusMessage={statusMessage}
       />
       {active && (
-        <div className="lobby-cta">
-          <div className="lobby-cta__primary">
-            <a href={`/draft-prep?draftId=${active.id}`} className="lobby-cta__button">
-              Draft Prep
-            </a>
-            <a href={`/draft-room?draftId=${active.id}`} className="lobby-cta__button lobby-cta__button--secondary">
-              Enter Draft Room
-            </a>
-          </div>
-          <a href={`/war-room?draftId=${active.id}`} target="_blank" rel="noreferrer" className="lobby-cta__link">
+        <div style={{ ...styles.center, minHeight: 'auto', paddingBottom: 32 }}>
+          <a
+            href={`/war-room?draftId=${active.id}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: '#1a73e8' }}
+          >
             Open War Room ↗
           </a>
         </div>
@@ -461,23 +429,6 @@ function WarRoomRoute({ auth }: { auth: AuthState }) {
   const draftId = params.get('draftId');
   if (!draftId) return <div style={styles.center}><p style={styles.error}>Missing draftId</p></div>;
   return <WarRoom draftId={draftId} leagueId={auth.leagueId} token={auth.token} teamId={auth.teamId ?? null} />;
-}
-
-function DraftPrepRoute({ auth }: { auth: AuthState }) {
-  const [params] = useSearchParams();
-  const draftId = params.get('draftId');
-  if (!draftId) return <div style={styles.center}><p style={styles.error}>Missing draftId</p></div>;
-  if (!auth.teamId) return <div style={styles.center}><p style={styles.error}>Draft Prep is only available to team owners</p></div>;
-  return (
-    <DraftPrep
-      draftId={draftId}
-      leagueId={auth.leagueId}
-      token={auth.token}
-      teamId={auth.teamId}
-      leagueName={auth.leagueName}
-      teamName={auth.teamName ?? 'My Team'}
-    />
-  );
 }
 
 // ── Draft Complete route ───────────────────────────────────────────────────────
@@ -510,8 +461,6 @@ function DraftCompleteRoute({ auth }: { auth: AuthState }) {
       report={report}
       isCommissioner={auth.role === 'COMMISSIONER'}
       currentTeamId={auth.teamId ?? null}
-      leagueId={auth.leagueId}
-      token={auth.token}
     />
   );
 }
@@ -687,19 +636,18 @@ export function App() {
     <BrowserRouter>
       <LogoutButton auth={auth} onLogout={handleLogout} />
       <div className="app-content">
-        <Routes>
-          <Route path="/" element={
-            auth.role === 'COMMISSIONER' || auth.role === 'HOST'
-              ? <Navigate to="/commissioner" replace />
-              : <Navigate to="/lobby" replace />
-          } />
-          <Route path="/commissioner" element={<CommissionerRoute auth={auth} onStaleSession={handleLogout} />} />
-          <Route path="/lobby" element={<DraftGateway auth={auth} onStaleSession={handleLogout} />} />
-          <Route path="/draft-room" element={<DraftRoomRoute auth={auth} />} />
-          <Route path="/war-room" element={<WarRoomRoute auth={auth} />} />
-          <Route path="/draft-prep" element={<DraftPrepRoute auth={auth} />} />
-          <Route path="/draft-complete" element={<DraftCompleteRoute auth={auth} />} />
-        </Routes>
+      <Routes>
+        <Route path="/" element={
+          auth.role === 'COMMISSIONER'
+            ? <Navigate to="/commissioner" replace />
+            : <Navigate to="/lobby" replace />
+        } />
+        <Route path="/commissioner" element={<CommissionerRoute auth={auth} onStaleSession={handleLogout} />} />
+        <Route path="/lobby" element={<DraftGateway auth={auth} onStaleSession={handleLogout} />} />
+        <Route path="/draft-room" element={<DraftRoomRoute auth={auth} />} />
+        <Route path="/war-room" element={<WarRoomRoute auth={auth} />} />
+        <Route path="/draft-complete" element={<DraftCompleteRoute auth={auth} />} />
+      </Routes>
       </div>
     </BrowserRouter>
   );

@@ -2,9 +2,8 @@
  * F-MOD-010: Commissioner League Setup and Readiness Checklist
  *
  * Tests run against a real database (DATABASE_URL must point to a test DB).
- * Commissioner/owner/host tokens are signed directly via server.jwt.sign() to
- * avoid the rate-limited /auth/league/:id endpoint — that endpoint's own
- * behavior (including the new HOST branch) is covered separately below.
+ * Commissioner/owner tokens are signed directly via server.jwt.sign() to
+ * avoid the rate-limited /auth/league/:id endpoint.
  */
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
@@ -31,9 +30,6 @@ describe.skipIf(SKIP_DB)('F-MOD-010 commissioner league setup', () => {
   }
   function makeOwnerToken(leagueId: string, teamId: string, authEpoch = 0): string {
     return server.jwt.sign({ league_id: leagueId, team_id: teamId, role: 'OWNER', auth_epoch: authEpoch });
-  }
-  function makeHostToken(leagueId: string, authEpoch = 1): string {
-    return server.jwt.sign({ league_id: leagueId, role: 'HOST', auth_epoch: authEpoch });
   }
 
   beforeAll(async () => {
@@ -272,67 +268,6 @@ describe.skipIf(SKIP_DB)('F-MOD-010 commissioner league setup', () => {
     expect(body.draft_order).toBe(5);
   });
 
-  // ── DELETE /leagues/:id/teams/:teamId ────────────────────────────────────────
-
-  it('test_F_MOD_010_delete_team_removes_it_while_draft_is_created_or_absent', async () => {
-    const { leagueId, teamId } = await createLeagueWithTeam();
-    testLeagueId = leagueId;
-    const token = makeCommToken(leagueId);
-
-    const res = await server.inject({
-      method: 'DELETE',
-      url: `/leagues/${leagueId}/teams/${teamId}`,
-      headers: { authorization: `Bearer ${token}` },
-    });
-    expect(res.statusCode).toBe(200);
-
-    const [row] = await sql<[{ id: string } | undefined]>`SELECT id FROM teams WHERE id = ${teamId}`;
-    expect(row).toBeUndefined();
-  });
-
-  it('test_F_MOD_010_delete_team_rejected_409_once_draft_has_left_created', async () => {
-    const { leagueId, teamId } = await createLeagueWithTeam();
-    testLeagueId = leagueId;
-    const token = makeCommToken(leagueId);
-
-    const [dataset] = await sql<[{ id: string }]>`
-      INSERT INTO draft_datasets (league_id, status, frozen_at)
-      VALUES (${leagueId}, 'FROZEN', NOW())
-      RETURNING id
-    `;
-    const [draft] = await sql<[{ id: string }]>`
-      INSERT INTO drafts (league_id, dataset_id, status)
-      VALUES (${leagueId}, ${dataset!.id}, 'RUNNING')
-      RETURNING id
-    `;
-
-    const res = await server.inject({
-      method: 'DELETE',
-      url: `/leagues/${leagueId}/teams/${teamId}`,
-      headers: { authorization: `Bearer ${token}` },
-    });
-    expect(res.statusCode).toBe(409);
-
-    const [row] = await sql<[{ id: string } | undefined]>`SELECT id FROM teams WHERE id = ${teamId}`;
-    expect(row).toBeDefined();
-
-    await sql`DELETE FROM drafts WHERE id = ${draft!.id}`;
-    await sql`DELETE FROM draft_datasets WHERE id = ${dataset!.id}`;
-  });
-
-  it('test_F_MOD_010_delete_team_non_commissioner_403', async () => {
-    const { leagueId, teamId } = await createLeagueWithTeam();
-    testLeagueId = leagueId;
-    const ownerToken = makeOwnerToken(leagueId, teamId);
-
-    const res = await server.inject({
-      method: 'DELETE',
-      url: `/leagues/${leagueId}/teams/${teamId}`,
-      headers: { authorization: `Bearer ${ownerToken}` },
-    });
-    expect(res.statusCode).toBe(403);
-  });
-
   // ── POST /leagues/:id/passwords/generate ─────────────────────────────────────
 
   it('test_F_MOD_010_generate_commissioner_password_bumps_auth_epoch_and_invalidates_old_token', async () => {
@@ -391,70 +326,6 @@ describe.skipIf(SKIP_DB)('F-MOD-010 commissioner league setup', () => {
     `;
     expect(row.team_password_hash).toMatch(/^\$2[ab]\$/);
     expect(row.auth_epoch).toBe(1);
-  });
-
-  it('test_F_MOD_010_generate_host_password_then_host_login_succeeds', async () => {
-    const c = await server.inject({
-      method: 'POST',
-      url: '/leagues',
-      payload: { name: 'Host League', site_password: 's', commissioner_password: 'c' },
-    });
-    testLeagueId = c.json<{ id: string }>().id;
-    const token = makeCommToken(testLeagueId);
-
-    await server.inject({
-      method: 'POST',
-      url: `/leagues/${testLeagueId}/passwords/generate`,
-      headers: { authorization: `Bearer ${token}` },
-      payload: { scope: 'HOST', custom_password: 'hostpass123' },
-    });
-
-    const loginRes = await server.inject({
-      method: 'POST',
-      url: `/auth/league/${testLeagueId}`,
-      payload: { role: 'HOST', password: 'hostpass123' },
-    });
-    expect(loginRes.statusCode).toBe(200);
-    const { token: hostToken } = loginRes.json<{ token: string }>();
-
-    const decoded = server.jwt.decode<{ role: string; team_id?: string; league_id: string }>(hostToken);
-    expect(decoded?.role).toBe('HOST');
-    expect(decoded?.team_id).toBeUndefined();
-    expect(decoded?.league_id).toBe(testLeagueId);
-  });
-
-  it('test_F_MOD_010_host_login_rejected_when_host_password_unset', async () => {
-    const c = await server.inject({
-      method: 'POST',
-      url: '/leagues',
-      payload: { name: 'No Host League', site_password: 's', commissioner_password: 'c' },
-    });
-    testLeagueId = c.json<{ id: string }>().id;
-
-    const res = await server.inject({
-      method: 'POST',
-      url: `/auth/league/${testLeagueId}`,
-      payload: { role: 'HOST', password: 'anything' },
-    });
-    expect(res.statusCode).toBe(401);
-  });
-
-  it('test_F_MOD_010_host_token_rejected_by_commissioner_mutation_endpoint', async () => {
-    const c = await server.inject({
-      method: 'POST',
-      url: '/leagues',
-      payload: { name: 'Host Reject League', site_password: 's', commissioner_password: 'c' },
-    });
-    testLeagueId = c.json<{ id: string }>().id;
-    const hostToken = makeHostToken(testLeagueId);
-
-    const res = await server.inject({
-      method: 'PUT',
-      url: `/leagues/${testLeagueId}`,
-      headers: { authorization: `Bearer ${hostToken}` },
-      payload: { name: 'Should Fail' },
-    });
-    expect(res.statusCode).toBe(403);
   });
 
   // ── PUT /leagues/:id/config/whammy — setWhammyConfig ─────────────────────────

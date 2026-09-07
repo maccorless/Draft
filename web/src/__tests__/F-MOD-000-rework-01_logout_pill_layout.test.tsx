@@ -23,11 +23,17 @@ function read(relPath: string): string {
 
 describe('logout pill does not overlap page content', () => {
   it('test_F-MOD-000-rework-01_app_content_reserves_top_space_below_pill', () => {
-    const css = read('app-chrome.css');
-    const match = css.match(/\.app-content\s*\{[^}]*padding-top:\s*(\d+)px/);
-    expect(match).toBeTruthy();
-    // Pill: top offset 12px + ~40px height — reserve at least that much.
-    expect(Number(match?.[1])).toBeGreaterThanOrEqual(52);
+    const appChrome = read('app-chrome.css');
+    const tokens = read('styles/tokens.css');
+
+    // .app-content must use --header-height custom property
+    expect(appChrome).toMatch(/\.app-content\s*\{[^}]*padding-top:\s*var\(--header-height\)/);
+
+    // --header-height must be defined in tokens with a value >= 52px
+    // (pill: top 12px + ~40px height)
+    const hMatch = tokens.match(/--header-height:\s*(\d+)px/);
+    expect(hMatch).toBeTruthy();
+    expect(Number(hMatch?.[1])).toBeGreaterThanOrEqual(52);
   });
 
   it('test_F-MOD-000-rework-01_commissioner_header_reserves_right_space_for_pill', () => {

@@ -6,13 +6,14 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { WifiHigh, WifiMedium, WifiSlash, Robot } from '@phosphor-icons/react';
+import { Robot } from '@phosphor-icons/react';
 
 import { useAuctionSocket } from '../../lib/useAuctionSocket.js';
 import { NominationAudioPlayer } from '../../components/NominationAudioPlayer.js';
 import { TeamIcon } from '../../components/TeamIcon.js';
 import { AuctionCloseCard } from '../../components/AuctionCloseCard.js';
 import { PlayerDetailPopover } from '../../components/PlayerDetailPopover.js';
+import { ConnectionBadge } from '../../components/ConnectionBadge.js';
 import type { AwardEntry } from '../../lib/useAuctionSocket.js';
 import './draft-room.css';
 
@@ -22,7 +23,7 @@ interface DraftRoomProps {
   token: string;
   teamId: string | null;
   /** Optional — when 'COMMISSIONER', the in-room Pause Draft action is shown (UF-01-03 item 3). */
-  role?: 'COMMISSIONER' | 'OWNER' | 'HOST';
+  role?: 'COMMISSIONER' | 'OWNER';
 }
 
 interface RosterSlotDef {
@@ -113,21 +114,6 @@ function computeWouldFill(slots: RosterSlotDef[], filled: GridSlot[], playerPosi
   return '—';
 }
 
-/** Tab-vs-player-position eligibility for the persistent player list (UF-17-07
- * item 1). Mirrors the FLEX/SUPERFLEX eligibility computeWouldFill already
- * uses server-side (engine.ts's assignRosterSlot), so "FLEX-eligible" in the
- * tab means the same thing it means for roster assignment. */
-function positionMatchesTab(playerPosition: string, tab: string): boolean {
-  if (tab === 'ALL') return true;
-  const pos = playerPosition.toUpperCase();
-  if (pos === tab) return true;
-  if (tab === 'FLEX') return pos === 'RB' || pos === 'WR' || pos === 'TE';
-  if (tab === 'SUPERFLEX') return pos === 'QB' || pos === 'RB' || pos === 'WR' || pos === 'TE';
-  return false;
-}
-
-type PlayerListSortKey = 'name' | 'position' | 'aav' | 'points';
-
 function useCountdown(deadlineTs: number | null): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -146,16 +132,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
   const [rosterGrid, setRosterGrid] = useState<GridTeam[]>([]);
   const [players, setPlayers] = useState<DatasetPlayer[]>([]);
   const [customAmount, setCustomAmount] = useState('');
-  // UF-17-07 item 1: the persistent player list panel's own filter/sort/search
-  // state — separate from bid-related state above.
-  const [playerListTab, setPlayerListTab] = useState('ALL');
-  const [playerListSearch, setPlayerListSearch] = useState('');
-  // Sortable columns (name/position/projected points) added alongside the
-  // default AAV-desc ranking below — clicking a header switches to it.
-  const [playerListSort, setPlayerListSort] = useState<{ key: PlayerListSortKey; dir: 'asc' | 'desc' }>({
-    key: 'aav',
-    dir: 'desc',
-  });
+  const [nominateSearch, setNominateSearch] = useState('');
   const [targets, setTargets] = useState<TargetItem[]>([]);
   const [closeCardAward, setCloseCardAward] = useState<AwardEntry | null>(null);
   const [showPopover, setShowPopover] = useState(false);
@@ -198,24 +175,30 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
     }
   }, [ws.recentAwards.length]);
 
-  // Anti-snipe extension + Whammy toasts: same ephemeral, self-dismissing
-  // pattern as the close card, keyed on receivedAt so a repeat of the same
-  // event still re-triggers the auto-dismiss timer.
+  // Anti-snipe extension toast: 3s auto-dismiss, re-triggers on each new notice.
   const [antiSnipeVisible, setAntiSnipeVisible] = useState(false);
   useEffect(() => {
     if (!ws.antiSnipeNotice) return;
     setAntiSnipeVisible(true);
-    const timer = setTimeout(() => setAntiSnipeVisible(false), 4000);
+    const timer = setTimeout(() => setAntiSnipeVisible(false), 3000);
     return () => clearTimeout(timer);
   }, [ws.antiSnipeNotice?.receivedAt]);
 
+  // Whammy overlay: not dismissable, 5s minimum then auto-dismiss, or clears
+  // when draft status returns to RUNNING (server auto-resumed after pause).
   const [whammyVisible, setWhammyVisible] = useState(false);
   useEffect(() => {
     if (!ws.whammyNotice) return;
     setWhammyVisible(true);
-    const timer = setTimeout(() => setWhammyVisible(false), 4000);
+    const timer = setTimeout(() => setWhammyVisible(false), 8000);
     return () => clearTimeout(timer);
   }, [ws.whammyNotice?.receivedAt]);
+  useEffect(() => {
+    if (ws.draftStatus === 'RUNNING') setWhammyVisible(false);
+  }, [ws.draftStatus]);
+
+  // Whammy countdown: display-only timer using pause_until_ms.
+  const whammySecondsLeft = useCountdown(ws.whammyNotice?.pause_until_ms ?? null);
 
   // The popover is scoped to whichever player is currently up for auction —
   // close it rather than let it silently show stale data for a new player.
@@ -347,62 +330,13 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
   const isMyNominationTurn = !auction && teamId !== null && ws.currentNominatorTeamId === teamId;
   const nominationSecondsLeft = useCountdown(!auction ? ws.nominationDeadlineTs : null);
 
-  // UF-17-07 item 1: position tabs derived from the league's starter
-  // roster_slot_definitions (bench/'BN' excluded — it isn't a position),
-  // deduped and preserving the server's priority order, prefixed with "All".
-  const positionTabs = useMemo(() => {
-    const slots = config?.roster_slots ?? [];
-    const seen = new Set<string>();
-    const tabs: string[] = [];
-    for (const slot of slots) {
-      if (!slot.is_starter) continue;
-      const pos = slot.position.toUpperCase();
-      if (pos === 'BN' || pos === 'BENCH') continue;
-      if (seen.has(pos)) continue;
-      seen.add(pos);
-      tabs.push(pos);
-    }
-    return ['ALL', ...tabs];
-  }, [config]);
-
-  // Persistent, position-filterable, sortable undrafted-player list — default
-  // sorted aav_minor desc, projected_points desc as tiebreak (unless the
-  // owner has clicked a Name/Position/Projected Points column header); free-
-  // text search narrows further without replacing the persistent listing.
-  const rankedPlayers = useMemo(() => {
-    const q = playerListSearch.trim().toLowerCase();
-    const dirMul = playerListSort.dir === 'asc' ? 1 : -1;
+  const availablePlayers = useMemo(() => {
+    if (!nominateSearch.trim()) return [];
+    const q = nominateSearch.toLowerCase();
     return players
-      .filter((p) => !drafted.has(p.name))
-      .filter((p) => positionMatchesTab(p.position, playerListTab))
-      .filter((p) => !q || p.name.toLowerCase().includes(q))
-      .sort((a, b) => {
-        switch (playerListSort.key) {
-          case 'name':
-            return dirMul * a.name.localeCompare(b.name);
-          case 'position':
-            return dirMul * a.position.localeCompare(b.position);
-          case 'points': {
-            const bp = b.projected_points ?? -Infinity;
-            const ap = a.projected_points ?? -Infinity;
-            return dirMul * (ap - bp);
-          }
-          case 'aav':
-          default: {
-            if (b.aav_minor !== a.aav_minor) return dirMul * (a.aav_minor - b.aav_minor);
-            const bp = b.projected_points ?? -Infinity;
-            const ap = a.projected_points ?? -Infinity;
-            return bp - ap;
-          }
-        }
-      });
-  }, [players, drafted, playerListTab, playerListSearch, playerListSort]);
-
-  function togglePlayerListSort(key: PlayerListSortKey): void {
-    setPlayerListSort((prev) =>
-      prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' },
-    );
-  }
+      .filter((p) => !drafted.has(p.name) && p.name.toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [players, drafted, nominateSearch]);
 
   // Re-enable the +$1 button once a NEWER auction-state broadcast has been
   // applied (a different player_auction_id, or a version bump on the same
@@ -449,7 +383,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
   function handleNominate(entryId: string, aavMinor: number): void {
     ws.nominate(entryId, Math.max(config?.auction?.min_bid_minor ?? 100, 100));
     void aavMinor;
-    setPlayerListSearch('');
+    setNominateSearch('');
   }
 
   // UF-01-03 item 3: an owner who is also the commissioner needs a visible
@@ -466,15 +400,6 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
       .finally(() => navigate('/commissioner'));
   }
 
-  const connectionMeta: Record<string, { icon: typeof WifiHigh; label: string }> = {
-    open: { icon: WifiHigh, label: 'Live' },
-    connecting: { icon: WifiMedium, label: 'Connecting…' },
-    reconnecting: { icon: WifiSlash, label: 'Reconnecting…' },
-    closed: { icon: WifiSlash, label: 'Offline' },
-  };
-  const connMeta = connectionMeta[ws.connectionStatus] ?? connectionMeta['closed']!;
-  const ConnIcon = connMeta.icon;
-
   return (
     <div className="draft-room">
       <NominationAudioPlayer cue={ws.nominationAudioCue} />
@@ -485,12 +410,6 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
           onDismiss={dismissCloseCard}
         />
       )}
-      {whammyVisible && ws.whammyNotice && (
-        <div className="draft-room__whammy-toast" role="status" data-testid="whammy-toast">
-          {(rosterGrid.find((t) => t.team_id === ws.whammyNotice!.team_id)?.team_name ?? 'A team')} —{' '}
-          {ws.whammyNotice.description || 'Whammy'} ({formatMoney(ws.whammyNotice.amount_minor)})
-        </div>
-      )}
       {showPopover && auction && activePlayerDetail && (
         <PlayerDetailPopover
           player={activePlayerDetail}
@@ -498,6 +417,24 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
           comparables={comparablePlayers}
           onClose={() => setShowPopover(false)}
         />
+      )}
+      {/* Whammy overlay — not dismissable, auto-clears after 8s or on draft resume. */}
+      {whammyVisible && ws.whammyNotice && (
+        <div className="draft-room__whammy-overlay" role="alertdialog" aria-label="Whammy" data-testid="whammy-overlay">
+          <div className="draft-room__whammy-body">
+            <p className="draft-room__whammy-title">WHAMMY!</p>
+            <p className="draft-room__whammy-team">
+              {rosterGrid.find((t) => t.team_id === ws.whammyNotice!.team_id)?.team_name ?? 'A team'}
+            </p>
+            <p className="draft-room__whammy-desc">{ws.whammyNotice.description || 'Budget event'}</p>
+            <p className="draft-room__whammy-amount">{formatMoney(ws.whammyNotice.amount_minor)}</p>
+            {ws.whammyNotice.pause_until_ms !== null && whammySecondsLeft > 0 && (
+              <p className="draft-room__whammy-countdown">
+                Draft paused — resuming in {whammySecondsLeft}s
+              </p>
+            )}
+          </div>
+        </div>
       )}
       <header className="draft-room__topbar">
         <span className="draft-room__title">Draft Room</span>
@@ -531,44 +468,9 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
               Pause Draft
             </button>
           )}
-          <span
-            className={`draft-room__conn draft-room__conn--${ws.connectionStatus}`}
-            data-testid="connection-status"
-          >
-            <ConnIcon size={14} weight="bold" /> {connMeta.label}
-          </span>
+          <ConnectionBadge connectionStatus={ws.connectionStatus} latencyMs={ws.latencyMs} />
         </div>
       </header>
-
-      {/* UF-17-07 item 2: compact team-by-team strip — every team in
-          nomination order (server's draft_order, same as /roster-grid
-          already returns) with icon/name/budget, and the current leader
-          highlighted with the current bid whenever a PlayerAuction is open.
-          Deliberate small Draft Room addition per the feedback item, not a
-          duplicate of the War Room's fuller team/budget tables. */}
-      <div className="draft-room__team-strip" aria-label="Teams" data-testid="team-strip">
-        {rosterGrid.map((team) => {
-          const isAuctionLeader = !!(auction && team.team_id === auction.leading_team_id);
-          return (
-            <div
-              key={team.team_id}
-              className={`draft-room__team-strip-item${isAuctionLeader ? ' draft-room__team-strip-item--leading' : ''}`}
-              data-testid={`team-strip-${team.team_id}`}
-            >
-              <TeamIcon iconUrl={team.icon_url} className="draft-room__team-strip-icon" />
-              <span className="draft-room__team-strip-name">{team.team_name}</span>
-              <span className="draft-room__team-strip-budget" data-testid={`team-strip-budget-${team.team_id}`}>
-                {formatMoney(team.remaining_budget_minor)}
-              </span>
-              {isAuctionLeader && auction && (
-                <span className="draft-room__team-strip-bid" data-testid={`team-strip-bid-${team.team_id}`}>
-                  {formatMoney(auction.current_bid_minor)}
-                </span>
-              )}
-            </div>
-          );
-        })}
-      </div>
 
       <div className="draft-room__layout">
         <aside className="draft-room__team-context" aria-label="My Team">
@@ -628,12 +530,6 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                           >
                             <span className="draft-room__roster-slot-player-name">{player.name}</span>
                             <span className="draft-room__roster-slot-player-price">{formatMoney(player.price_minor)}</span>
-                            <span className="draft-room__roster-slot-player-bye" data-testid={`roster-slot-${slot.position}-player-${i}-bye`}>
-                              {players.find((p) => p.name === player.name)?.bye_week ?? '—'}
-                            </span>
-                            <span className="draft-room__roster-slot-player-points" data-testid={`roster-slot-${slot.position}-player-${i}-points`}>
-                              {players.find((p) => p.name === player.name)?.projected_points ?? '—'}
-                            </span>
                           </li>
                         ))}
                       </ul>
@@ -664,7 +560,6 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
         </aside>
 
         <main className="draft-room__active-auction" aria-label="Active Auction">
-          <div className="draft-room__bid-area">
           {!auction ? (
             <div className="draft-room__no-auction">
               {ws.draftStatus === 'COMPLETE' ? (
@@ -675,9 +570,33 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   {nominationSecondsLeft > 0 && (
                     <p className="draft-room__nominate-timer">{nominationSecondsLeft}s</p>
                   )}
-                  <p className="draft-room__nominate-hint">
-                    Select a player from the list below to nominate.
-                  </p>
+                  <input
+                    className="draft-room__nominate-search"
+                    type="text"
+                    placeholder="Search a player to nominate…"
+                    value={nominateSearch}
+                    onChange={(e) => setNominateSearch(e.target.value)}
+                    aria-label="Search players to nominate"
+                    data-testid="nominate-search"
+                  />
+                  {availablePlayers.length > 0 && (
+                    <ul className="draft-room__nominate-results">
+                      {availablePlayers.map((p) => (
+                        <li key={p.dataset_entry_id}>
+                          <button
+                            className="draft-room__nominate-result"
+                            onClick={() => handleNominate(p.dataset_entry_id, p.aav_minor)}
+                            data-testid={`nominate-${p.dataset_entry_id}`}
+                          >
+                            <span>{p.name}</span>
+                            <span className="draft-room__nominate-meta">
+                              {p.position} · {p.nfl_team} · AAV {formatMoney(p.aav_minor)}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               ) : (
                 <p>Waiting for the next nomination…</p>
@@ -706,26 +625,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   {auction.position} · {auction.nfl_team}
                   {auction.tier !== null && ` · Tier ${auction.tier}`}
                 </p>
-                <p className="draft-room__player-stats-row">
-                  <span className="draft-room__player-aav">AAV {formatMoney(auction.aav_minor)}</span>
-                  {activePlayerDetail?.projected_points != null && (
-                    <span className="draft-room__player-proj-points" data-testid="active-player-projected-points">
-                      Proj {activePlayerDetail.projected_points.toFixed(1)} pts
-                    </span>
-                  )}
-                  {activePlayerDetail?.bye_week != null && (
-                    <span className="draft-room__player-bye" data-testid="active-player-bye-week">
-                      Bye {activePlayerDetail.bye_week}
-                    </span>
-                  )}
-                </p>
-                <p className="draft-room__my-target-slot">
-                  {myTargetValueMinor !== null && (
-                    <span className="draft-room__my-target" data-testid="my-target-value">
-                      My Target {formatMoney(myTargetValueMinor)}
-                    </span>
-                  )}
-                </p>
+                <p className="draft-room__player-aav">AAV {formatMoney(auction.aav_minor)}</p>
               </div>
 
               <div className="draft-room__price-block">
@@ -742,20 +642,17 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                 </div>
               </div>
 
-              <div className="draft-room__status-strip">
-                {antiSnipeVisible && (
-                  <div className="draft-room__anti-snipe-badge" role="status" data-testid="anti-snipe-badge">
-                    Deadline extended — anti-snipe
-                  </div>
-                )}
-
-                {ws.lastError && (
-                  <div className="draft-room__bid-error" role="alert" data-testid="bid-error">
-                    {ws.lastError.reason}
-                    <button onClick={ws.clearError} aria-label="Dismiss">×</button>
-                  </div>
-                )}
-              </div>
+              {antiSnipeVisible && (
+                <div className="draft-room__anti-snipe-badge" role="status" data-testid="anti-snipe-badge">
+                  ⏱ Timer extended — late bid detected
+                </div>
+              )}
+              {ws.lastError && (
+                <div className="draft-room__bid-error" role="alert" data-testid="bid-error">
+                  {ws.lastError.reason}
+                  <button onClick={ws.clearError} aria-label="Dismiss">×</button>
+                </div>
+              )}
 
               <div className="draft-room__bid-controls" aria-label="Bid controls">
                 <button
@@ -785,13 +682,11 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   </button>
                 </form>
 
-                <div className="draft-room__bid-footer">
-                  {canMatch && (
-                    <button className="draft-room__match-btn" onClick={ws.nominatorMatch} data-testid="match-button">
-                      MATCH {formatMoney(auction.current_bid_minor)}
-                    </button>
-                  )}
-                </div>
+                {canMatch && (
+                  <button className="draft-room__match-btn" onClick={ws.nominatorMatch} data-testid="match-button">
+                    MATCH {formatMoney(auction.current_bid_minor)}
+                  </button>
+                )}
 
                 {isLeading && <p className="draft-room__leading-note">You're winning this auction.</p>}
               </div>
@@ -803,106 +698,6 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
               )}
             </>
           )}
-          </div>
-
-          {/* UF-17-07 item 1: persistent, position-filterable, sortable player
-              list — replaces the old search-only-during-your-turn flow.
-              Always visible; clicking a row only nominates while it's the
-              viewing owner's turn (same NOMINATE_COMMAND path, same
-              min_bid_minor default as the old search results used). */}
-          <section className="draft-room__player-list" aria-label="Available Players" data-testid="player-list-panel">
-            <h2 className="draft-room__panel-heading">Available Players</h2>
-            <div className="draft-room__player-list-tabs" role="tablist">
-              {positionTabs.map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  className={`draft-room__player-list-tab${playerListTab === tab ? ' draft-room__player-list-tab--active' : ''}`}
-                  onClick={() => setPlayerListTab(tab)}
-                  aria-pressed={playerListTab === tab}
-                  data-testid={`player-list-tab-${tab}`}
-                >
-                  {tab === 'ALL' ? 'All' : tab}
-                </button>
-              ))}
-            </div>
-            <input
-              className="draft-room__player-list-search"
-              type="text"
-              placeholder="Search players…"
-              value={playerListSearch}
-              onChange={(e) => setPlayerListSearch(e.target.value)}
-              aria-label="Search available players"
-              data-testid="player-list-search"
-            />
-            <div className="draft-room__player-list-table-wrap" data-testid="player-list-rows">
-              <table className="draft-room__player-list-table">
-                <thead>
-                  <tr>
-                    <th
-                      className="draft-room__player-list-sortable"
-                      onClick={() => togglePlayerListSort('name')}
-                      data-testid="player-list-sort-name"
-                    >
-                      Name{playerListSort.key === 'name' && (playerListSort.dir === 'asc' ? ' ▲' : ' ▼')}
-                    </th>
-                    <th
-                      className="draft-room__player-list-sortable"
-                      onClick={() => togglePlayerListSort('position')}
-                      data-testid="player-list-sort-position"
-                    >
-                      Pos{playerListSort.key === 'position' && (playerListSort.dir === 'asc' ? ' ▲' : ' ▼')}
-                    </th>
-                    <th>Team</th>
-                    <th
-                      className="draft-room__player-list-sortable"
-                      onClick={() => togglePlayerListSort('aav')}
-                      data-testid="player-list-sort-aav"
-                    >
-                      AAV{playerListSort.key === 'aav' && (playerListSort.dir === 'asc' ? ' ▲' : ' ▼')}
-                    </th>
-                    <th
-                      className="draft-room__player-list-sortable"
-                      onClick={() => togglePlayerListSort('points')}
-                      data-testid="player-list-sort-points"
-                    >
-                      Proj Pts{playerListSort.key === 'points' && (playerListSort.dir === 'asc' ? ' ▲' : ' ▼')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rankedPlayers.map((p) => (
-                    <tr
-                      key={p.dataset_entry_id}
-                      className="draft-room__player-list-row"
-                      data-testid={`player-list-row-${p.dataset_entry_id}`}
-                    >
-                      <td>
-                        <button
-                          type="button"
-                          className="draft-room__player-list-row-btn"
-                          onClick={() => handleNominate(p.dataset_entry_id, p.aav_minor)}
-                          disabled={!isMyNominationTurn}
-                          data-testid={`player-list-nominate-${p.dataset_entry_id}`}
-                        >
-                          {p.name}
-                        </button>
-                      </td>
-                      <td>{p.position}</td>
-                      <td>{p.nfl_team}</td>
-                      <td className="draft-room__player-list-num">{formatMoney(p.aav_minor)}</td>
-                      <td className="draft-room__player-list-num">{p.projected_points !== null ? p.projected_points : '—'}</td>
-                    </tr>
-                  ))}
-                  {rankedPlayers.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="draft-room__player-list-empty">No players match.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
         </main>
 
         <aside className="draft-room__recent-bids" aria-label="Recent Bids">
@@ -917,14 +712,9 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   <span className="draft-room__bid-ladder-team">
                     {rosterGrid.find((t) => t.team_id === entry.team_id)?.team_name ?? '—'}
                   </span>
-                  {entry.bid_type && (
-                    <span className="draft-room__bid-ladder-type" data-testid="bid-ladder-type">
-                      {entry.bid_type}
-                    </span>
-                  )}
-                  {entry.ms_remaining_at_receipt !== null && (
-                    <span className="draft-room__bid-ladder-remaining" data-testid="bid-ladder-remaining">
-                      {Math.max(0, Math.round(entry.ms_remaining_at_receipt / 1000))}s left
+                  {ws.penalizedTeamIds.has(entry.team_id) && (
+                    <span className="draft-room__bid-penalty-badge" data-testid={`penalty-badge-${entry.team_id}`}>
+                      ⚠ Penalty
                     </span>
                   )}
                 </li>
