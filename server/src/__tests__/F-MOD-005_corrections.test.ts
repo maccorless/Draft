@@ -295,7 +295,9 @@ describe.skipIf(SKIP_DB)('F-MOD-005 corrections and rollback', () => {
     // Clean in FK order
     if (draftId) {
       await sql`DELETE FROM roster_entries WHERE draft_id = ${draftId}`;
+      await sql`UPDATE whammy_events SET budget_ledger_entry_id = NULL WHERE draft_id = ${draftId}`;
       await sql`DELETE FROM budget_ledger_entries WHERE draft_id = ${draftId}`;
+      await sql`DELETE FROM whammy_events WHERE draft_id = ${draftId}`;
       await sql`DELETE FROM acquisitions WHERE draft_id = ${draftId}`;
       await sql`DELETE FROM bid_attempts WHERE draft_id = ${draftId}`;
       await sql`DELETE FROM draft_events WHERE draft_id = ${draftId}`;
@@ -817,5 +819,274 @@ describe.skipIf(SKIP_DB)('F-MOD-005 corrections and rollback', () => {
 
     ws.close();
     void acq1Id; // referenced in insertAwardedPick
+  });
+
+  // ── Rollback Preview (F-MOD-005-rework-01) ────────────────────────────────
+
+  it('test_F_MOD_005_rework_01_preview_returns_per_pick_breakdown_no_writes', async () => {
+    const { playerEntryIds } = await setupDraft({ draftStatus: 'PAUSED' });
+    const acq1Id = await insertAwardedPick({
+      playerEntryId: playerEntryIds[0]!,
+      teamId: team1Id,
+      priceMinor: 1000,
+      resolutionSequence: 1,
+    });
+    const acq2Id = await insertAwardedPick({
+      playerEntryId: playerEntryIds[1]!,
+      teamId: team1Id,
+      priceMinor: 500,
+      resolutionSequence: 2,
+    });
+
+    const [before] = await sql<[{ remaining_budget_minor: number }]>`
+      SELECT remaining_budget_minor FROM draft_team_states WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+
+    const res = await server.inject({
+      method: 'GET',
+      url: `/drafts/${draftId}/rollback/preview?count=2`,
+      headers: { authorization: `Bearer ${commToken}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{
+      would_roll_back: number;
+      picks: Array<{
+        acquisition_id: string;
+        player_name: string;
+        team_id: string;
+        price_minor: number;
+        budget_return_minor: number;
+        vacated_roster_slot: string | null;
+        whammy_interactions: unknown[];
+      }>;
+      state_version: number;
+    }>();
+
+    expect(body.would_roll_back).toBe(2);
+    // Highest resolution_sequence first (reverse order): acq2 (seq 2) then acq1 (seq 1)
+    expect(body.picks[0]!.acquisition_id).toBe(acq2Id);
+    expect(body.picks[0]!.price_minor).toBe(500);
+    expect(body.picks[0]!.budget_return_minor).toBe(500);
+    expect(body.picks[0]!.vacated_roster_slot).toBeTruthy();
+    expect(body.picks[1]!.acquisition_id).toBe(acq1Id);
+    expect(body.picks[1]!.budget_return_minor).toBe(1000);
+    expect(typeof body.state_version).toBe('number');
+
+    // No writes performed — acquisitions still active, budget unchanged
+    const activeAcqs = await sql<[{ count: number }]>`
+      SELECT COUNT(*)::int AS count FROM acquisitions WHERE draft_id = ${draftId} AND active = true
+    `;
+    expect(activeAcqs[0]!.count).toBe(2);
+    const [after] = await sql<[{ remaining_budget_minor: number }]>`
+      SELECT remaining_budget_minor FROM draft_team_states WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+    expect(after!.remaining_budget_minor).toBe(before!.remaining_budget_minor);
+  });
+
+  it('test_F_MOD_005_rework_01_preview_returns_only_available_picks_when_count_exceeds', async () => {
+    const { playerEntryIds } = await setupDraft({ draftStatus: 'PAUSED' });
+    await insertAwardedPick({
+      playerEntryId: playerEntryIds[0]!,
+      teamId: team1Id,
+      priceMinor: 1000,
+      resolutionSequence: 1,
+    });
+
+    const res = await server.inject({
+      method: 'GET',
+      url: `/drafts/${draftId}/rollback/preview?count=5`,
+      headers: { authorization: `Bearer ${commToken}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{ would_roll_back: number; picks: unknown[] }>();
+    expect(body.would_roll_back).toBe(1);
+    expect(body.picks).toHaveLength(1);
+  });
+
+  it('test_F_MOD_005_rework_01_preview_returns_409_when_no_picks_available', async () => {
+    await setupDraft({ draftStatus: 'PAUSED' });
+
+    const res = await server.inject({
+      method: 'GET',
+      url: `/drafts/${draftId}/rollback/preview?count=1`,
+      headers: { authorization: `Bearer ${commToken}` },
+    });
+
+    expect(res.statusCode).toBe(409);
+  });
+
+  it('test_F_MOD_005_rework_01_preview_non_commissioner_returns_403', async () => {
+    const { playerEntryIds } = await setupDraft({ draftStatus: 'PAUSED' });
+    await insertAwardedPick({
+      playerEntryId: playerEntryIds[0]!,
+      teamId: team1Id,
+      priceMinor: 1000,
+      resolutionSequence: 1,
+    });
+
+    const res = await server.inject({
+      method: 'GET',
+      url: `/drafts/${draftId}/rollback/preview?count=1`,
+      headers: { authorization: `Bearer ${team1Token}` },
+    });
+
+    expect(res.statusCode).toBe(403);
+  });
+
+  it('test_F_MOD_005_rework_01_preview_includes_whammy_interactions_at_or_after_trigger_sequence', async () => {
+    const { playerEntryIds } = await setupDraft({ draftStatus: 'PAUSED' });
+    const acqId = await insertAwardedPick({
+      playerEntryId: playerEntryIds[0]!,
+      teamId: team1Id,
+      priceMinor: 1000,
+      resolutionSequence: 1,
+    });
+
+    // Directly insert a WHAMMY that landed at draft_event sequence 2 (>= pick's resolution_sequence=1)
+    const [we] = await sql<[{ id: string }]>`
+      INSERT INTO whammy_events (draft_id, team_id, amount_minor, description, status)
+      VALUES (${draftId}, ${team1Id}, -300, 'Bad luck tax', 'APPLIED')
+      RETURNING id
+    `;
+    const [ble] = await sql<[{ id: string }]>`
+      INSERT INTO budget_ledger_entries (draft_id, team_id, reference_id, amount_minor, entry_type, active)
+      VALUES (${draftId}, ${team1Id}, ${we!.id}, -300, 'WHAMMY', true)
+      RETURNING id
+    `;
+    await sql`UPDATE whammy_events SET budget_ledger_entry_id = ${ble!.id} WHERE id = ${we!.id}`;
+    await sql`
+      INSERT INTO draft_events (draft_id, sequence, event_type, team_id, payload, created_at)
+      VALUES (${draftId}, 2, 'WHAMMY_APPLIED', ${team1Id},
+        ${JSON.stringify({ whammy_event_id: we!.id, team_id: team1Id, amount_minor: -300 })}::jsonb, NOW())
+    `;
+
+    const res = await server.inject({
+      method: 'GET',
+      url: `/drafts/${draftId}/rollback/preview?count=1`,
+      headers: { authorization: `Bearer ${commToken}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json<{
+      picks: Array<{
+        acquisition_id: string;
+        whammy_interactions: Array<{ whammy_id: string; amount_minor: number; description: string }>;
+      }>;
+    }>();
+    expect(body.picks[0]!.acquisition_id).toBe(acqId);
+    expect(body.picks[0]!.whammy_interactions).toHaveLength(1);
+    expect(body.picks[0]!.whammy_interactions[0]!.whammy_id).toBe(we!.id);
+    expect(body.picks[0]!.whammy_interactions[0]!.amount_minor).toBe(-300);
+    expect(body.picks[0]!.whammy_interactions[0]!.description).toBe('Bad luck tax');
+  });
+
+  // ── Rollback reverses Whammy financial effects (F-MOD-009-rework-01 U8: ────
+  // constraint #10 / EXTRACTED-014 — a rollback past a Whammy's trigger point
+  // must reverse it generically, not just refund the pick's own award price.
+
+  it('test_F_MOD_005_rollback_reverses_whammy_applied_at_or_after_rolled_back_pick', async () => {
+    const { playerEntryIds } = await setupDraft({ draftStatus: 'PAUSED' });
+    await insertAwardedPick({
+      playerEntryId: playerEntryIds[0]!,
+      teamId: team1Id,
+      priceMinor: 1000,
+      resolutionSequence: 1,
+    });
+
+    const [we] = await sql<[{ id: string }]>`
+      INSERT INTO whammy_events (draft_id, team_id, amount_minor, description, status)
+      VALUES (${draftId}, ${team1Id}, -300, 'Bad luck tax', 'APPLIED')
+      RETURNING id
+    `;
+    const [ble] = await sql<[{ id: string }]>`
+      INSERT INTO budget_ledger_entries (draft_id, team_id, reference_id, amount_minor, entry_type, active)
+      VALUES (${draftId}, ${team1Id}, ${we!.id}, -300, 'WHAMMY', true)
+      RETURNING id
+    `;
+    await sql`UPDATE whammy_events SET budget_ledger_entry_id = ${ble!.id} WHERE id = ${we!.id}`;
+    await sql`
+      INSERT INTO draft_events (draft_id, sequence, event_type, team_id, payload, created_at)
+      VALUES (${draftId}, 2, 'WHAMMY_APPLIED', ${team1Id},
+        ${JSON.stringify({ whammy_event_id: we!.id, team_id: team1Id, amount_minor: -300 })}::jsonb, NOW())
+    `;
+
+    const [before] = await sql<[{ remaining_budget_minor: number }]>`
+      SELECT remaining_budget_minor FROM draft_team_states WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+
+    const res = await server.inject({
+      method: 'POST',
+      url: `/drafts/${draftId}/rollback`,
+      headers: { authorization: `Bearer ${commToken}` },
+      payload: { count: 1 },
+    });
+    expect(res.statusCode).toBe(200);
+
+    // Refund is the award price (1000) PLUS reversing the -300 Whammy debit
+    // (a +300 compensating entry) = +1300 total vs. pre-rollback budget.
+    const [after] = await sql<[{ remaining_budget_minor: number }]>`
+      SELECT remaining_budget_minor FROM draft_team_states WHERE draft_id = ${draftId} AND team_id = ${team1Id}
+    `;
+    expect(after!.remaining_budget_minor).toBe(before!.remaining_budget_minor + 1300);
+
+    const [weAfter] = await sql<[{ status: string }]>`
+      SELECT status FROM whammy_events WHERE id = ${we!.id}
+    `;
+    expect(weAfter!.status).toBe('REVERSED');
+
+    const compensatingEntries = await sql<Array<{ amount_minor: number }>>`
+      SELECT amount_minor FROM budget_ledger_entries
+      WHERE draft_id = ${draftId} AND reference_id = ${we!.id} AND entry_type = 'ROLLBACK'
+    `;
+    expect(compensatingEntries).toHaveLength(1);
+    expect(compensatingEntries[0]!.amount_minor).toBe(300);
+  });
+
+  it('test_F_MOD_005_rollback_does_not_touch_whammy_before_rolled_back_pick', async () => {
+    const { playerEntryIds } = await setupDraft({ draftStatus: 'PAUSED' });
+    await insertAwardedPick({
+      playerEntryId: playerEntryIds[0]!,
+      teamId: team1Id,
+      priceMinor: 500,
+      resolutionSequence: 1,
+    });
+    await insertAwardedPick({
+      playerEntryId: playerEntryIds[1]!,
+      teamId: team1Id,
+      priceMinor: 500,
+      resolutionSequence: 2,
+    });
+
+    // Whammy landed at draft_event sequence 1 — before the pick being rolled
+    // back (resolution_sequence=2) — must NOT be reversed.
+    const [we] = await sql<[{ id: string }]>`
+      INSERT INTO whammy_events (draft_id, team_id, amount_minor, description, status)
+      VALUES (${draftId}, ${team1Id}, -200, 'Early whammy', 'APPLIED')
+      RETURNING id
+    `;
+    await sql`
+      INSERT INTO budget_ledger_entries (draft_id, team_id, reference_id, amount_minor, entry_type, active)
+      VALUES (${draftId}, ${team1Id}, ${we!.id}, -200, 'WHAMMY', true)
+    `;
+    await sql`
+      INSERT INTO draft_events (draft_id, sequence, event_type, team_id, payload, created_at)
+      VALUES (${draftId}, 1, 'WHAMMY_APPLIED', ${team1Id},
+        ${JSON.stringify({ whammy_event_id: we!.id, team_id: team1Id, amount_minor: -200 })}::jsonb, NOW())
+    `;
+
+    const res = await server.inject({
+      method: 'POST',
+      url: `/drafts/${draftId}/rollback`,
+      headers: { authorization: `Bearer ${commToken}` },
+      payload: { count: 1 },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const [weAfter] = await sql<[{ status: string }]>`
+      SELECT status FROM whammy_events WHERE id = ${we!.id}
+    `;
+    expect(weAfter!.status).toBe('APPLIED');
   });
 });

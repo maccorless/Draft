@@ -120,3 +120,50 @@ describe('F-MOD-013 DraftComplete Owner/League views', () => {
     expect(screen.getByLabelText('Send draft summary email to all team owners')).toBeTruthy();
   });
 });
+
+// ── F-MOD-013-rework-01 gap-review: working email report + guided ESPN transfer ──
+
+describe('F-MOD-013-rework-01 email status and ESPN transfer gating', () => {
+  it('F_MOD_013_rw01_email_send_success_shows_real_confirmation', async () => {
+    render(
+      <DraftComplete
+        draftId={DRAFT_ID}
+        report={report}
+        isCommissioner={true}
+        onEmailReport={async () => ({ recipients: 3, failed_count: 0 })}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText('Send draft summary email to all team owners'));
+    await screen.findByText(/Summary email sent to 3 teams/);
+  });
+
+  it('F_MOD_013_rw01_email_send_partial_failure_shows_distinct_error_state', async () => {
+    render(
+      <DraftComplete
+        draftId={DRAFT_ID}
+        report={report}
+        isCommissioner={true}
+        onEmailReport={async () => ({ recipients: 3, failed_count: 1 })}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText('Send draft summary email to all team owners'));
+    const error = await screen.findByRole('alert');
+    expect(error.textContent).toContain('1 of 3');
+
+    // Rest of the screen remains fully usable.
+    expect(screen.getByLabelText('Export ESPN roster worksheet')).toBeTruthy();
+    expect(screen.getByText('My Team')).toBeTruthy();
+  });
+
+  it('F_MOD_013_rw01_espn_transfer_button_hidden_without_leagueId_and_token', () => {
+    render(<DraftComplete draftId={DRAFT_ID} report={report} isCommissioner={true} />);
+    expect(screen.queryByLabelText('Open guided ESPN roster transfer')).toBeNull();
+  });
+
+  it('F_MOD_013_rw01_espn_transfer_button_shown_with_leagueId_and_token', () => {
+    render(
+      <DraftComplete draftId={DRAFT_ID} report={report} isCommissioner={true} leagueId="league-1" token="tok" />,
+    );
+    expect(screen.getByLabelText('Open guided ESPN roster transfer')).toBeTruthy();
+  });
+});

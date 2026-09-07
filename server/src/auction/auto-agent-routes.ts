@@ -9,7 +9,7 @@
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
-import { setControlMode, upsertAutoAgentConfig, type AutoAgentConfigFields } from './auto-agent.js';
+import { setControlMode, upsertAutoAgentConfig, getAutoAgentConfig, type AutoAgentConfigFields } from './auto-agent.js';
 
 interface TokenClaims {
   league_id: string;
@@ -98,6 +98,23 @@ export async function registerAutoAgentRoutes(
   server: FastifyInstance,
   sql: postgres.Sql,
 ): Promise<void> {
+  /**
+   * GET /drafts/:draftId/teams/:teamId/auto-agent
+   * Read a team's current AutoAgentConfiguration (defaults if never set).
+   * The Draft Prep screen uses this to seed its settings form on load,
+   * instead of relying on a PUT's response as the only read path.
+   */
+  server.get<{ Params: DraftTeamParams }>(
+    '/drafts/:draftId/teams/:teamId/auto-agent',
+    async (req, reply) => {
+      const ctx = await requireTeamOrCommissioner(server, sql, req, reply);
+      if (!ctx) return;
+
+      const config = await getAutoAgentConfig(req.params.draftId, req.params.teamId, sql);
+      return reply.send({ team_id: req.params.teamId, ...config });
+    },
+  );
+
   /**
    * PUT /drafts/:draftId/teams/:teamId/auto-agent
    * Configure the per-player AutoAgentConfiguration (F-MOD-004-rework-02):

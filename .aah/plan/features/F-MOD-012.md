@@ -57,6 +57,24 @@ the existing manual-award path (MOD-011 Live Interventions), with the first (err
 fields editable before re-award so the commissioner can fix it, then continue clicking through the
 rest unchanged.
 
+**Detailed rollback preview (post-launch gap review; PRD §31.1).** PRD §31.1 lists what a rollback
+restores per undone pick: the player, the winning team's budget (via a reversing ledger entry), the
+roster entry (removed — i.e. the roster slot it occupied is vacated), nomination order, Match state,
+team-completion state, and any Whammy financial effects tied to that pick's sequence. The rollback
+preview described above must show this full per-pick/per-team breakdown, not just player/team/price,
+before the commissioner confirms: for each pick that will be reversed, the budget amount returned to
+that team, which roster slot is vacated (starter slot name or bench), and, when that pick's sequence
+has an associated Whammy ledger entry, the Whammy interaction being unwound (amount and team). Source
+this from whatever `POST /drafts/:draftId/rollback`'s dry-run/preview surface exposes once MOD-005's
+rework lands — check MOD-005's updated feature spec and `server/src/draft/corrections.ts` for the
+exact preview endpoint/response shape (as of this writing `corrections.ts`'s rollback response only
+returns `{acquisition_id, player_name, team_id, price_minor}` per pick with no roster-slot or Whammy
+detail and no separate preview-only call, so this UI work depends on that MOD-005 rework landing
+first) rather than assuming a shape; if no dedicated preview call exists, derive the roster-slot and
+budget-returned figures from already-available per-team roster/budget state the same way the existing
+preview derives its cost statement, and omit the Whammy line only when the pick has no associated
+Whammy entry.
+
 **Whammy panel (PRD §33, IA §9.5).** A trigger form (team selector, signed dollar amount, required
 description) calls `POST /drafts/:draftId/whammy` with `{team_id, amount_minor, description}`. The
 response is one of two shapes and the UI must branch on it: an immediate application
@@ -95,6 +113,14 @@ elsewhere.
   renders (before confirm), then it shows the plain-language cost statement naming the pick range and
   player count, followed by the detailed per-pick preview (player, team, price) for every pick that
   will be reversed.
+- Given the rollback preview renders, when it shows the detailed per-pick breakdown, then each
+  reversed pick additionally shows the budget amount returned to that team and the roster slot it
+  vacates, and shows the associated Whammy interaction (amount and team) for any pick whose sequence
+  has one.
+- Given a rollback preview was fetched via MOD-005's `GET /drafts/:draftId/rollback/preview` and its
+  returned `state_version`, when the commissioner is about to confirm the rollback, then the UI
+  re-fetches the preview if the draft's current `state_version` has advanced since the preview was
+  computed, rather than confirming against a stale preview.
 - Given the draft is not currently `PAUSED`, when the commissioner confirms a rollback, then the UI
   pauses the draft before submitting `POST /drafts/:draftId/rollback`.
 - Given a rollback request with `{count}`, when the server returns `200` with `rolled_back` and
@@ -142,6 +168,10 @@ api_contracts:
       schema_file: schema/MOD-005-api-schema.yaml
       request_schema: RollbackRequest
       response_schema: RollbackResponse
+    - operation_id: previewRollback
+      schema_file: schema/MOD-005-api-schema.yaml
+      request_schema: "(none — GET with a `count` query parameter, no request body)"
+      response_schema: RollbackPreviewResponse
     - operation_id: triggerWhammy
       schema_file: schema/MOD-009-api-schema.yaml
       request_schema: WhammyRequest
@@ -170,3 +200,78 @@ api_contracts:
 
 ## Status
 done
+
+## Applicable Standards
+- Total rules: 68
+- Critical:
+  - EXTRACTED-022
+  - EXTRACTED-046
+  - TS-SEC-001
+  - TS-SEC-002
+  - RX-SEC-001
+  - RX-SEC-002
+  - PG-SEC-001
+- High:
+  - EXTRACTED-001
+  - EXTRACTED-002
+  - EXTRACTED-003
+  - EXTRACTED-004
+  - EXTRACTED-005
+  - EXTRACTED-006
+  - EXTRACTED-007
+  - EXTRACTED-008
+  - EXTRACTED-010
+  - EXTRACTED-011
+  - EXTRACTED-012
+  - EXTRACTED-013
+  - EXTRACTED-014
+  - EXTRACTED-015
+  - EXTRACTED-020
+  - EXTRACTED-021
+  - EXTRACTED-023
+  - EXTRACTED-024
+  - EXTRACTED-025
+  - EXTRACTED-026
+  - EXTRACTED-029
+  - EXTRACTED-032
+  - EXTRACTED-033
+  - EXTRACTED-034
+  - EXTRACTED-035
+  - EXTRACTED-036
+  - EXTRACTED-038
+  - EXTRACTED-040
+  - EXTRACTED-041
+  - EXTRACTED-042
+  - EXTRACTED-043
+  - EXTRACTED-044
+  - EXTRACTED-045
+  - TS-TYPE-001
+  - TS-TYPE-002
+  - TS-TEST-001
+  - TS-ERR-001
+  - RX-ARCH-001
+  - RX-ARCH-002
+  - RX-A11Y-001
+  - PG-SEC-002
+  - PG-PERF-001
+  - PG-PERF-002
+  - PG-DATA-001
+  - PG-DATA-002
+- Medium:
+  - EXTRACTED-009
+  - EXTRACTED-016
+  - EXTRACTED-017
+  - EXTRACTED-018
+  - EXTRACTED-019
+  - EXTRACTED-027
+  - EXTRACTED-028
+  - EXTRACTED-030
+  - EXTRACTED-031
+  - EXTRACTED-037
+  - EXTRACTED-039
+  - TS-TYPE-003
+  - RX-A11Y-002
+  - RX-PERF-001
+  - PG-PERF-003
+- Low:
+  - TS-CONV-001

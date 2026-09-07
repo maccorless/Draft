@@ -11,7 +11,10 @@
   background: var(--color-chrome);
   background-image: linear-gradient(180deg, var(--color-chrome-raised) 0%, var(--color-chrome) 70%);
   box-shadow: var(--shadow-chrome);
-  padding: var(--space-3) var(--space-6);
+  /* Extra right padding keeps the health cluster (War Room link, pause
+     button, connection status) clear of the fixed identity/logout pill,
+     which overlaps this topbar's top-right corner. */
+  padding: var(--space-3) calc(var(--space-6) + 180px) var(--space-3) var(--space-6);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -758,4 +761,88 @@
 .draft-room__popover-idle {
   color: var(--color-text-subtle);
   font-size: var(--text-sm);
+}
+
+/* ── Whammy overlay ──────────────────────────────────────────────────────── */
+
+.draft-room__whammy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.draft-room__whammy-body {
+  background: var(--color-chrome-raised, #1e2330);
+  border: 2px solid var(--color-led-amber, #ffb02e);
+  border-radius: var(--radius-lg, 12px);
+  padding: var(--space-8, 2rem) var(--space-10, 2.5rem);
+  text-align: center;
+  max-width: 420px;
+  width: 90%;
+}
+
+.draft-room__whammy-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-led-amber, #ffb02e);
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-2);
+}
+
+.draft-room__whammy-team {
+  font-size: var(--text-lg, 1.125rem);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-2);
+}
+
+.draft-room__whammy-desc {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-2);
+}
+
+.draft-room__whammy-amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-xl, 1.25rem);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text);
+  margin: 0 0 var(--space-3);
+}
+
+.draft-room__whammy-countdown {
+  font-size: var(--text-sm);
+  color: var(--color-led-amber, #ffb02e);
+  margin: 0;
+}
+
+/* ── Anti-snipe badge ────────────────────────────────────────────────────── */
+
+.draft-room__anti-snipe-badge {
+  display: inline-block;
+  padding: var(--space-1) var(--space-3);
+  background: rgba(255, 152, 0, 0.15);
+  border: 1px solid rgba(255, 152, 0, 0.4);
+  border-radius: var(--radius-pill);
+  color: var(--color-led-amber, #ffb02e);
+  font-size: var(--text-xs);
+  margin-bottom: var(--space-2);
+}
+
+/* ── Penalty badge in bid ladder ─────────────────────────────────────────── */
+
+.draft-room__bid-penalty-badge {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.4);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-led-red, #f44336);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  margin-left: var(--space-1);
 }

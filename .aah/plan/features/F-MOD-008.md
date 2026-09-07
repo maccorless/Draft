@@ -44,6 +44,22 @@ All `target_value_minor` data is read from and written to the DB only for the au
 - Given the strategy panel is rendered and the owner has no target value set for a player visible in the panel, when that player row renders, then no "My Target" cell or column is shown for that row (per EXTRACTED-019).
 - Given the server boots, when `NODE_ENV`, `DATABASE_URL`, and `JWT_SECRET` are checked by the startup env checker (registered in MOD-000), then if any variable is absent the server exits with `ERR_CDR_78_EX_CONFIG` naming every missing variable; this module adds no new env variables but reads all three transitively through Drizzle and the JWT plugin.
 
+**Post-launch gap-review additions (War Room enrichment):**
+
+The following extend the War Room screen (`web/src/screens/war-room/index.tsx`) and its two supporting read endpoints (`server/src/draft/war-room.ts`). They wire up or surface data that already exists server-side; only the recent-activity response payload gains new fields — no new tables and no new WS event types are introduced by this module.
+
+- **Do Not Draft tab.** The "My Preparation" panel gains a fourth tab, alongside Watch/Queue/Targets, that calls the existing `GET/POST/DELETE /drafts/:draftId/teams/:teamId/do-not-draft` endpoints (owned and already implemented by F-MOD-014's `server/src/draft/do-not-draft.ts`; this module only adds the War Room UI and consumes them — see `## API Contracts` `consumes`). Given the tab is opened, when it loads, then it calls the list endpoint and renders each entry with a remove control; an empty list renders an empty state, not an error. Given the active auction's player is not already on the team's Do Not Draft list, when the tab is open, then a "+ Do Not Draft <player>" affordance is shown, mirroring the existing add-affordance pattern used by the Watch/Queue tabs; adding or removing never triggers a nomination and is never broadcast (per F-MOD-014's privacy posture, same as `OwnerTargetValue`).
+- **Market Context: AAV-baseline comparison and remaining-by-tier.** The Market Context panel (Zone: Market Context) adds (a) an actual-spend-vs-AAV comparison — total `price_minor` actually paid across `recent` activity rows vs. the sum of each row's primary-source `aav_minor` at time of sale, shown as both a dollar difference and a percentage (e.g. "Actual vs ESPN +4.4%") — and (b) a "remaining players by tier" breakdown, grouped from the already-fetched dataset player list (`GET /leagues/:leagueId/players`) filtered to players not yet awarded (the same `drafted` set the panel already derives from `ws.recentAwards`), counted per `tier`. Both are computed client-side from data already fetched by the screen; no new endpoint is required. Given no players have been awarded yet, when Market Context renders, then the AAV-baseline comparison shows $0 / 0% rather than an error or NaN.
+- **Recent Activity: unique bidders and AAV difference.** `GET /drafts/:draftId/activity` (`server/src/draft/war-room.ts`) is extended to return, per recent-activity row, `unique_bidder_count` (distinct `team_id` values among accepted `BidAttempt` rows for that `PlayerAuction`, the same `COUNT(DISTINCT team_id)` computation `server/src/auction/engine.ts` already performs for the `PLAYER_AWARDED` event payload's `unique_bidder_count`) and `aav_diff_minor` (`price_minor` minus that player's primary-source `aav_minor` at resolution time, joined the same way `resolveEffectivePrimarySource`/`player_aav_sources` is already joined elsewhere in this file). The War Room activity list renders both: "`N` bids · `M` bidders" and a signed AAV-difference amount next to the sale price. Given a player was awarded with zero competing bids beyond the opener, when the activity list renders that row, then `unique_bidder_count` is 1 (the winner), not 0, matching the existing `PLAYER_AWARDED`-event convention.
+- **Player Intelligence: prior-season stats.** Zone A (Player Intelligence) renders the active player's `prior_season_stats` (already returned by `GET /leagues/:leagueId/players`, already fetched into the screen's `players` state, and already rendered by the Draft Room's player detail popover, `web/src/components/PlayerDetailPopover.tsx`) using the same key/value list presentation that popover already uses. Given the active player's `prior_season_stats` is null or an empty object, when Zone A renders, then the prior-season-stats block is omitted entirely, not shown as an empty table (matching the popover's existing convention).
+- **Comparable Remaining: projection and My Target columns.** The "Comparable Remaining" table (Zone B) adds a "Proj" column (`projected_points`, already present per row in the fetched player list) and a "My Target" column showing the viewing team's `target_value_minor` for that row's player when one exists in the already-fetched `targets` state, blank otherwise (never a `$0` placeholder, consistent with EXTRACTED-019's "no column when unset" convention already applied elsewhere in this module).
+- **Watch List: AAV, customized-Target flag, status columns.** The Watch tab's list adds the player's `aav_minor` — `WatchListEntry` (`schema/MOD-008-api-schema.yaml`, `getWatchList`) gains an `aav_minor` field, joined the same way other panels already join primary-source AAV — a flag indicating the viewing team has a customized target for that player (cross-referenced against the already-fetched `targets` state, not a new field), and the player's injury/availability status (already present per player in the fetched player list as `injury_status`).
+- **Nomination Queue: opening price and availability columns.** The Queue tab's list adds an opening-price column (the draft's configured `min_bid_minor`, from `getDraftConfig` — `GET /drafts/:draftId/config`, already implemented server-side in `server/src/draft/war-room.ts` returning `auction.min_bid_minor` among other config, but not yet documented in a schema file or fetched by this screen — one value applies to every queued player, since opening price is a draft-wide auction setting, not a per-player one) and an availability column (whether the player has already been drafted, from the same `drafted` set derived from `ws.recentAwards` that other panels already use).
+- **Targets tab toggle.** The Targets tab adds a two-state toggle: "Customized only" (current/default behavior, listing only rows the team has set a `target_value_minor` for) and "All tracked players" (every dataset player, showing target value where set and blank where not). Given the toggle is set to "All tracked players", when the tab renders, then it merges the fetched `targets` rows with the full player list by `dataset_player_id`, and a player with no target set shows no target-value cell (per EXTRACTED-019), not a `$0` cell.
+- **League Roster/Budget Grid: position-focus highlighting.** When an auction is active (`auction.position` known), the grid optionally highlights (a) teams with an open compatible starter slot for that position and (b) the team(s) with the highest `remaining_budget_minor`, using data the grid already has (`rosterSlots`, `rosterGrid`). This is visual emphasis only — it never reorders rows, and it is included only insofar as it composes cleanly with the grid's existing rendering; it must not block or complicate the higher-priority items above.
+- **Whammy toast/notification.** When a WHAMMY_APPLIED-class `DraftEvent` (added by MOD-002's rework to the same WS event stream this screen already connects to via `useAuctionSocket`) arrives over the War Room's WS connection, the screen shows a dismissible toast/notification describing the effect, mirroring however the Draft Room (a separate module) surfaces the same event — this module does not define the event shape or trigger logic, only consumes and displays it. Given the WS connection has not yet been extended with this event (i.e. MOD-002's rework has not landed), when no such event is ever received, then no toast ever renders and nothing else in the screen is affected — this is additive, not a dependency gate.
+- **Anti-snipe penalty indicator.** When a penalty-status signal for a team (added by MOD-002's rework anti-snipe rework to the same WS stream) arrives, the War Room surfaces a small indicator (e.g. on that team's row in the Roster/Budget Grid) showing the affected team is under a bid penalty, for as long as the signal indicates the penalty is active. This module consumes and displays the signal only; it never computes penalty eligibility, duration, or mode — that logic and its qualifying-bid counter live entirely in MOD-002's rework.
+
 ## Layers
 
 - db
@@ -92,6 +108,42 @@ produces:
     schema_file: schema/MOD-008-api-schema.yaml
     request_schema: ReorderQueueRequest
     response_schema: null
+
+  - operation_id: getRecentActivity
+    schema_file: schema/MOD-008-api-schema.yaml
+    request_schema: null
+    response_schema: RecentActivityResponse
+    note: >
+      Gap-review extension: GET /drafts/:draftId/activity (server/src/draft/war-room.ts)
+      response rows gain unique_bidder_count and aav_diff_minor. Existing fields
+      (acquisition_id, player_name, position, price_minor, resolution_sequence,
+      team_id, team_name, awarded_at, bid_count) are unchanged.
+
+  - operation_id: getDraftConfig
+    schema_file: schema/MOD-008-api-schema.yaml
+    request_schema: null
+    response_schema: DraftConfigResponse
+    note: >
+      Gap-review addition: this endpoint (GET /drafts/:draftId/config) was already
+      implemented server-side (server/src/draft/war-room.ts) but never documented in
+      any schema file. Documented here so the Nomination Queue's opening-price column
+      (auction.min_bid_minor) has a resolvable contract.
+
+consumes:
+  - operation_id: listDoNotDraft
+    schema_file: schema/MOD-014-api-schema.yaml
+    request_schema: "(none)"
+    response_schema: DoNotDraftListResponse
+
+  - operation_id: addDoNotDraft
+    schema_file: schema/MOD-014-api-schema.yaml
+    request_schema: AddDoNotDraftRequest
+    response_schema: DoNotDraftEntry
+
+  - operation_id: removeDoNotDraft
+    schema_file: schema/MOD-014-api-schema.yaml
+    request_schema: "(none)"
+    response_schema: "204 No Content"
 ```
 
 ## Required Env Variables

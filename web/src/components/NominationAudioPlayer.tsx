@@ -15,9 +15,16 @@ export interface NominationAudioPlayerProps {
 
 export function NominationAudioPlayer({ cue }: NominationAudioPlayerProps): null {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // ponytail: per-team dedup — once a team's audio plays per session, skip repeats.
+  // A Set<string> ref is stable across renders and never triggers a re-render.
+  const playedTeamsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!cue) return;
+    // Skip if this team already played audio this session.
+    if (playedTeamsRef.current.has(cue.team_id)) return;
+    playedTeamsRef.current.add(cue.team_id);
+
     if (!audioRef.current) {
       audioRef.current = new Audio();
     }

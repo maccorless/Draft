@@ -1,0 +1,92 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[90m/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05[39m
+
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_start_draft_transitions_CREATED_to_RUNNING_and_appends_event[32m 242[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_start_draft_non_commissioner_returns_403_draft_stays_CREATED[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_start_draft_initializes_draft_team_states_with_correct_budget[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_pause_and_resume_append_events_and_transition_status[32m 185[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_starting_already_running_draft_returns_409[32m 182[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_ws_authenticate_sends_AUTHENTICATED_on_valid_token[32m 183[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_ws_closes_4401_on_invalid_jwt[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_ws_closes_4401_when_auth_epoch_is_stale[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_ws_closes_4401_on_wrong_league_in_token[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_nominate_creates_OPEN_player_auction_and_broadcasts_NOMINATION_STARTED[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_absolute_bid_accepted_persists_bid_attempt_and_broadcasts_BID_ACCEPTED[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_bid_rejected_when_exceeds_max_legal_bid[32m 185[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_relative_bid_rejected_on_stale_auction_version[32m 182[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [32m✓[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_max_legal_bid_computed_as_integer_no_floating_point[32m 0[2mms[22m[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_anti_snipe_extends_rebid_deadline_when_bid_arrives_within_threshold[32m 183[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_player_awarded_after_rebid_deadline_expires_with_all_DB_rows[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_starter_first_roster_assigns_QB_to_QB_slot_not_bench[32m 185[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_superflex_slot_accepts_any_position_including_QB[32m 185[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_auth_epoch_revocation_returns_ERROR_on_next_command[32m 186[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_draft_events_have_strictly_incrementing_sequence_per_draft[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_01_manual_team_nomination_timer_expiry_auto_nominates_highest_aav[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_01_auto_nomination_excludes_do_not_draft_players[32m 183[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_01_auto_nomination_prefers_nomination_queue_top_entry_over_aav_fallback[32m 183[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_01_auto_agent_team_nominates_immediately_on_turn_advance_no_timer_wait[32m 183[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_01_completed_roster_team_skipped_in_nomination_turn_advance[32m 183[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_02_bid_too_low_reason_is_dollar_formatted_not_raw_minor[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_02_exceeds_max_legal_bid_reason_is_dollar_formatted_not_raw_minor[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_02_nominate_opening_bid_too_low_reason_is_dollar_formatted[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_02_mid_draft_nomination_timer_edit_takes_effect_on_next_turn_without_restart[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_03_roster_grid_exposes_player_name_and_price_for_filled_slot[32m 184[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_04_bid_rejected_with_ROSTER_FULL_when_roster_already_full[32m 182[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [31m×[39m [30m[43m node [49m[39m server/src/__tests__/F-MOD-002_auction.test.ts[2m > [22mF-MOD-002 auction engine[2m > [22mtest_F_MOD_002_rework_04_award_throws_and_does_not_charge_when_no_roster_slot_available[32m 183[2mms[22m[39m
+[31m   → role "draft" does not exist[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22mtest_F_MOD_002_rework_02_plus_one_disables_immediately_on_click[32m 40[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22mtest_F_MOD_002_rework_02_plus_one_reenables_after_BID_ACCEPTED_applied[32m 13[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 plus-one debounce (UF-01-03 item 1)[2m > [22mtest_F_MOD_002_rework_02_plus_one_reenables_after_BID_REJECTED_and_shows_dollar_formatted_reason[32m 13[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 in-room Pause action (UF-01-03 item 3)[2m > [22mtest_F_MOD_002_rework_02_pause_action_visible_for_commissioner_role[32m 3[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 in-room Pause action (UF-01-03 item 3)[2m > [22mtest_F_MOD_002_rework_02_pause_action_hidden_for_owner_role[32m 4[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 in-room Pause action (UF-01-03 item 3)[2m > [22mtest_F_MOD_002_rework_02_pause_action_calls_pause_endpoint_and_opens_commissioner_console[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 Draft Room <-> War Room cross-navigation (UF-01-03 item 4)[2m > [22mtest_F_MOD_002_rework_02_draft_room_links_to_war_room[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 Draft Room <-> War Room cross-navigation (UF-01-03 item 4)[2m > [22mtest_F_MOD_002_rework_02_war_room_links_back_to_draft_room[32m 3[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22mtest_F_MOD_002_rework_02_shows_filled_and_open_starter_slots_and_bench_count[32m 4[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22mtest_F_MOD_002_rework_02_roster_status_updates_on_PLAYER_AWARDED_via_grid_refresh[32m 11[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22mtest_F_MOD_002_rework_03_filled_slot_shows_player_name_and_price_paid[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22mtest_F_MOD_002_rework_03_open_slot_shows_no_player_or_price[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-02 always-visible own roster status (UF-01-03 items 5-6)[2m > [22mtest_F_MOD_002_rework_03_newly_filled_slot_shows_player_and_price_on_PLAYER_AWARDED_without_reload[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-05 persistent player list panel (UF-17-07 item 1)[2m > [22mtest_F_MOD_002_rework_05_default_sort_is_aav_desc_then_projected_points_desc_tiebreak[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-05 persistent player list panel (UF-17-07 item 1)[2m > [22mtest_F_MOD_002_rework_05_position_tab_filters_without_changing_sort_order[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-05 persistent player list panel (UF-17-07 item 1)[2m > [22mtest_F_MOD_002_rework_05_excludes_already_drafted_players[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-05 persistent player list panel (UF-17-07 item 1)[2m > [22mtest_F_MOD_002_rework_05_selecting_from_list_during_nomination_turn_sends_NOMINATE_COMMAND_at_min_bid[32m 8[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-05 persistent player list panel (UF-17-07 item 1)[2m > [22mtest_F_MOD_002_rework_05_nominate_action_disabled_when_not_owner_turn[32m 5[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-05 team-by-team strip (UF-17-07 item 2)[2m > [22mtest_F_MOD_002_rework_05_strip_shows_every_team_in_order_with_budget_and_no_highlight_when_no_auction_open[32m 6[2mms[22m[39m
+ [32m✓[39m [30m[46m web [49m[39m web/src/__tests__/F-MOD-002-rework-02_draft_room.test.tsx[2m > [22mF-MOD-002-rework-05 team-by-team strip (UF-17-07 item 2)[2m > [22mtest_F_MOD_002_rework_05_strip_highlights_current_leader_with_bid_amount[32m 11[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m1 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[31m31 failed[39m[22m[2m | [22m[1m[32m21 passed[39m[22m[90m (52)[39m
+[2m   Start at [22m 20:25:13
+[2m   Duration [22m 19.08s[2m (import 49%, tests 42%, environment 8%, transform 1%)[22m
+

@@ -299,7 +299,7 @@ describe.skipIf(SKIP_DB)('F-MOD-010 War Room read endpoints', () => {
       headers: { authorization: `Bearer ${team1Token}` },
     });
     expect(activityRes.statusCode).toBe(200);
-    const activity = activityRes.json<{ recent: Array<{ player_name: string; team_id: string; price_minor: number; bid_count: number }> }>();
+    const activity = activityRes.json<{ recent: Array<{ player_name: string; team_id: string; price_minor: number; bid_count: number; unique_bidder_count: number; aav_diff_minor: number | null }> }>();
     expect(activity.recent.length).toBe(1);
     expect(activity.recent[0]!.player_name).toBe('F010-Josh-Allen');
     expect(activity.recent[0]!.team_id).toBe(team1Id);
@@ -307,6 +307,11 @@ describe.skipIf(SKIP_DB)('F-MOD-010 War Room read endpoints', () => {
     // Nomination sets the opening price directly — no bid_attempts row is written
     // unless a competing BID_COMMAND is placed, which this test doesn't send.
     expect(activity.recent[0]!.bid_count).toBe(0);
+    // F-MOD-008-rework-01 gap-review: a win with zero competing bids beyond
+    // the opener is still 1 unique bidder (the winner), never 0.
+    expect(activity.recent[0]!.unique_bidder_count).toBe(1);
+    // aav_minor = 5000 (setupDraft), price_minor = 100 → -4900.
+    expect(activity.recent[0]!.aav_diff_minor).toBe(-4900);
   }, 10000);
 
   it('test_F_MOD_010_nomination_turn_advances_to_next_team_after_award', async () => {

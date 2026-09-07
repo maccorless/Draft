@@ -172,6 +172,51 @@ and must not require any other module to be built first.
 - Given a merge to `main`, when the GitHub Actions CI workflow runs, then the Railway deploy step
   executes only after `tsc --noEmit` and Vitest both pass.
 
+**Post-launch gap review additions:**
+
+- **Host role in league login.** `POST /auth/league/:id` (`server/src/auth/routes.ts`) already
+  accepts and correctly issues JWTs for `role: "HOST"` (mirroring the `COMMISSIONER` branch), and
+  League Setup already generates a Host password — this is backend-complete. The frontend
+  `LeagueLogin` component (`web/src/App.tsx`) is the gap: its role `<select>` only offers
+  `COMMISSIONER` and `OWNER`, and `AuthState.role` is typed `'COMMISSIONER' | 'OWNER'`, so a Host
+  password can never be entered even though the server would accept it. Add `HOST` as a third
+  selectable option, widen `AuthState.role` (and any component prop types keyed off it, e.g.
+  `LogoutButton`'s identity label) to include `'HOST'`, and route a successful Host login the same
+  way as Commissioner (no team_id, straight to `step: 'app'`) unless `screen-information-architecture.md`
+  specifies a distinct Host landing screen, in which case follow that spec instead. No new backend
+  work is in scope; reuse the existing `/auth/league/:id` HOST branch as-is.
+
+  - Given a valid Host password for a league, when `LeagueLogin` submits
+    `{ role: "HOST", password: "..." }` to `POST /auth/league/:id`, then the existing server HOST
+    branch returns HTTP 200 with a JWT, and the frontend accepts `role: "HOST"` as a valid `AuthState`
+    without a type error or runtime fallback.
+
+- **Identity/logout pill must reserve its own layout space.** The fixed top-right identity/logout
+  pill (`LogoutButton` in `web/src/App.tsx`, styled by `.app-logout` in `web/src/app-chrome.css`) is
+  rendered once per authenticated session in `App()` (line ~637, outside `<Routes>`) and therefore
+  overlays every authenticated screen: Commissioner Console, Draft Room, Lobby, War Room, and Draft
+  Complete. `.app-logout` currently uses `position: fixed` with no compensating padding/margin on the
+  content beneath it, so it floats over page content rather than reserving space. Reproduced twice:
+  at ~1280px viewport width, the Commissioner Console's "Create Draft" button became fully
+  unclickable because the pill intercepted pointer events; in Draft Room, the nominated-player card's
+  title and the topbar health cluster (War Room link, pause button, connection status) render
+  underneath/behind the pill, partially or fully invisible. Fix by giving the identity/logout pill a
+  proper place in each screen's layout flow (e.g. a shared header row that every authenticated route
+  renders into, with `position: static`/flex placement rather than `fixed`, or — if `fixed`
+  positioning is kept — reserving equivalent top padding on the app's content root so nothing renders
+  underneath it) so it never overlaps interactive or informational content, verified across
+  Commissioner Console and Draft Room at viewport widths from at least 1200px to 1440px.
+
+  - Given an authenticated session at any viewport width between 1200px and 1440px, when the
+    Commissioner Console renders, then the "Create Draft" button (and every other interactive
+    control) is fully clickable — no element in the identity/logout pill's screen region intercepts
+    its pointer events.
+
+  - Given an authenticated session at any viewport width between 1200px and 1440px, when the Draft
+    Room renders, then the nominated-player card's title and the full topbar health cluster (War
+    Room link, pause button, connection status) are visible and not obscured by the identity/logout
+    pill.
+
 ## Layers
 
 - scaffold

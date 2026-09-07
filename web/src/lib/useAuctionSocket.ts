@@ -40,11 +40,26 @@ export interface BidLadderEntry {
   team_id: string;
   at_ts: number;
   is_match: boolean;
+  bid_type: 'MATCH' | 'ABSOLUTE' | 'RELATIVE' | null;
+  ms_remaining_at_receipt: number | null;
+}
+
+export interface AntiSnipeNotice {
+  receivedAt: number;
+}
+
+export interface WhammyNotice {
+  team_id: string;
+  amount_minor: number;
+  description: string;
+  pause_until_ms: number | null;
+  receivedAt: number;
 }
 
 export interface AwardEntry {
   player_auction_id: string;
   player_name: string;
+  position: string;
   winning_team_id: string;
   price_minor: number;
   roster_slot: string;
@@ -75,9 +90,16 @@ interface AuctionState {
   currentNominatorTeamId: string | null;
   nominationDeadlineTs: number | null;
   recentAwards: AwardEntry[];
+  /** Full picks history (all PLAYER_AWARDED events, no cap), newest first. */
+  picks: AwardEntry[];
   asOfSequence: number;
   lastError: { code: string; reason: string } | null;
   nominationAudioCue: NominationAudioCue | null;
+  antiSnipeNotice: AntiSnipeNotice | null;
+  whammyNotice: WhammyNotice | null;
+  latencyMs: number | null;
+  /** Team IDs that currently have an active anti-snipe penalty. */
+  penalizedTeamIds: Set<string>;
 }
 
 const initialState: AuctionState = {
@@ -90,9 +112,14 @@ const initialState: AuctionState = {
   currentNominatorTeamId: null,
   nominationDeadlineTs: null,
   recentAwards: [],
+  picks: [],
   asOfSequence: -1,
   lastError: null,
   nominationAudioCue: null,
+  antiSnipeNotice: null,
+  whammyNotice: null,
+  latencyMs: null,
+  penalizedTeamIds: new Set(),
 };
 
 type Action =
@@ -172,11 +199,17 @@ function reducer(state: AuctionState, action: Action): AuctionState {
       if (!state.currentAuction || state.currentAuction.player_auction_id !== p['player_auction_id']) {
         return state;
       }
+      const bidType = (p['bid_type'] as BidLadderEntry['bid_type'] | undefined) ?? null;
       const entry: BidLadderEntry = {
         bid_amount_minor: Number(p['bid_amount_minor']),
         team_id: String(p['leading_team_id']),
         at_ts: Date.now(),
         is_match: false,
+        // Only MATCH or a custom absolute jump is notable enough to show a
+        // bid-type indicator; a plain +$1 relative bid stays untagged.
+        bid_type: bidType === 'RELATIVE' ? null : bidType,
+        ms_remaining_at_receipt:
+          p['ms_remaining_at_receipt'] == null ? null : Number(p['ms_remaining_at_receipt']),
       };
       return {
         ...state,
@@ -188,7 +221,56 @@ function reducer(state: AuctionState, action: Action): AuctionState {
           rebid_deadline_ts: Number(p['rebid_deadline_ts']),
         },
         bidLadder: [entry, ...state.bidLadder].slice(0, 10),
+        // ponytail: anti-snipe from BID_ACCEPTED flag kept alongside the discrete
+        // ANTI_SNIPE_EXTENSION event so either path updates the notice.
+        antiSnipeNotice: p['anti_snipe_extended'] === true ? { receivedAt: Date.now() } : state.antiSnipeNotice,
       };
+    }
+
+    case 'ANTI_SNIPE_EXTENSION': {
+      // Discrete event: server extended the deadline due to a late bid.
+      return { ...state, antiSnipeNotice: { receivedAt: Date.now() } };
+    }
+
+    case 'ANTI_SNIPE_PENALTY_APPLIED': {
+      const teamId = String(p['team_id'] ?? '');
+      const next = new Set(state.penalizedTeamIds);
+      next.add(teamId);
+      return { ...state, penalizedTeamIds: next };
+    }
+
+    case 'ANTI_SNIPE_PENALTY_EXPIRED': {
+      const teamId = String(p['team_id'] ?? '');
+      const next = new Set(state.penalizedTeamIds);
+      next.delete(teamId);
+      return { ...state, penalizedTeamIds: next };
+    }
+
+    case 'WHAMMY_APPLIED': {
+      const teamId = String(p['team_id'] ?? '');
+      const prevTeam = state.teams[teamId];
+      return {
+        ...state,
+        teams: prevTeam
+          ? {
+              ...state.teams,
+              [teamId]: { ...prevTeam, remaining_budget_minor: Number(p['new_remaining_budget_minor'] ?? prevTeam.remaining_budget_minor) },
+            }
+          : state.teams,
+        whammyNotice: {
+          team_id: teamId,
+          amount_minor: Number(p['amount_minor'] ?? 0),
+          description: String(p['description'] ?? ''),
+          pause_until_ms: (p['pause_until_ms'] as number | null) ?? null,
+          receivedAt: Date.now(),
+        },
+      };
+    }
+
+    case 'PONG': {
+      // RTT = round-trip from when we sent PING to now.
+      const rtt = Date.now() - Number(p['client_time_ms'] ?? Date.now());
+      return { ...state, latencyMs: Math.max(0, rtt) };
     }
 
     case 'NOMINATOR_MATCH_USED': {
@@ -208,6 +290,7 @@ function reducer(state: AuctionState, action: Action): AuctionState {
       const award: AwardEntry = {
         player_auction_id: String(p['player_auction_id']),
         player_name: String(p['player_name']),
+        position: String(p['position'] ?? ''),
         winning_team_id: String(p['winning_team_id']),
         price_minor: Number(p['price_minor']),
         roster_slot: String(p['roster_slot']),
@@ -224,6 +307,7 @@ function reducer(state: AuctionState, action: Action): AuctionState {
         currentAuction: null,
         bidLadder: [],
         recentAwards: [award, ...state.recentAwards].slice(0, 15),
+        picks: [award, ...state.picks],
         teams: prevTeam
           ? {
               ...state.teams,
@@ -331,6 +415,10 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
     // regardless of timing.
     let cancelled = false;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    // ponytail: ping interval cleared on close/error/cleanup to avoid sending
+    // PINGs on a dead socket. Server PING/PONG handler is a separate task —
+    // if PONG never arrives, latencyMs stays null (ConnectionBadge shows grey).
+    let pingInterval: ReturnType<typeof setInterval> | null = null;
 
     function connect(): void {
       if (cancelled) return;
@@ -345,6 +433,13 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
           type: 'AUTHENTICATE',
           payload: { token, last_seen_sequence: lastSeenSeqRef.current },
         }));
+        // Start latency measurement: send PING every 5s.
+        if (pingInterval) clearInterval(pingInterval);
+        pingInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'PING', payload: { client_time_ms: Date.now() } }));
+          }
+        }, 5000);
       };
 
       ws.onmessage = (event: MessageEvent<string>) => {
@@ -362,6 +457,7 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
       };
 
       ws.onclose = () => {
+        if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
         if (cancelled || wsRef.current !== ws) return;
         dispatch({ type: 'CONNECTION', status: 'reconnecting' });
         const delay = Math.min(1000 * 2 ** reconnectAttemptRef.current, 15000);
@@ -370,6 +466,7 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
       };
 
       ws.onerror = () => {
+        if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
         ws.close();
       };
     }
@@ -379,6 +476,7 @@ export function useAuctionSocket(draftId: string | null, token: string | null): 
     return () => {
       cancelled = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
+      if (pingInterval) clearInterval(pingInterval);
       wsRef.current?.close();
       wsRef.current = null;
       dispatch({ type: 'CONNECTION', status: 'closed' });

@@ -68,6 +68,28 @@ interface PendingWhammy {
   amount_minor: number;
 }
 
+interface RollbackPreviewWhammyInteraction {
+  whammy_id: string;
+  amount_minor: number;
+  description: string;
+}
+
+interface RollbackPreviewPick {
+  acquisition_id: string;
+  player_name: string;
+  team_id: string;
+  price_minor: number;
+  budget_return_minor: number;
+  vacated_roster_slot: string | null;
+  whammy_interactions: RollbackPreviewWhammyInteraction[];
+}
+
+interface RollbackPreview {
+  would_roll_back: number;
+  picks: RollbackPreviewPick[];
+  state_version: number;
+}
+
 interface ApiError {
   code: string;
   message: string;
@@ -162,6 +184,7 @@ export function Corrections({ draftId, leagueId, token }: CorrectionsProps): Rea
   // ── Rollback ───────────────────────────────────────────────────────────────
   const [rollbackCountInput, setRollbackCountInput] = useState('');
   const [rollbackError, setRollbackError] = useState<ApiError | null>(null);
+  const [rollbackPreview, setRollbackPreview] = useState<RollbackPreview | null>(null);
   const [reapplyItems, setReapplyItems] = useState<ReapplyItem[]>([]);
   const [editTeamId, setEditTeamId] = useState('');
   const [editPlayerId, setEditPlayerId] = useState('');
@@ -280,21 +303,46 @@ export function Corrections({ draftId, leagueId, token }: CorrectionsProps): Rea
   // ── Rollback ───────────────────────────────────────────────────────────────
 
   const rollbackCount = rollbackCountInput ? parseInt(rollbackCountInput, 10) : 0;
-  const rollbackPreviewPicks = useMemo(
-    () => (rollbackCount > 0 ? picks.slice(0, rollbackCount) : []),
-    [picks, rollbackCount],
+
+  // Fetch the server-computed preview (budget returned, roster slot vacated,
+  // Whammy interactions, state_version) whenever the count changes — F-MOD-005's
+  // dry-run endpoint, wired here per F-MOD-012-rework-01's detailed preview scope.
+  const fetchRollbackPreview = useCallback((): void => {
+    if (rollbackCount <= 0) {
+      setRollbackPreview(null);
+      return;
+    }
+    authedJson<RollbackPreview>(`/drafts/${draftId}/rollback/preview?count=${rollbackCount}`, token)
+      .then(setRollbackPreview)
+      .catch(() => setRollbackPreview(null));
+  }, [draftId, token, rollbackCount]);
+
+  useEffect(() => {
+    fetchRollbackPreview();
+  }, [fetchRollbackPreview]);
+
+  // resolution_sequence isn't part of the preview response — derive it from
+  // the already-fetched activity feed (same acquisitions) for the cost statement.
+  const resolutionSequenceByAcquisition = useMemo(
+    () => new Map(picks.map((p) => [p.acquisition_id, p.resolution_sequence])),
+    [picks],
   );
   const rollbackCostStatement = useMemo(() => {
-    if (rollbackPreviewPicks.length === 0) return null;
-    const first = rollbackPreviewPicks[0]!;
-    const last = rollbackPreviewPicks[rollbackPreviewPicks.length - 1]!;
-    const n = rollbackPreviewPicks.length;
+    const previewPicks = rollbackPreview?.picks ?? [];
+    if (previewPicks.length === 0) return null;
+    const first = previewPicks[0]!;
+    const last = previewPicks[previewPicks.length - 1]!;
+    const firstSeq = resolutionSequenceByAcquisition.get(first.acquisition_id);
+    const lastSeq = resolutionSequenceByAcquisition.get(last.acquisition_id);
+    const n = previewPicks.length;
     const range =
-      first.resolution_sequence === last.resolution_sequence
-        ? `pick #${first.resolution_sequence}`
-        : `picks #${first.resolution_sequence} through #${last.resolution_sequence}`;
+      firstSeq === undefined || lastSeq === undefined
+        ? `${n} most recent pick${n === 1 ? '' : 's'}`
+        : firstSeq === lastSeq
+          ? `pick #${firstSeq}`
+          : `picks #${firstSeq} through #${lastSeq}`;
     return `This will undo ${range} (${n} player${n === 1 ? '' : 's'}). Those players return to the pool.`;
-  }, [rollbackPreviewPicks]);
+  }, [rollbackPreview, resolutionSequenceByAcquisition]);
 
   function confirmRollback(): void {
     if (rollbackCount <= 0) return;
@@ -317,6 +365,7 @@ export function Corrections({ draftId, leagueId, token }: CorrectionsProps): Rea
             setEditPriceInput(String(firstItem.price_minor / 100));
           }
           setRollbackCountInput('');
+          setRollbackPreview(null);
           setCorrectionResult(null);
           refreshTeams();
           refreshPicks();
@@ -326,16 +375,32 @@ export function Corrections({ draftId, leagueId, token }: CorrectionsProps): Rea
       }).catch(() => setRollbackError({ code: 'NETWORK_ERROR', message: 'Request failed' }));
     };
 
-    if (draftStatus !== 'PAUSED') {
-      authedJson(`/drafts/${draftId}/pause`, token, { method: 'POST' })
-        .then(() => {
-          setDraftStatus('PAUSED');
-          doRollback();
-        })
-        .catch(() => setRollbackError({ code: 'PAUSE_FAILED', message: 'Failed to pause draft' }));
-    } else {
-      doRollback();
-    }
+    const proceed = (): void => {
+      if (draftStatus !== 'PAUSED') {
+        authedJson(`/drafts/${draftId}/pause`, token, { method: 'POST' })
+          .then(() => {
+            setDraftStatus('PAUSED');
+            doRollback();
+          })
+          .catch(() => setRollbackError({ code: 'PAUSE_FAILED', message: 'Failed to pause draft' }));
+      } else {
+        doRollback();
+      }
+    };
+
+    // Re-fetch the preview first; if state_version has advanced since it was
+    // last shown, refresh the displayed preview instead of confirming against
+    // a stale one (F-MOD-012-rework-01 behavioral expectation).
+    authedJson<RollbackPreview>(`/drafts/${draftId}/rollback/preview?count=${rollbackCount}`, token)
+      .then((fresh) => {
+        if (rollbackPreview && fresh.state_version !== rollbackPreview.state_version) {
+          setRollbackPreview(fresh);
+          setRollbackError({ code: 'PREVIEW_STALE', message: 'Draft state changed — review the updated preview and confirm again.' });
+          return;
+        }
+        proceed();
+      })
+      .catch(() => proceed());
   }
 
   function reawardItem(index: number): void {
@@ -565,11 +630,22 @@ export function Corrections({ draftId, leagueId, token }: CorrectionsProps): Rea
           <div className="corrections__preview" data-testid="rollback-preview">
             <p data-testid="rollback-preview-statement">{rollbackCostStatement}</p>
             <ul data-testid="rollback-preview-list">
-              {rollbackPreviewPicks.map((p) => (
-                <li key={p.acquisition_id}>
-                  #{p.resolution_sequence} {p.player_name} — {p.team_name} ({formatMoney(p.price_minor)})
-                </li>
-              ))}
+              {(rollbackPreview?.picks ?? []).map((p) => {
+                const seq = resolutionSequenceByAcquisition.get(p.acquisition_id);
+                const teamName = teams.find((t) => t.team_id === p.team_id)?.team_name ?? p.team_id;
+                return (
+                  <li key={p.acquisition_id} data-testid={`rollback-preview-pick-${p.acquisition_id}`}>
+                    {seq !== undefined ? `#${seq} ` : ''}{p.player_name} — {teamName} ({formatMoney(p.price_minor)})
+                    <br />
+                    Budget returned: {formatMoney(p.budget_return_minor)} · Slot vacated: {p.vacated_roster_slot ?? 'BN'}
+                    {p.whammy_interactions.map((w) => (
+                      <span key={w.whammy_id} data-testid={`rollback-preview-whammy-${w.whammy_id}`}>
+                        {' '}· Whammy unwound: {formatMoney(w.amount_minor)} ({w.description})
+                      </span>
+                    ))}
+                  </li>
+                );
+              })}
             </ul>
             <button type="button" data-testid="rollback-confirm" onClick={confirmRollback}>
               Confirm Rollback

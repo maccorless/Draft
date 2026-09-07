@@ -144,6 +144,10 @@ export function Lobby({
   const [doNotDraft, setDoNotDraft] = useState<DoNotDraftEntry[]>([]);
   const [players, setPlayers] = useState<DatasetPlayer[]>([]);
   const [autoAgentConfig, setAutoAgentConfig] = useState<AutoAgentConfigState>(DEFAULT_AUTO_AGENT_CONFIG);
+  const [editingTargetId, setEditingTargetId] = useState<string | null>(null);
+  const [editingTargetValue, setEditingTargetValue] = useState('');
+  const [newTargetPlayerId, setNewTargetPlayerId] = useState('');
+  const [newTargetValue, setNewTargetValue] = useState('');
   const [media, setMedia] = useState<TeamMedia>({ icon_url: null, nomination_audio_url: null });
 
   const refreshWatchlist = useMemo(
@@ -267,6 +271,19 @@ export function Lobby({
     if (swapIdx < 0 || swapIdx >= next.length) return;
     [next[index], next[swapIdx]] = [next[swapIdx]!, next[index]!];
     reorderQueue(next.map((q) => q.dataset_player_id));
+  }
+
+  function saveTarget(playerId: string, dollarStr: string): void {
+    if (!canUseDraftTools || !playerId) return;
+    const amount = Math.round(parseFloat(dollarStr) * 100);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/target-values`, token!, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ targets: [{ dataset_player_id: playerId, target_value_minor: amount }] }),
+    })
+      .then(refreshTargets)
+      .catch(() => {});
   }
 
   function addToDoNotDraft(playerId: string): void {
@@ -412,9 +429,87 @@ export function Lobby({
                 {targets.map((t) => (
                   <li key={t.dataset_player_id} className="lobby__prep-item">
                     <span>{t.player_name}</span>
-                    <span>${Math.round(t.target_value_minor / 100)}</span>
+                    {editingTargetId === t.dataset_player_id ? (
+                      <input
+                        type="number"
+                        min={1}
+                        autoFocus
+                        value={editingTargetValue}
+                        onChange={(e) => setEditingTargetValue(e.target.value)}
+                        onBlur={() => {
+                          saveTarget(t.dataset_player_id, editingTargetValue);
+                          setEditingTargetId(null);
+                          setEditingTargetValue('');
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            saveTarget(t.dataset_player_id, editingTargetValue);
+                            setEditingTargetId(null);
+                            setEditingTargetValue('');
+                          } else if (e.key === 'Escape') {
+                            setEditingTargetId(null);
+                            setEditingTargetValue('');
+                          }
+                        }}
+                        style={{ width: 80 }}
+                        aria-label={`Target value for ${t.player_name}`}
+                      />
+                    ) : (
+                      <button
+                        className="lobby__target-value-btn"
+                        onClick={() => {
+                          setEditingTargetId(t.dataset_player_id);
+                          setEditingTargetValue(String(Math.round(t.target_value_minor / 100)));
+                        }}
+                        title="Click to edit"
+                      >
+                        ${Math.round(t.target_value_minor / 100)}
+                      </button>
+                    )}
                   </li>
                 ))}
+                {/* Add Target: pick a player without a custom target */}
+                {(() => {
+                  const withoutTarget = players.filter(
+                    (p) => !targets.some((t) => t.dataset_player_id === p.dataset_entry_id),
+                  );
+                  if (withoutTarget.length === 0) return null;
+                  return (
+                    <li className="lobby__prep-item lobby__prep-add-target">
+                      <select
+                        aria-label="Player to target"
+                        value={newTargetPlayerId}
+                        onChange={(e) => setNewTargetPlayerId(e.target.value)}
+                      >
+                        <option value="">Add Target…</option>
+                        {withoutTarget.map((p) => (
+                          <option key={p.dataset_entry_id} value={p.dataset_entry_id}>
+                            {p.name} ({p.position})
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="number"
+                        min={1}
+                        placeholder="$"
+                        value={newTargetValue}
+                        onChange={(e) => setNewTargetValue(e.target.value)}
+                        style={{ width: 60 }}
+                        aria-label="Target dollar amount"
+                      />
+                      <button
+                        onClick={() => {
+                          saveTarget(newTargetPlayerId, newTargetValue);
+                          setNewTargetPlayerId('');
+                          setNewTargetValue('');
+                        }}
+                        disabled={!newTargetPlayerId || !newTargetValue}
+                      >
+                        Save
+                      </button>
+                    </li>
+                  );
+                })()}
               </ul>
             )}
 

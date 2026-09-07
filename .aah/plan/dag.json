@@ -13,6 +13,18 @@
       ]
     },
     {
+      "id": "F-MOD-000-rework-01",
+      "module_ref": "MOD-000",
+      "layers": [
+        "scaffold",
+        "protocol",
+        "db",
+        "api",
+        "crash_recovery",
+        "ui"
+      ]
+    },
+    {
       "id": "F-MOD-001",
       "module_ref": "MOD-001",
       "layers": [
@@ -74,6 +86,30 @@
     },
     {
       "id": "F-MOD-002-rework-04",
+      "module_ref": "MOD-002",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-001"
+      ]
+    },
+    {
+      "id": "F-MOD-002-rework-05",
+      "module_ref": "MOD-002",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-001"
+      ]
+    },
+    {
+      "id": "F-MOD-002-rework-06",
       "module_ref": "MOD-002",
       "layers": [
         "db",
@@ -156,7 +192,31 @@
       ]
     },
     {
+      "id": "F-MOD-005-rework-01",
+      "module_ref": "MOD-005",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-003"
+      ]
+    },
+    {
       "id": "F-MOD-006",
+      "module_ref": "MOD-006",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-003"
+      ]
+    },
+    {
+      "id": "F-MOD-006-rework-01",
       "module_ref": "MOD-006",
       "layers": [
         "db",
@@ -191,6 +251,18 @@
       ]
     },
     {
+      "id": "F-MOD-008-rework-01",
+      "module_ref": "MOD-008",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-002"
+      ]
+    },
+    {
       "id": "F-MOD-009",
       "module_ref": "MOD-009",
       "layers": [
@@ -203,7 +275,34 @@
       ]
     },
     {
+      "id": "F-MOD-009-rework-01",
+      "module_ref": "MOD-009",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-002"
+      ]
+    },
+    {
       "id": "F-MOD-010",
+      "module_ref": "MOD-010",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-001",
+        "F-MOD-009",
+        "F-MOD-015",
+        "F-MOD-016"
+      ]
+    },
+    {
+      "id": "F-MOD-010-rework-01",
       "module_ref": "MOD-010",
       "layers": [
         "db",
@@ -265,6 +364,17 @@
       ]
     },
     {
+      "id": "F-MOD-012-rework-01",
+      "module_ref": "MOD-012",
+      "layers": [
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-005",
+        "F-MOD-009"
+      ]
+    },
+    {
       "id": "F-MOD-013",
       "module_ref": "MOD-013",
       "layers": [
@@ -276,7 +386,33 @@
       ]
     },
     {
+      "id": "F-MOD-013-rework-01",
+      "module_ref": "MOD-013",
+      "layers": [
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-006"
+      ]
+    },
+    {
       "id": "F-MOD-014",
+      "module_ref": "MOD-014",
+      "layers": [
+        "db",
+        "api",
+        "ui"
+      ],
+      "dependencies": [
+        "F-MOD-000",
+        "F-MOD-004",
+        "F-MOD-008",
+        "F-MOD-015"
+      ]
+    },
+    {
+      "id": "F-MOD-014-rework-01",
       "module_ref": "MOD-014",
       "layers": [
         "db",
@@ -338,6 +474,10 @@
       "to": "F-MOD-014"
     },
     {
+      "from": "F-MOD-000",
+      "to": "F-MOD-014-rework-01"
+    },
+    {
       "from": "F-MOD-001",
       "to": "F-MOD-002"
     },
@@ -359,11 +499,23 @@
     },
     {
       "from": "F-MOD-001",
+      "to": "F-MOD-002-rework-05"
+    },
+    {
+      "from": "F-MOD-001",
+      "to": "F-MOD-002-rework-06"
+    },
+    {
+      "from": "F-MOD-001",
       "to": "F-MOD-007"
     },
     {
       "from": "F-MOD-001",
       "to": "F-MOD-010"
+    },
+    {
+      "from": "F-MOD-001",
+      "to": "F-MOD-010-rework-01"
     },
     {
       "from": "F-MOD-001",
@@ -383,7 +535,15 @@
     },
     {
       "from": "F-MOD-002",
+      "to": "F-MOD-008-rework-01"
+    },
+    {
+      "from": "F-MOD-002",
       "to": "F-MOD-009"
+    },
+    {
+      "from": "F-MOD-002",
+      "to": "F-MOD-009-rework-01"
     },
     {
       "from": "F-MOD-002",
@@ -427,7 +587,15 @@
     },
     {
       "from": "F-MOD-003",
+      "to": "F-MOD-005-rework-01"
+    },
+    {
+      "from": "F-MOD-003",
       "to": "F-MOD-006"
+    },
+    {
+      "from": "F-MOD-003",
+      "to": "F-MOD-006-rework-01"
     },
     {
       "from": "F-MOD-004",
@@ -446,12 +614,24 @@
       "to": "F-MOD-014"
     },
     {
+      "from": "F-MOD-004",
+      "to": "F-MOD-014-rework-01"
+    },
+    {
       "from": "F-MOD-005",
       "to": "F-MOD-012"
     },
     {
+      "from": "F-MOD-005",
+      "to": "F-MOD-012-rework-01"
+    },
+    {
       "from": "F-MOD-006",
       "to": "F-MOD-013"
+    },
+    {
+      "from": "F-MOD-006",
+      "to": "F-MOD-013-rework-01"
     },
     {
       "from": "F-MOD-007",
@@ -462,24 +642,48 @@
       "to": "F-MOD-014"
     },
     {
+      "from": "F-MOD-008",
+      "to": "F-MOD-014-rework-01"
+    },
+    {
       "from": "F-MOD-009",
       "to": "F-MOD-010"
+    },
+    {
+      "from": "F-MOD-009",
+      "to": "F-MOD-010-rework-01"
     },
     {
       "from": "F-MOD-009",
       "to": "F-MOD-012"
     },
     {
+      "from": "F-MOD-009",
+      "to": "F-MOD-012-rework-01"
+    },
+    {
       "from": "F-MOD-015",
       "to": "F-MOD-010"
+    },
+    {
+      "from": "F-MOD-015",
+      "to": "F-MOD-010-rework-01"
     },
     {
       "from": "F-MOD-015",
       "to": "F-MOD-014"
     },
     {
+      "from": "F-MOD-015",
+      "to": "F-MOD-014-rework-01"
+    },
+    {
       "from": "F-MOD-016",
       "to": "F-MOD-010"
+    },
+    {
+      "from": "F-MOD-016",
+      "to": "F-MOD-010-rework-01"
     }
   ]
 }

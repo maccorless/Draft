@@ -56,11 +56,57 @@ describe('F-MOD-000 env checker', () => {
   });
 
   it('test_F_MOD_000_env_check_passes_when_all_required_vars_present', () => {
-    // NODE_ENV was added to the required list by MOD-001 (spec: "DATABASE_URL, JWT_SECRET, or NODE_ENV absent → ERR_CDR_78_EX_CONFIG")
+    // NODE_ENV was added to the required list by MOD-001 (spec: "DATABASE_URL, JWT_SECRET, or NODE_ENV absent → ERR_CDR_78_EX_CONFIG").
+    // SENDGRID_API_KEY/SENDGRID_FROM_EMAIL were added by F-MOD-006-rework-01
+    // (real SendGrid delivery cannot silently no-op on a missing sender identity).
     const result = runEnvCheck({
       DATABASE_URL: 'postgres://localhost/test',
       JWT_SECRET: 'test-secret-at-least-32-chars-long',
       NODE_ENV: 'test',
+      SENDGRID_API_KEY: 'test-sendgrid-key',
+      SENDGRID_FROM_EMAIL: 'test-sender@example.com',
+    });
+    expect(result.status).toBe(0);
+  });
+
+  // ── Code-review P1: production CORS needs a configured frontend origin ────
+
+  it('test_F_MOD_000_env_check_requires_frontend_origin_in_production', () => {
+    const result = runEnvCheck({
+      DATABASE_URL: 'postgres://localhost/test',
+      JWT_SECRET: 'test-secret-at-least-32-chars-long',
+      NODE_ENV: 'production',
+      SENDGRID_API_KEY: 'test-sendgrid-key',
+      SENDGRID_FROM_EMAIL: 'test-sender@example.com',
+      // FRONTEND_ORIGIN intentionally omitted
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('ERR_CDR_78_EX_CONFIG');
+    expect(result.stderr).toContain('FRONTEND_ORIGIN');
+  });
+
+  it('test_F_MOD_000_env_check_passes_in_production_with_frontend_origin_set', () => {
+    const result = runEnvCheck({
+      DATABASE_URL: 'postgres://localhost/test',
+      JWT_SECRET: 'test-secret-at-least-32-chars-long',
+      NODE_ENV: 'production',
+      SENDGRID_API_KEY: 'test-sendgrid-key',
+      SENDGRID_FROM_EMAIL: 'test-sender@example.com',
+      FRONTEND_ORIGIN: 'https://app.example.com',
+    });
+    expect(result.status).toBe(0);
+  });
+
+  it('test_F_MOD_000_env_check_frontend_origin_optional_outside_production', () => {
+    // Already covered by test_F_MOD_000_env_check_passes_when_all_required_vars_present
+    // (NODE_ENV: 'test', no FRONTEND_ORIGIN) — this test names the behavior
+    // explicitly so a future change to the production-only gate is caught.
+    const result = runEnvCheck({
+      DATABASE_URL: 'postgres://localhost/test',
+      JWT_SECRET: 'test-secret-at-least-32-chars-long',
+      NODE_ENV: 'development',
+      SENDGRID_API_KEY: 'test-sendgrid-key',
+      SENDGRID_FROM_EMAIL: 'test-sender@example.com',
     });
     expect(result.status).toBe(0);
   });

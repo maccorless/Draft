@@ -22,6 +22,12 @@ Rollback undoes the most recently resolved picks in strict reverse resolution_se
 
 Per CLAUDE.md constraint #10 and data-model.md §17.5: the rollback mechanism is bounded to last N picks; there is no jump-to-any-checkpoint. Per data-model.md §1 and architecture-overview.md §2: Acquisition, RosterEntry, and BudgetLedgerEntry rows are never deleted — compensating rows supersede. Per resolved-standards.yaml rule EXTRACTED-033: correction never erases history.
 
+**Post-launch addition: detailed rollback preview (dry-run, no mutation).**
+
+The commissioner-facing Rollback panel (owned by MOD-012) previously showed only a plain-language cost statement and a flat list of picks (player, team, price). Per PRD §31.1 ("A rollback restores, for each undone pick: the player; the winning team's budget; the roster entry; ... Whammy financial effects tied to that pick's sequence, if any") and data-model.md §17.5 ("The preview is pinned to the `state_version` it was computed from; if `state_version` has advanced by the time the commissioner confirms, the preview is stale and must be retaken"), the preview shown before confirming a rollback must be a server-computed, per-pick, per-team breakdown, not a client-side derivation — the data model already anticipates a distinct, staleness-checked preview artifact, and two of the three effects (which roster slot is vacated, and whether a Whammy entry sits in the affected range) are not derivable from data the client already holds (draft-board acquisition lists carry player/team/price only, not `RosterEntry` slot assignments or `BudgetLedgerEntry` rows).
+
+This module therefore adds a read-only preview endpoint, `GET /drafts/:draftId/rollback/preview?count=N`, that runs the *same* pick-selection query the rollback endpoint uses (highest `resolution_sequence` first, `active=true` only) but performs no writes. For each pick it would reverse, the response reports: the acquisition (player, team, price_minor), the budget effect (`budget_return_minor`, equal to `price_minor` — the amount that would be credited back per the ROLLBACK `BudgetLedgerEntry` convention already used by the mutating endpoint), the roster effect (`vacated_roster_slot`: the `RosterEntry` slot's label/type string that would be vacated, joined from `roster_entries`/`roster_slot_definitions`), and any Whammy interaction — `whammy_interactions`: an array of `{ whammy_id, amount_minor, description }`, one per `WHAMMY`-type `BudgetLedgerEntry` row for that team whose originating `WhammyEvent.trigger_event_sequence` falls at or after the pick's `resolution_sequence` (per data-model.md §18.3, a Whammy's ledger entry is undone generically by rollback only if the rollback reaches back past its trigger sequence — the preview reports these as informational context for the commissioner, not as additional rows the mutating endpoint will touch, since the existing rollback transaction only reverses ledger entries tied to the acquisitions in its own pick list). The response also carries the `Draft.state_version` the preview was computed from, so MOD-012 can detect staleness (per data-model.md §17.5) and require a fresh preview if `state_version` has advanced before the commissioner confirms — the mutating `POST /drafts/:draftId/rollback` endpoint is unchanged and continues to accept `count` without a state_version check of its own (this addition does not change its contract).
+
 **Stack and structure:** Node.js 20 + Fastify 4.x backend in `server/src/draft/` (new `corrections.ts` handler), Drizzle ORM for schema column additions in `server/db/schema/`, React 18 + Vite 5 frontend panels inside `web/src/screens/commissioner/`. Shared Zod types for request/response shapes in `shared-types/src/schemas/`. See architecture-overview.md §7 for the full folder layout.
 
 **Design references:**
@@ -30,12 +36,12 @@ Per CLAUDE.md constraint #10 and data-model.md §17.5: the rollback mechanism is
 - Rollback transaction sequence: `application-flow.md §9` (full Rollback Flow sequence diagram)
 - Event type names: `knowledge/state-machine-flows.md §19` (PRICE_CORRECTED, ROLLBACK_STARTED, ROLLBACK_APPLIED, ACQUISITION_SUPERSEDED)
 - PRD acceptance scenario: `knowledge/PRD.md §31` (corrections/rollback), `knowledge/PRD.md §44` (acceptance scenarios)
-- API schema: `schema/MOD-005-api-schema.yaml` (correctPrice, rollbackPicks operations)
+- API schema: `schema/MOD-005-api-schema.yaml` (correctPrice, rollbackPicks operations; `previewRollback` is new — not yet defined in this file, see `## API Contracts`)
 
 **UI screens (Commissioner Console additions):**
 
 - **Correction panel** — pick selector (lists awarded picks with player name, team, current price), new-price integer input (minimum $1.00 = 100 minor), ledger preview showing the projected effect on the team's remaining budget, and a submit button. Displays a "Would make pick illegal" error inline when the server rejects with 409. On success, shows the new price and updated remaining budget.
-- **Rollback panel** — count input (default 1), a preview listing which picks (player name, team, price) will be reversed (populated from the same data the server will use), a confirmation dialog ("Roll back these N picks?"), and a confirm button. The panel is disabled and shows "Pause the draft first" when Draft.status is not PAUSED. On success, lists the reversed picks.
+- **Rollback panel** — count input (default 1), a preview listing which picks (player name, team, price) will be reversed (populated from the same data the server will use), a confirmation dialog ("Roll back these N picks?"), and a confirm button. The panel is disabled and shows "Pause the draft first" when Draft.status is not PAUSED. On success, lists the reversed picks. (Post-launch addition: the preview is fetched from `GET /drafts/:draftId/rollback/preview` and expands per pick to show budget returned, roster slot vacated, and any Whammy interaction — this is owned by MOD-012 and consumes the response shape described below; MOD-005 is responsible only for the backend endpoint.)
 - **Draft Board highlight** — corrected picks are visually distinguished (e.g., a "corrected" badge showing old and new price); rolled-back picks are shown as inactive/struck-through rather than removed.
 
 **Behavioral expectations:**
@@ -53,6 +59,14 @@ Per CLAUDE.md constraint #10 and data-model.md §17.5: the rollback mechanism is
 - Given POST /drafts/:id/rollback is called with count=N and fewer than N active acquisitions exist, then: the server rolls back only the available picks and returns the actual rolled_back count in the response (or returns 409 if count=0 acquisitions are available, per schema minimum=1).
 
 - Given any step of the rollback transaction fails (e.g., DB error mid-loop), then: the entire transaction is rolled back, no rows are partially modified, and the server returns an error response; in-memory DraftTeamState is not updated.
+
+- Given a commissioner sends GET /drafts/:id/rollback/preview?count=N, then: the server performs no writes and selects the same N highest-`resolution_sequence` active acquisitions the mutating rollback endpoint would select; the response includes, per pick, the player name, team_id, price_minor, budget_return_minor (equal to price_minor), vacated_roster_slot (the slot's label/type string), and a (possibly empty) whammy_interactions array of `{ whammy_id, amount_minor, description }` for any WHAMMY-type BudgetLedgerEntry for that team whose triggering WhammyEvent occurred at or after that pick's resolution_sequence; the response also includes the draft's current state_version.
+
+- Given fewer than N active acquisitions exist when GET /drafts/:id/rollback/preview?count=N is called, then: the preview returns only the available picks (same "fewer than N" behavior as the mutating endpoint), and returns 409 if zero picks are available.
+
+- Given a non-commissioner token sends GET /drafts/:id/rollback/preview, then: the server rejects with HTTP 401/403 and returns no preview data.
+
+- Given the commissioner confirms a rollback in the UI after fetching a preview, when the draft's state_version has advanced since the preview was computed, then: MOD-012 is expected to treat the preview as stale and re-fetch before allowing confirmation (per data-model.md §17.5); MOD-005's mutating rollback endpoint itself performs no state_version check and is unchanged by this addition.
 
 - Given a PRICE_CORRECTED or ROLLBACK_APPLIED WS broadcast is sent, then: all WebSocket sessions currently subscribed to that draft_id receive the broadcast; clients not connected to that draft are unaffected (per MOD-003 multi-draft isolation).
 
@@ -91,6 +105,11 @@ produces:
     schema_file: schema/MOD-005-api-schema.yaml
     request_schema: RollbackRequest
     response_schema: RollbackResponse
+
+  - operation_id: previewRollback
+    schema_file: schema/MOD-005-api-schema.yaml
+    request_schema: "(none — GET with a `count` query parameter, no request body)"
+    response_schema: RollbackPreviewResponse
 ```
 
 ## Required Env Variables

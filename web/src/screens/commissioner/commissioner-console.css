@@ -23,7 +23,11 @@
 .commissioner-console__header-inner {
   max-width: var(--content-max-width);
   margin: 0 auto;
-  padding: var(--space-5) var(--space-6) var(--space-4);
+  /* Extra right padding keeps the rightmost control (Create Draft) clear of
+     the fixed identity/logout pill, which overlaps this header's top-right
+     corner even when .app-content's top padding has been scrolled past
+     (this header is position: sticky; top: 0). */
+  padding: var(--space-5) calc(var(--space-6) + 180px) var(--space-4) var(--space-6);
   display: flex;
   align-items: center;
   justify-content: space-between;

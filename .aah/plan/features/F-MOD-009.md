@@ -32,6 +32,8 @@ This module adds the optional Whammy mechanic: commissioner-triggered budget eve
 
 *UI layer:* In the Commissioner Console, `screen-information-architecture.md §9.5` defines the Whammy panel with three states: trigger/status view, pending-approval view, and apply/reject view. In the Draft Room, a brief toast notification surfaces on `WHAMMY_APPLIED` events showing the affected team and amount, then auto-dismisses, consistent with the toast taxonomy in `screen-information-architecture.md` (Whammy event is an explicit toast trigger; bids are not).
 
+*Auto-trigger layer (added from post-launch gap review):* `data-model.md §18.2` already defines `WhammyDefinition` with `trigger_rule_json` and `weight` columns, but the existing manual-trigger implementation (`server/src/draft/whammy.ts`) never reads `WhammyDefinition` at all — the commissioner types a raw `amount_minor`/`description` directly into `POST /drafts/:id/whammy`. This module adds the automatic side of `state-machine-flows.md §16`'s Whammy Flow diagram, whose entry step is "Configured trigger occurs" leading into "Whammy enabled and limits permit?" then "Select weighted eligible definition" — i.e. the same enabled/limits/approval/roster-completion gate the manual path already implements, just reached automatically instead of via commissioner POST. Per PRD §33, "trigger rule" and "probability/weight" are themselves configuration inputs, and the PRD does not name a fixed polling cadence (no "once per timer tick" language anywhere in the Whammy section); the only discrete, already-serialized draft event this module can ground the check in is pick resolution, since `WhammyEvent.trigger_event_sequence` (`data-model.md §18.3`) is a `DraftEvent` sequence number and pick resolution (`PLAYER_AWARDED`) is the nearest such event in the existing command flow. Concretely: within the same per-draft serialized command that resolves a pick (after that resolution's own transaction commits, still before the command queue admits the next command for that draft), the server loads that league's `active=true` `WhammyDefinition` rows, evaluates each one's `trigger_rule_json` (a probability/weight check) once, and if one or more are eligible, picks exactly one via weighted random selection using `WhammyDefinition.weight`. The selected definition then runs through the identical `enabled` / `max_per_team` / `max_per_draft` / sign (`allow_positive`/`allow_negative`) / roster-completion-invariant / `commissioner_approval_required` gate that manual triggers already use, and — on success — calls the same `applyWhammy` function, producing the same `WhammyEvent` row shape, the same `BudgetLedgerEntry`, the same `DraftEvent(WHAMMY_APPLIED)`, and the same `broadcast(draft.id, { type: 'WHAMMY_APPLIED', payload: {...} })` call already used by the manual path — no new event type, no new broadcast channel, so MOD-002/MOD-008's client-side `WHAMMY_APPLIED` listener requires zero changes to pick up auto-triggered events. For a `WhammyDefinition` with a nonzero `budget_delta_minor` (a budget-affecting Whammy), the target team is the team just awarded the player in that pick resolution (the only team the trigger event names); a `WhammyDefinition` with no budget delta (a message-only/offline-action Whammy per PRD §33) applies with `team_id = null`, matching `WhammyEvent.team_id`'s nullability in `data-model.md §18.3`. Because `WhammyDefinition` previously had no API surface, this module also adds commissioner CRUD endpoints (Commissioner Setup, alongside the existing `WhammyConfiguration` panel) so `trigger_rule_json`, `weight`, `type`, `budget_delta_minor`, `display_message`, `offline_action_text`, and `active` can actually be set — see `## API Contracts`.
+
 **Behavioral expectations:**
 
 - Given `WhammyConfiguration.enabled = false` for the league, when `POST /drafts/:id/whammy` is called, then the server rejects with a typed error (code, message JSON) and no `WhammyEvent` row or ledger entry is created.
@@ -51,6 +53,15 @@ This module adds the optional Whammy mechanic: commissioner-triggered budget eve
 - Given the Commissioner Console is open with `WhammyConfiguration.enabled = true`, when the Whammy panel renders, then it shows team selector, `amount_minor` input (signed integer in cents), description input, and a fire button, matching the trigger/status state from `screen-information-architecture.md §9.5`.
 - Given a Whammy is applied while the Draft Room is open, when the `WHAMMY_APPLIED` WS event arrives, then a toast notification appears showing the affected team name and formatted amount, and auto-dismisses without blocking the bid UI.
 - Given the env checker (established by MOD-000 in `config/env-check.cjs`) runs at boot, when `DATABASE_URL` or `JWT_SECRET` is absent, then the process exits with `ERR_CDR_78_EX_CONFIG` naming every missing variable; this module adds no new environment variables beyond those already registered.
+- Given one or more `active=true` `WhammyDefinition` rows exist for a league with `WhammyConfiguration.enabled = true`, when a pick resolves for a draft in that league, then, within the same per-draft serialized command (after the resolution transaction commits), the server evaluates each definition's `trigger_rule_json` exactly once; no evaluation happens on nomination, bid, or timer-tick events.
+- Given no `WhammyDefinition` rows exist for a league, or none are `active`, when a pick resolves, then auto-trigger evaluation is a no-op — no `WhammyEvent` is created — and `POST /drafts/:id/whammy` (manual trigger) continues to work exactly as before.
+- Given more than one `WhammyDefinition`'s `trigger_rule_json` evaluates to eligible for the same pick resolution, when the server selects which one fires, then it picks exactly one via weighted random selection over `WhammyDefinition.weight`, per the "Select weighted eligible definition" step in `state-machine-flows.md §16`.
+- Given a `WhammyDefinition` becomes eligible and fires, then it passes through the same `enabled`, `allow_positive`/`allow_negative`, `max_per_team`, `max_per_draft`, and roster-completion-invariant checks the manual trigger path already enforces, using the definition's own `type`/`budget_delta_minor`; if any check fails, no `WhammyEvent` is created and no budget or broadcast effect occurs (fails silently to the draft, consistent with Whammy being optional/entertainment per EXTRACTED-046).
+- Given `WhammyConfiguration.commissioner_approval_required = true` and an eligible `WhammyDefinition` fires, then a `WhammyEvent(status=PENDING_APPROVAL, definition_id=<that definition>)` is created with no budget effect and no broadcast yet, and the existing `approveWhammy`/`rejectWhammy` endpoints apply/reject it exactly as they do for a manually-triggered `WhammyEvent` — no new approval endpoint is added for auto-triggered events.
+- Given `WhammyConfiguration.commissioner_approval_required = false` and an eligible `WhammyDefinition` fires, then `applyWhammy` runs in one transaction (`WhammyEvent(status=APPLIED, definition_id=<that definition>)` + `BudgetLedgerEntry` + `DraftEvent(WHAMMY_APPLIED)`), and after commit the server broadcasts `WHAMMY_APPLIED` with the same `{team_id, amount_minor, description, new_remaining_budget_minor}` payload shape used by manual triggers — verify with a test asserting a MOD-002/MOD-008-style WS listener receives an indistinguishable event for an auto-triggered vs. a manually-triggered Whammy.
+- Given a `WhammyDefinition` with `budget_delta_minor` set (a budget-affecting type), when it auto-fires at pick resolution, then the target team is the team just awarded the player in that resolution; given a `WhammyDefinition` with no `budget_delta_minor` (message/offline-action only), when it auto-fires, then `WhammyEvent.team_id` is `null` and no `BudgetLedgerEntry` is created (mirrors "Budget delta? No -> No financial mutation" in `state-machine-flows.md §16`).
+- Given a commissioner submits `POST /leagues/:id/whammy-definitions` with `name`, `type`, `budget_delta_minor`, `trigger_rule_json`, `weight`, `display_message`, and optionally `offline_action_text`, then a `WhammyDefinition` row is created scoped to that league's `WhammyConfiguration`; `GET /leagues/:id/whammy-definitions` lists them (bare array) and `PUT /leagues/:id/whammy-definitions/:definitionId` replaces the definition's full editable payload (`name`, `type`, `budget_delta_minor`, `trigger_rule_json`, `weight`, `display_message`, `offline_action_text` — the same required-field shape `POST` accepts).
+- Given a non-commissioner JWT, when any of `POST`/`GET`/`PUT /leagues/:id/whammy-definitions*` is called, then the server returns a 403 and no `WhammyDefinition` state is written or returned.
 
 ## Layers
 
@@ -89,7 +100,24 @@ produces:
     schema_file: schema/MOD-009-api-schema.yaml
     request_schema: "(none)"
     response_schema: WhammyRejectResponse
+
+  - operation_id: createWhammyDefinition
+    schema_file: schema/MOD-009-api-schema.yaml
+    request_schema: WhammyDefinitionRequest
+    response_schema: WhammyDefinition
+
+  - operation_id: listWhammyDefinitions
+    schema_file: schema/MOD-009-api-schema.yaml
+    request_schema: "(none)"
+    response_schema: "WhammyDefinition[] (bare array)"
+
+  - operation_id: updateWhammyDefinition
+    schema_file: schema/MOD-009-api-schema.yaml
+    request_schema: WhammyDefinitionRequest
+    response_schema: WhammyDefinition
 ```
+
+New/changed endpoints added by this gap-review scope (auto-trigger, `POST /leagues/:id/whammy-definitions`, `GET /leagues/:id/whammy-definitions`, `PUT /leagues/:id/whammy-definitions/:definitionId`) have been added to `schema/MOD-009-api-schema.yaml` alongside the existing `triggerWhammy`/`approveWhammy`/`rejectWhammy` paths; the `WHAMMY_APPLIED` WS event schema is unchanged — auto-triggered Whammys reuse it verbatim.
 
 ## Required Env Variables
 

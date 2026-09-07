@@ -15,6 +15,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { eq } from 'drizzle-orm';
 import { hash } from '@node-rs/bcrypt';
 
 import {
@@ -38,11 +39,25 @@ const SITE_PASSWORD = 'draft2026!';
 const COMMISSIONER_PASSWORD = 'commissioner2026!';
 const TEAM_PASSWORD = 'team123!';
 
+// Real league roster, in the owner's draft-order preference. Index 0
+// (Ken's team) is also flagged as the league's commissioner_team_id so one
+// owner can be tagged as commish (login flow to use that is a future feature —
+// this just seeds the data shape for it).
 const TEAM_NAMES = [
-  'Alpha Wolves', 'Beta Bears', 'Gamma Gorillas', 'Delta Dogs',
-  'Epsilon Eagles', 'Zeta Zebras', 'Eta Hawks', 'Theta Tigers',
-  'Iota Iguanas', 'Kappa Kings', 'Lambda Lions', 'Mu Mustangs',
+  'Coroebus of Elis (KC)',
+  'British Outlaws (MW)',
+  'Junkyard Dawgs (JK)',
+  'The Zandwagon (ZM)',
+  'Tokyo 5XL returns (BA)',
+  "Ben's Brilliant Team (BC)",
+  'Just send More Letters (JT)',
+  'Isabout to Win (IP)',
+  'Fourth and Cole (CR)',
+  'The Advisors (MW)',
+  'FloridaGPT (JO)',
+  'Nas T (NC)',
 ];
+const COMMISSIONER_TEAM_INDEX = 0;
 
 export interface SeedResult {
   leagueId: string;
@@ -117,8 +132,29 @@ function loadPlayersCsv(): CsvPlayerRow[] {
   });
 }
 
-export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
-  // ─── League ──────────────────────────────────────────────────────────────
+export interface CoreLeagueResult {
+  leagueId: string;
+  teamIds: string[];
+  sitePassword: string;
+  commissionerPassword: string;
+  teamPassword: string;
+}
+
+export interface PlayerDatasetResult {
+  datasetId: string;
+  playerCount: number;
+}
+
+export interface DraftInstanceResult {
+  draftId: string;
+}
+
+/**
+ * Layer 1 — league basics: the league row, roster/auction config, and 12
+ * teams. Created once by `npm run db:seed`'s first run; test runs never wipe
+ * or recreate this (see server/db/wipe.ts).
+ */
+export async function seedCoreLeague(db: PostgresJsDatabase): Promise<CoreLeagueResult> {
   const [sitePasswordHash, commPasswordHash, teamPasswordHash] = await Promise.all([
     hash(SITE_PASSWORD, BCRYPT_WORK_FACTOR),
     hash(COMMISSIONER_PASSWORD, BCRYPT_WORK_FACTOR),
@@ -157,16 +193,16 @@ export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
     { config_id: rosterConfig!.id, position: 'BN', priority: 99, is_starter: false, slot_count: 7 },
   ]);
 
-  // ─── Auction Configuration ───────────────────────────────────────────────
+  // ─── Auction Configuration — $250 budget, 10s timers everywhere ──────────
   await db.insert(auctionConfigurations).values({
     league_id: league!.id,
-    initial_budget_minor: 20000, // $200.00
-    nomination_timer_ms: 90000,  // 90 seconds
-    second_bid_timer_ms: 30000,  // 30 seconds
-    rebid_timer_ms: 15000,        // 15 seconds
-    anti_snipe_threshold_ms: 5000, // last 5 seconds
+    initial_budget_minor: 25000,    // $250.00
+    nomination_timer_ms: 10000,     // 10 seconds
+    second_bid_timer_ms: 10000,     // 10 seconds
+    rebid_timer_ms: 10000,          // 10 seconds
+    anti_snipe_threshold_ms: 10000, // last 10 seconds
     anti_snipe_extension_ms: 10000, // extend by 10 seconds
-    min_bid_minor: 100,            // $1.00
+    min_bid_minor: 100,             // $1.00
   });
 
   // ─── 12 Teams ─────────────────────────────────────────────────────────────
@@ -184,7 +220,41 @@ export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
     )
     .returning();
 
-  // ─── Players ──────────────────────────────────────────────────────────────
+  // One owner (index 0) is also tagged as commissioner, so they can log in
+  // either way. No login logic reads this yet — see comment on TEAM_NAMES.
+  await db
+    .update(leagues)
+    .set({ commissioner_team_id: insertedTeams[COMMISSIONER_TEAM_INDEX]!.id })
+    .where(eq(leagues.id, league!.id));
+
+  // ─── Whammy configuration (disabled by default — PRD §41 readiness only
+  // requires the row to exist, "configured or intentionally disabled") ──────
+  await db.insert(whammyConfigs).values({
+    league_id: league!.id,
+    enabled: false,
+    max_amount_minor: 1000, // $10.00 — only meaningful if enabled later
+    allow_positive: true,
+    allow_negative: true,
+  });
+
+  return {
+    leagueId: league!.id,
+    teamIds: insertedTeams.map((t) => t.id),
+    sitePassword: SITE_PASSWORD,
+    commissionerPassword: COMMISSIONER_PASSWORD,
+    teamPassword: TEAM_PASSWORD,
+  };
+}
+
+/**
+ * Layer 2 — player/AAV master data: loads data/players-2026.csv into a fresh
+ * FROZEN DraftDataset for the given league. Wiped and recreated by the
+ * "Reload Player Data" dev action; layer 1 (league/teams) is untouched.
+ */
+export async function seedPlayerDataset(
+  db: PostgresJsDatabase,
+  leagueId: string,
+): Promise<PlayerDatasetResult> {
   // Loaded from data/players-2026.csv (generated from the real 2026 salary-cap
   // cheatsheet in data/cheatsheet.csv — see scripts/build-players-csv.js).
   const csvPlayers = loadPlayersCsv();
@@ -194,11 +264,10 @@ export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
     .values(csvPlayers.map((p) => ({ name: p.name, position: p.position, nfl_team: p.nfl_team })))
     .returning();
 
-  // ─── DraftDataset (FROZEN) ────────────────────────────────────────────────
   const [dataset] = await db
     .insert(draftDatasets)
     .values({
-      league_id: league!.id,
+      league_id: leagueId,
       status: 'FROZEN',
       frozen_at: new Date(),
       version: 1,
@@ -219,44 +288,55 @@ export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
     })),
   );
 
-  // ─── Draft (CREATED) ──────────────────────────────────────────────────────
+  return { datasetId: dataset!.id, playerCount: insertedPlayers.length };
+}
+
+/**
+ * Layer 3 — a fresh CREATED draft against an existing dataset, plus its
+ * per-team Auto-Agent defaults. This is the "reset the draft" test-data
+ * action: it never touches league/team/player/dataset rows.
+ */
+export async function seedFreshDraft(
+  db: PostgresJsDatabase,
+  leagueId: string,
+  datasetId: string,
+  teamIds: string[],
+): Promise<DraftInstanceResult> {
   const [draft] = await db
     .insert(drafts)
     .values({
-      league_id: league!.id,
-      dataset_id: dataset!.id,
+      league_id: leagueId,
+      dataset_id: datasetId,
       status: 'CREATED',
     })
     .returning();
 
   // ─── Auto-Agent defaults (one row per team, PRD §41 readiness) ────────────
   await db.insert(autoAgentConfigs).values(
-    insertedTeams.map((t) => ({
+    teamIds.map((teamId) => ({
       draft_id: draft!.id,
-      team_id: t.id,
+      team_id: teamId,
       willingness_pct: '0.800',
       enabled: false, // MANUAL by default — owners opt into Auto-Agent live
     })),
   );
 
-  // ─── Whammy configuration (disabled by default — PRD §41 readiness only
-  // requires the row to exist, "configured or intentionally disabled") ──────
-  await db.insert(whammyConfigs).values({
-    league_id: league!.id,
-    enabled: false,
-    max_amount_minor: 1000, // $10.00 — only meaningful if enabled later
-    allow_positive: true,
-    allow_negative: true,
-  });
+  return { draftId: draft!.id };
+}
+
+export async function seedDevData(db: PostgresJsDatabase): Promise<SeedResult> {
+  const core = await seedCoreLeague(db);
+  const dataset = await seedPlayerDataset(db, core.leagueId);
+  const draft = await seedFreshDraft(db, core.leagueId, dataset.datasetId, core.teamIds);
 
   return {
-    leagueId: league!.id,
-    draftId: draft!.id,
-    datasetId: dataset!.id,
-    teamCount: insertedTeams.length,
-    playerCount: insertedPlayers.length,
-    sitePassword: SITE_PASSWORD,
-    commissionerPassword: COMMISSIONER_PASSWORD,
-    teamPassword: TEAM_PASSWORD,
+    leagueId: core.leagueId,
+    draftId: draft.draftId,
+    datasetId: dataset.datasetId,
+    teamCount: core.teamIds.length,
+    playerCount: dataset.playerCount,
+    sitePassword: core.sitePassword,
+    commissionerPassword: core.commissionerPassword,
+    teamPassword: core.teamPassword,
   };
 }

@@ -91,6 +91,16 @@ async function nextEventSeq(tx: postgres.TransactionSql, draftId: string): Promi
   return row?.max ?? 0;
 }
 
+// Draft.state_version tracks the same monotonic counter as DraftEvent.sequence
+// (data-model.md §17.5, §21) — no separate column, derived from the event log's
+// highest committed sequence for this draft.
+async function getStateVersion(sql: postgres.Sql, draftId: string): Promise<number> {
+  const [row] = await sql<[{ max: number | null }]>`
+    SELECT COALESCE(MAX(sequence), 0) AS max FROM draft_events WHERE draft_id = ${draftId}
+  `;
+  return row?.max ?? 0;
+}
+
 // ─── Ledger replay for price correction ───────────────────────────────────────
 //
 // Simulates the team's budget from initial value through all their active picks,
@@ -157,6 +167,10 @@ const PriceCorrectionBody = z.object({
 
 const RollbackBody = z.object({
   count: z.number().int().min(1),
+});
+
+const RollbackPreviewQuery = z.object({
+  count: z.coerce.number().int().min(1),
 });
 
 // ─── Route registration ────────────────────────────────────────────────────────
@@ -367,6 +381,49 @@ export async function registerCorrectionRoutes(
       // All-or-nothing transaction (constraint #4: atomicity)
       try {
         await sql.begin(async (tx) => {
+          // Reverse any APPLIED Whammy tied to a pick sequence being undone —
+          // constraint #10 and F-MOD-012-rework-01's spec both require a
+          // rollback to unwind Whammy financial effects, not just the awards
+          // themselves. Same WHAMMY_APPLIED-event join the preview endpoint
+          // below already uses to find these interactions (EXTRACTED-014: no
+          // Whammy-specific rollback logic beyond finding what to reverse —
+          // the reversal itself is the same generic ledger-entry/status-flip
+          // pattern as everything else here).
+          const minResolutionSeq = Math.min(...picks.map((p) => p.resolution_sequence));
+          const affectedWhammies = await tx<Array<{
+            id: string;
+            team_id: string | null;
+            amount_minor: number;
+          }>>`
+            SELECT DISTINCT we.id, we.team_id, we.amount_minor
+            FROM whammy_events we
+            JOIN budget_ledger_entries ble ON ble.reference_id = we.id AND ble.entry_type = 'WHAMMY' AND ble.active = true
+            JOIN draft_events de
+              ON de.draft_id = ${draft.id}
+             AND de.event_type = 'WHAMMY_APPLIED'
+             AND ((de.payload #>> '{}')::jsonb ->> 'whammy_event_id') = we.id::text
+            WHERE we.draft_id = ${draft.id} AND we.status = 'APPLIED' AND de.sequence >= ${minResolutionSeq}
+          `;
+
+          for (const w of affectedWhammies) {
+            await tx`
+              INSERT INTO budget_ledger_entries
+                (draft_id, team_id, amount_minor, entry_type, reference_id, active)
+              VALUES
+                (${draft.id}, ${w.team_id}, ${-w.amount_minor}, 'ROLLBACK', ${w.id}, true)
+            `;
+            if (w.team_id) {
+              await tx`
+                UPDATE draft_team_states
+                SET remaining_budget_minor = remaining_budget_minor - ${w.amount_minor}
+                WHERE draft_id = ${draft.id} AND team_id = ${w.team_id}
+              `;
+            }
+            await tx`
+              UPDATE whammy_events SET status = 'REVERSED' WHERE id = ${w.id}
+            `;
+          }
+
           for (const pick of picks) {
             // 1. Mark acquisition inactive (append-only: supersede, never delete)
             await tx`
@@ -446,6 +503,110 @@ export async function registerCorrectionRoutes(
       return reply.send({
         rolled_back: picks.length,
         picks_reversed: picksReversed,
+      });
+    },
+  );
+
+  /**
+   * GET /drafts/:draftId/rollback/preview?count=N
+   *
+   * Read-only dry-run: same pick-selection as POST rollback (highest
+   * resolution_sequence first, active=true only) but performs no writes.
+   * Returns a per-pick breakdown (budget returned, roster slot vacated,
+   * Whammy interactions) plus the draft's current state_version, so the
+   * caller (MOD-012) can detect staleness before confirming (data-model.md §17.5).
+   */
+  server.get<{ Params: DraftParams }>(
+    '/drafts/:draftId/rollback/preview',
+    async (req, reply) => {
+      const ctx = await requireCommissioner(server, sql, req, reply);
+      if (!ctx) return;
+      const { draft } = ctx;
+
+      const queryParse = RollbackPreviewQuery.safeParse(req.query);
+      if (!queryParse.success) {
+        return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid count' });
+      }
+      const { count } = queryParse.data;
+
+      const picks = await sql<Array<{
+        id: string;
+        team_id: string;
+        price_minor: number;
+        resolution_sequence: number;
+        player_name: string;
+        vacated_roster_slot: string | null;
+      }>>`
+        SELECT
+          a.id, a.team_id, a.price_minor, a.resolution_sequence,
+          p.name AS player_name,
+          rsd.position AS vacated_roster_slot
+        FROM acquisitions a
+        JOIN player_auctions pa ON pa.id = a.player_auction_id
+        JOIN players p ON p.id = pa.dataset_player_id
+        LEFT JOIN roster_entries re ON re.acquisition_id = a.id AND re.active = true
+        LEFT JOIN roster_slot_definitions rsd ON rsd.id = re.roster_slot_id
+        WHERE a.draft_id = ${draft.id} AND a.active = true
+        ORDER BY a.resolution_sequence DESC
+        LIMIT ${count}
+      `;
+
+      if (picks.length === 0) {
+        return reply.status(409).send({
+          code: 'NO_PICKS_TO_ROLLBACK',
+          message: 'No active picks to roll back',
+        });
+      }
+
+      const stateVersion = await getStateVersion(sql, draft.id);
+
+      const previewPicks = [];
+      for (const pick of picks) {
+        // WHAMMY-type ledger entries for this team whose triggering WhammyEvent
+        // (found via the WHAMMY_APPLIED DraftEvent that carries its id) landed at
+        // or after this pick's resolution_sequence (data-model.md §18.3).
+        const whammyRows = await sql<Array<{
+          whammy_id: string;
+          amount_minor: number;
+          description: string;
+        }>>`
+          SELECT we.id AS whammy_id, we.amount_minor, we.description
+          FROM budget_ledger_entries ble
+          JOIN whammy_events we ON we.id = ble.reference_id
+          JOIN draft_events de
+            ON de.draft_id = ${draft.id}
+           AND de.event_type = 'WHAMMY_APPLIED'
+           -- de.payload is written as JSON.stringify(...)::jsonb by callers, which
+           -- stores it as a jsonb scalar string rather than a jsonb object; unwrap
+           -- via #>>'{}' (text form, works for both a scalar string and an object)
+           -- then re-cast to jsonb before extracting the key.
+           AND ((de.payload #>> '{}')::jsonb ->> 'whammy_event_id') = we.id::text
+          WHERE ble.draft_id = ${draft.id}
+            AND ble.team_id = ${pick.team_id}
+            AND ble.entry_type = 'WHAMMY'
+            AND ble.active = true
+            AND de.sequence >= ${pick.resolution_sequence}
+        `;
+
+        previewPicks.push({
+          acquisition_id: pick.id,
+          player_name: pick.player_name,
+          team_id: pick.team_id,
+          price_minor: pick.price_minor,
+          budget_return_minor: pick.price_minor,
+          vacated_roster_slot: pick.vacated_roster_slot,
+          whammy_interactions: whammyRows.map((w) => ({
+            whammy_id: w.whammy_id,
+            amount_minor: w.amount_minor,
+            description: w.description,
+          })),
+        });
+      }
+
+      return reply.send({
+        would_roll_back: picks.length,
+        picks: previewPicks,
+        state_version: stateVersion,
       });
     },
   );

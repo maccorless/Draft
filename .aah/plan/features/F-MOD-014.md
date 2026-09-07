@@ -43,6 +43,17 @@ This module finishes two pre-draft screens for the Draft platform (Node.js 20 + 
 - Given the Lobby renders the team icon/audio upload control (MOD-015), when it is present, then it calls MOD-015's existing `POST /leagues/:id/teams/:teamId/media` endpoint and does not duplicate or reimplement upload logic.
 - Given the Lobby is rendered for a draft that has not yet been created for the league (no `active` draft in `DraftGateway`), when it renders, then the prep-tool tabs are omitted or shown as unavailable rather than erroring on a missing `draftId`.
 
+**(4) Manual "Enter Draft Room" entry point (post-launch gap review).** Today `DraftGateway` (`web/src/App.tsx`) only ever puts an owner into Draft Room via the automatic `<Navigate to="/draft-room?...">` once `active.status` is `RUNNING`/`PAUSED`; while `active.status === 'CREATED'`, `DraftGateway` renders `<Lobby .../>` plus a conditional "Open War Room ↗" link (shown whenever `active` exists, regardless of status), but there is no equivalent manual link into Draft Room itself. Add a persistent "Enter Draft Room" link/button, rendered under the same `{active && (...)}` condition already guarding "Open War Room ↗" in `DraftGateway` (i.e. available as soon as a draft exists for the league — `CREATED` or later — not gated on `RUNNING`/`PAUSED`), pointing at `/draft-room?draftId=${active.id}`. This link's only job is to provide the entry point; it does not itself build Draft Room's pre-RUNNING "waiting room" rendering — that degraded pre-RUNNING shell is MOD-002's responsibility. Owners who click it before the draft is running land on whatever MOD-002 renders for a non-RUNNING draft; this module does not change Draft Room's own status handling.
+
+**(5) Editable Target Values tab (post-launch gap review).** The Lobby's Target Values tab (see (2) above) currently only lists existing `OwnerTargetValue` rows read via `GET /drafts/:draftId/teams/:teamId/target-values` — there is no control to set or change one. A `PUT /drafts/:draftId/teams/:teamId/target-values` endpoint already exists for this in `server/src/draft/strategy.ts` (upserts `owner_target_values` rows, accepts a `targets: [{ dataset_player_id, target_value_minor }]` body per `SetTargetValuesBody`, same `requireTeamOwner` auth gate as the sibling Watch List/Nomination Queue endpoints, no WS broadcast since target values are strictly private) — this feature wires the Lobby's existing Target Values tab UI to that endpoint rather than adding a new one. Add: a `PlayerPicker`-style control (mirroring the pattern already used for Watch List/Nomination Queue/Do Not Draft in this same file) to set a target value for a not-yet-targeted player, and an inline edit control on each existing target row to change its amount — both submit through the existing `PUT .../target-values` endpoint with the full/updated `targets` array, then re-run `refreshTargets()`. Dollar amounts entered in the UI convert to `target_value_minor` (integer minor units) before the request is sent, matching the money-handling convention used everywhere else in this codebase.
+
+**Additional behavioral expectations (post-launch gap review):**
+
+- Given `DraftGateway` renders with an `active` draft of any status (`CREATED`, `RUNNING`, `PAUSED`, or `COMPLETE`), when the page renders, then an "Enter Draft Room" link/button pointing at `/draft-room?draftId=${active.id}` is present, unconditioned on draft status (unlike the automatic redirect, which still only fires for `RUNNING`/`PAUSED`).
+- Given no `active` draft exists for the league, when `DraftGateway` renders, then no "Enter Draft Room" link is shown (same guard as "Open War Room ↗").
+- Given the Lobby's Target Values tab is active, when the owner selects a not-yet-targeted player and enters a dollar amount and submits, then `PUT /drafts/:draftId/teams/:teamId/target-values` is called with that player's `dataset_player_id` and `target_value_minor` included in the `targets` array, and a subsequent `GET` includes the new target.
+- Given the Lobby's Target Values tab shows an existing target, when the owner edits its amount and submits, then `PUT .../target-values` is called with the updated `target_value_minor` for that `dataset_player_id`, and a subsequent `GET` reflects the new amount (not a duplicate row).
+
 ## Layers
 
 - db
@@ -90,3 +101,78 @@ api_contracts:
 
 ## Status
 done
+
+## Applicable Standards
+- Total rules: 68
+- Critical:
+  - EXTRACTED-022
+  - EXTRACTED-046
+  - TS-SEC-001
+  - TS-SEC-002
+  - RX-SEC-001
+  - RX-SEC-002
+  - PG-SEC-001
+- High:
+  - EXTRACTED-001
+  - EXTRACTED-002
+  - EXTRACTED-003
+  - EXTRACTED-004
+  - EXTRACTED-005
+  - EXTRACTED-006
+  - EXTRACTED-007
+  - EXTRACTED-008
+  - EXTRACTED-010
+  - EXTRACTED-011
+  - EXTRACTED-012
+  - EXTRACTED-013
+  - EXTRACTED-014
+  - EXTRACTED-015
+  - EXTRACTED-020
+  - EXTRACTED-021
+  - EXTRACTED-023
+  - EXTRACTED-024
+  - EXTRACTED-025
+  - EXTRACTED-026
+  - EXTRACTED-029
+  - EXTRACTED-032
+  - EXTRACTED-033
+  - EXTRACTED-034
+  - EXTRACTED-035
+  - EXTRACTED-036
+  - EXTRACTED-038
+  - EXTRACTED-040
+  - EXTRACTED-041
+  - EXTRACTED-042
+  - EXTRACTED-043
+  - EXTRACTED-044
+  - EXTRACTED-045
+  - TS-TYPE-001
+  - TS-TYPE-002
+  - TS-TEST-001
+  - TS-ERR-001
+  - RX-ARCH-001
+  - RX-ARCH-002
+  - RX-A11Y-001
+  - PG-SEC-002
+  - PG-PERF-001
+  - PG-PERF-002
+  - PG-DATA-001
+  - PG-DATA-002
+- Medium:
+  - EXTRACTED-009
+  - EXTRACTED-016
+  - EXTRACTED-017
+  - EXTRACTED-018
+  - EXTRACTED-019
+  - EXTRACTED-027
+  - EXTRACTED-028
+  - EXTRACTED-030
+  - EXTRACTED-031
+  - EXTRACTED-037
+  - EXTRACTED-039
+  - TS-TYPE-003
+  - RX-A11Y-002
+  - RX-PERF-001
+  - PG-PERF-003
+- Low:
+  - TS-CONV-001

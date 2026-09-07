@@ -1,7 +1,5 @@
 # Data Model
 
-> **Note:** Pre-implementation. All entities are `[PLANNED]`. Derived from `data-model.md`.
-
 ## Overview
 
 State-stored (not event-sourced) Postgres schema. Live rows (`DraftTeamState`, `PlayerAuction`, `Acquisition`, `RosterEntry`, ledger) are authoritative truth. `DraftEvent` is append-only audit log and WS reconnect replay source — not used for arbitrary state reconstruction. Money is integer minor units (cents). Rollback appends compensating rows; history is never mutated.
@@ -15,7 +13,8 @@ erDiagram
     League ||--o| AuctionConfiguration : "configured by"
     League ||--o| ScoringConfiguration : "configured by"
     League ||--o{ Draft : hosts
-    League ||--o{ WhammyConfiguration : "may have"
+    League ||--o| WhammyConfiguration : "may have"
+    League ||--o{ DraftDataset : owns
 
     League {
         uuid id PK
@@ -35,6 +34,7 @@ erDiagram
     Team ||--o{ DoNotDraftEntry : "owns"
     Team ||--o{ OwnerPlayerTarget : "owns"
     Team ||--o| AutoAgentConfiguration : "configures"
+    Team ||--o| NominatorMatchRight : "granted one per auction"
     Team {
         uuid id PK
         uuid league_id FK
@@ -150,12 +150,109 @@ erDiagram
     }
 
     DraftDataset ||--o{ PlayerAuction : "scopes players for"
+    DraftDataset ||--o{ PlayerAavSource : "carries multi-source AAVs for"
     DraftDataset {
         uuid id PK
         uuid league_id FK
+        uuid draft_id
         enum status
         int version
         timestamp frozen_at
+        string primary_aav_source
+        string secondary_aav_source
+    }
+
+    Player ||--o{ PlayerAavSource : "priced by"
+    Player {
+        uuid id PK
+        string name
+        string position
+        string nfl_team
+        string espn_player_id
+        int bye_week
+        string injury_status
+        jsonb prior_season_stats
+    }
+
+    PlayerAavSource {
+        uuid id PK
+        uuid dataset_id FK
+        uuid player_id FK
+        int aav_minor
+        decimal projected_points
+        int tier
+        string source
+    }
+
+    WhammyConfiguration ||--o{ WhammyEvent : "governs"
+    WhammyConfiguration {
+        uuid id PK
+        uuid league_id FK
+        bool enabled
+        int max_amount_minor
+        text_array allowed_event_types
+        bool commissioner_approval_required
+    }
+
+    WhammyEvent ||--o| BudgetLedgerEntry : "produces"
+    WhammyEvent {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        int amount_minor
+        string description
+        enum status "PENDING_APPROVAL | APPLIED | REJECTED | REVERSED"
+    }
+
+    AutoAgentConfiguration {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        bool enabled
+        decimal max_over_base_pct
+        decimal random_variance_pct
+        decimal bench_value_pct
+        bool prioritize_starters
+        bool use_owner_target_when_customized
+        bool fallback_to_primary_aav
+    }
+
+    NominatorMatchRight {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        bool used
+        timestamp used_at
+    }
+
+    WatchListEntry {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        uuid dataset_player_id FK
+    }
+
+    NominationQueueEntry {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        uuid dataset_player_id FK
+        int queue_position
+    }
+
+    DoNotDraftEntry {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        uuid dataset_player_id FK
+    }
+
+    OwnerPlayerTarget {
+        uuid id PK
+        uuid draft_id FK
+        uuid team_id FK
+        uuid dataset_player_id FK
+        int target_value_minor
     }
 ```
 
@@ -163,21 +260,31 @@ erDiagram
 
 | Entity | Purpose | Key Fields | Relationships |
 |--------|---------|------------|---------------|
-| League | League configuration and auth | commissioner_password_hash, auth_epoch | 1:N Teams, 1:N Drafts [PLANNED] |
-| Team | Team identity and budget override | team_password_hash, auth_epoch, starting_budget_override_minor | N:1 League, 1:N DraftTeamState [PLANNED] |
-| Draft | Live draft event FSM | status, nomination_cursor, state_version | 1:1 DraftDataset, 1:N PlayerAuction [PLANNED] |
-| DraftTeamState | Per-team live state | remaining_budget_minor, control_mode, anti_snipe_penalty_remaining_auctions | N:1 Draft, N:1 Team [PLANNED] |
-| PlayerAuction | Single-player auction FSM | status, current_price_minor, current_leader_team_id, deadlines | N:1 Draft, 1:N BidAttempt [PLANNED] |
-| BidAttempt | All bid attempts incl. rejected | bid_type, result, server_receipt_time, idempotency_key | N:1 PlayerAuction [PLANNED] |
-| Acquisition | Awarded pick (append-only, supersede to correct) | price_minor, resolution_sequence, active | 1:N RosterEntry, 1:N BudgetLedgerEntry [PLANNED] |
-| RosterEntry | Starter-first slot assignment | slot_type, active | N:1 Acquisition [PLANNED] |
-| BudgetLedgerEntry | Ledger-backed budget changes | amount_minor, reason, active | N:1 Team, N:1 Draft [PLANNED] |
-| DraftEvent | Immutable audit log + WS replay | sequence, event_type, payload | N:1 Draft [PLANNED] |
-| DraftDataset | Frozen versioned player snapshot | status (FROZEN), version | Referenced by Draft [PLANNED] |
+| League | League configuration and auth | commissioner_password_hash, auth_epoch | 1:N Teams, 1:N Drafts |
+| Team | Team identity and budget override | team_password_hash, auth_epoch, starting_budget_override_minor | N:1 League, 1:N DraftTeamState |
+| Draft | Live draft event FSM | status, nomination_cursor, state_version | 1:1 DraftDataset, 1:N PlayerAuction |
+| DraftTeamState | Per-team live state | remaining_budget_minor, control_mode, anti_snipe_penalty_remaining_auctions | N:1 Draft, N:1 Team |
+| PlayerAuction | Single-player auction FSM | status, current_price_minor, current_leader_team_id, deadlines | N:1 Draft, 1:N BidAttempt |
+| BidAttempt | All bid attempts incl. rejected | bid_type, result, server_receipt_time, idempotency_key | N:1 PlayerAuction |
+| Acquisition | Awarded pick (append-only, supersede to correct) | price_minor, resolution_sequence, active | 1:N RosterEntry, 1:N BudgetLedgerEntry |
+| RosterEntry | Starter-first slot assignment | slot_type, active | N:1 Acquisition |
+| BudgetLedgerEntry | Ledger-backed budget changes | amount_minor, entry_type, active | N:1 Team, N:1 Draft, optional N:1 WhammyEvent |
+| DraftEvent | Immutable audit log + WS replay | sequence, event_type, payload | N:1 Draft |
+| DraftDataset | Frozen versioned player snapshot | status (FROZEN), version, primary/secondary AAV source | Referenced by Draft, 1:N PlayerAavSource |
+| Player | Static player reference data | position, nfl_team, injury_status, prior_season_stats | 1:N PlayerAavSource |
+| PlayerAavSource | Per-(dataset, player, source) AAV row | aav_minor, projected_points, tier, source | N:1 DraftDataset, N:1 Player — enables multi-source AAV blending (F-MOD-016) |
+| WhammyConfiguration | Commissioner-configured random budget events | enabled, max_amount_minor, allowed_event_types | 1:1 League, 1:N WhammyEvent |
+| WhammyEvent | An applied/pending Whammy occurrence | amount_minor, status (PENDING_APPROVAL/APPLIED/REJECTED/REVERSED) | N:1 Draft, N:1 Team, 1:1 BudgetLedgerEntry |
+| AutoAgentConfiguration | Per-team Auto-Agent bidding parameters | max_over_base_pct, random_variance_pct, bench_value_pct, prioritize_starters | N:1 Draft, N:1 Team |
+| NominatorMatchRight | One-per-auction right to match high bid at same price | used, used_at | N:1 Draft, N:1 Team — consumed permanently |
+| WatchListEntry | Private per-team watch list (never auto-nominates) | dataset_player_id | N:1 Draft, N:1 Team |
+| NominationQueueEntry | Private per-team auto-nomination queue | queue_position | N:1 Draft, N:1 Team |
+| DoNotDraftEntry | Per-team exclusion list (excluded from Auto-Agent bidding) | dataset_player_id | N:1 Draft, N:1 Team |
+| OwnerPlayerTarget | Private per-team target valuation (never shown to other owners) | target_value_minor | N:1 Draft, N:1 Team |
 
 ## Data Stores
 
 | Store | Type | Purpose |
 |-------|------|---------|
-| PostgreSQL | Relational RDBMS | All persistent state — teams, draft, auctions, ledger, events [PLANNED] |
-| In-memory (Node.js Map) | Process memory | Hot draft state per draft_id; authoritative only after DB commit [PLANNED] |
+| PostgreSQL | Relational RDBMS (Drizzle schema, 32 tables) | All persistent state — league, team, draft, auctions, ledger, events, strategy lists |
+| In-memory `DraftRuntime` (Node.js `Map<draft_id, ...>`) | Process memory | Hot draft state per `draft_id` (queue, team sessions, grace timers); populated from and updated only after DB commit — never authoritative on its own |

@@ -15,7 +15,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
 import { z } from 'zod';
-import { broadcast } from '../auction/engine.js';
+import { broadcast, getOrCreateRuntime } from '../auction/engine.js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +42,20 @@ interface WhammyConfig {
 
 type DraftParams = { draftId: string };
 type WhammyParams = { draftId: string; whammyId: string };
+type LeagueParams = { leagueId: string };
+type DefinitionParams = { leagueId: string; definitionId: string };
+
+interface WhammyDefinitionRow {
+  id: string;
+  name: string;
+  type: string;
+  budget_delta_minor: number | null;
+  trigger_rule_json: Record<string, unknown> | string;
+  display_message: string;
+  offline_action_text: string | null;
+  weight: number;
+  active: boolean;
+}
 
 // ─── Auth helper (mirrors corrections.ts pattern) ─────────────────────────────
 
@@ -91,6 +105,42 @@ async function requireCommissioner(
   }
 
   return { draft, claims };
+}
+
+/** League-scoped commissioner auth (WhammyDefinition CRUD — no :draftId param). */
+async function requireLeagueCommissioner(
+  req: FastifyRequest<{ Params: LeagueParams | DefinitionParams }>,
+  reply: FastifyReply,
+  sql: postgres.Sql,
+): Promise<TokenClaims | null> {
+  let claims: TokenClaims;
+  try {
+    claims = await req.jwtVerify<TokenClaims>();
+  } catch {
+    reply.status(401).send({ code: 'UNAUTHORIZED', message: 'Invalid or expired token' });
+    return null;
+  }
+  if (claims.role !== 'COMMISSIONER') {
+    reply.status(403).send({ code: 'FORBIDDEN', message: 'Commissioner role required' });
+    return null;
+  }
+  const { leagueId } = req.params;
+  if (claims.league_id !== leagueId) {
+    reply.status(403).send({ code: 'FORBIDDEN', message: 'Token scope mismatch' });
+    return null;
+  }
+  const [league] = await sql<[{ auth_epoch: number }]>`
+    SELECT auth_epoch FROM leagues WHERE id = ${leagueId} LIMIT 1
+  `;
+  if (!league) {
+    reply.status(404).send({ code: 'NOT_FOUND', message: 'League not found' });
+    return null;
+  }
+  if (claims.auth_epoch !== league.auth_epoch) {
+    reply.status(401).send({ code: 'TOKEN_REVOKED', message: 'Token has been revoked' });
+    return null;
+  }
+  return claims;
 }
 
 // ─── Whammy config loader ─────────────────────────────────────────────────────
@@ -155,6 +205,8 @@ async function applyWhammy(
   amountMinor: number,
   description: string,
   whammyEventId: string | null,
+  definitionId: string | null = null,
+  triggerEventSequence: number | null = null,
 ): Promise<{ whammyEventId: string; newRemainingBudgetMinor: number }> {
   let resolvedWhammyId = whammyEventId ?? '';
   let newRemainingBudget = 0;
@@ -164,8 +216,8 @@ async function applyWhammy(
     if (!whammyEventId) {
       // Immediate path: create WhammyEvent with status=APPLIED in the same transaction
       const [we] = await tx<[{ id: string }]>`
-        INSERT INTO whammy_events (draft_id, team_id, amount_minor, description, status)
-        VALUES (${draftId}, ${teamId}, ${amountMinor}, ${description}, 'APPLIED')
+        INSERT INTO whammy_events (draft_id, team_id, amount_minor, description, status, definition_id, trigger_event_sequence)
+        VALUES (${draftId}, ${teamId}, ${amountMinor}, ${description}, 'APPLIED', ${definitionId}, ${triggerEventSequence})
         RETURNING id
       `;
       resolvedWhammyId = we!.id;
@@ -459,4 +511,236 @@ export async function registerWhammyRoutes(
       return reply.send({ whammy_id: whammyId, status: 'REJECTED' });
     },
   );
+
+  // ── WhammyDefinition CRUD (F-MOD-009-rework-01) ─────────────────────────────
+  // Commissioner-only, league-scoped (not draft-scoped) — these configure the
+  // event catalog the auto-trigger evaluator below selects from.
+
+  const WhammyDefinitionRequestBody = z.object({
+    name: z.string().min(1),
+    type: z.string().min(1),
+    budget_delta_minor: z.number().int().nullable().optional(),
+    trigger_rule_json: z.record(z.string(), z.unknown()).optional().default({}),
+    weight: z.number().int().positive().optional().default(1),
+    display_message: z.string().min(1),
+    offline_action_text: z.string().nullable().optional(),
+    active: z.boolean().optional().default(true),
+  });
+
+  server.post<{ Params: LeagueParams }>(
+    '/leagues/:leagueId/whammy-definitions',
+    async (req, reply) => {
+      const claims = await requireLeagueCommissioner(req, reply, sql);
+      if (!claims) return;
+
+      const parse = WhammyDefinitionRequestBody.safeParse(req.body);
+      if (!parse.success) {
+        return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid request body' });
+      }
+      const d = parse.data;
+      const [row] = await sql<[WhammyDefinitionRow]>`
+        INSERT INTO whammy_definitions
+          (league_id, name, type, budget_delta_minor, trigger_rule_json, display_message, offline_action_text, weight, active)
+        VALUES
+          (${req.params.leagueId}, ${d.name}, ${d.type}, ${d.budget_delta_minor ?? null},
+           ${JSON.stringify(d.trigger_rule_json)}::jsonb, ${d.display_message}, ${d.offline_action_text ?? null},
+           ${d.weight}, ${d.active})
+        RETURNING id, name, type, budget_delta_minor, trigger_rule_json, display_message, offline_action_text, weight, active
+      `;
+      return reply.status(201).send(row);
+    },
+  );
+
+  server.get<{ Params: LeagueParams }>(
+    '/leagues/:leagueId/whammy-definitions',
+    async (req, reply) => {
+      const claims = await requireLeagueCommissioner(req, reply, sql);
+      if (!claims) return;
+
+      const rows = await sql<WhammyDefinitionRow[]>`
+        SELECT id, name, type, budget_delta_minor, trigger_rule_json, display_message, offline_action_text, weight, active
+        FROM whammy_definitions WHERE league_id = ${req.params.leagueId}
+        ORDER BY name
+      `;
+      return reply.send(rows);
+    },
+  );
+
+  server.put<{ Params: DefinitionParams }>(
+    '/leagues/:leagueId/whammy-definitions/:definitionId',
+    async (req, reply) => {
+      const claims = await requireLeagueCommissioner(req, reply, sql);
+      if (!claims) return;
+
+      const parse = WhammyDefinitionRequestBody.safeParse(req.body);
+      if (!parse.success) {
+        return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'Invalid request body' });
+      }
+      const { leagueId, definitionId } = req.params;
+      const [existing] = await sql<[{ id: string } | undefined]>`
+        SELECT id FROM whammy_definitions WHERE id = ${definitionId} AND league_id = ${leagueId} LIMIT 1
+      `;
+      if (!existing) {
+        return reply.status(404).send({ code: 'NOT_FOUND', message: 'Whammy definition not found' });
+      }
+      const d = parse.data;
+      const [row] = await sql<[WhammyDefinitionRow]>`
+        UPDATE whammy_definitions SET
+          name = ${d.name}, type = ${d.type}, budget_delta_minor = ${d.budget_delta_minor ?? null},
+          trigger_rule_json = ${JSON.stringify(d.trigger_rule_json)}::jsonb, display_message = ${d.display_message},
+          offline_action_text = ${d.offline_action_text ?? null}, weight = ${d.weight}, active = ${d.active}
+        WHERE id = ${definitionId}
+        RETURNING id, name, type, budget_delta_minor, trigger_rule_json, display_message, offline_action_text, weight, active
+      `;
+      return reply.send(row);
+    },
+  );
+}
+
+// ─── Auto-trigger evaluation (F-MOD-009-rework-01) ────────────────────────────
+//
+// Runs once per pick resolution, inside the same serialized command that
+// resolved the pick, after that resolution's own transaction commits and
+// before the per-draft queue admits the next command (state-machine-flows.md
+// §16). Called from auction/engine.ts's awardAuction.
+
+interface TriggerRule {
+  // ponytail: simplest workable shape for "a probability/weight check"
+  // (PRD §33) absent a stricter shared contract — a definition with no
+  // parseable probability in [0,1] is treated as never-eligible rather than
+  // defaulting to always-eligible, so a malformed rule fails safe (silent,
+  // per EXTRACTED-046) instead of flooding every pick.
+  probability?: number;
+}
+
+function isEligible(triggerRuleJson: Record<string, unknown> | string): boolean {
+  // postgres.js does not consistently auto-parse a jsonb column written via
+  // an explicit ::jsonb cast — it can come back as a JSON string rather than
+  // an object (same quirk noted elsewhere in this codebase, e.g.
+  // F-MOD-004_auto_agent.test.ts's rawPayload handling). Parse defensively.
+  const parsed = typeof triggerRuleJson === 'string' ? (JSON.parse(triggerRuleJson) as TriggerRule) : (triggerRuleJson as TriggerRule);
+  const p = parsed.probability;
+  if (typeof p !== 'number' || !Number.isFinite(p) || p < 0 || p > 1) return false;
+  return Math.random() < p;
+}
+
+function weightedRandomPick<T extends { weight: number }>(items: T[]): T {
+  const weights = items.map((i) => (Number.isFinite(i.weight) && i.weight > 0 ? i.weight : 1));
+  const total = weights.reduce((a, b) => a + b, 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i]!;
+    if (r <= 0) return items[i]!;
+  }
+  return items[items.length - 1]!;
+}
+
+export async function evaluateWhammyAutoTrigger(
+  sql: postgres.Sql,
+  draftId: string,
+  leagueId: string,
+  awardedTeamId: string,
+  triggerEventSequence: number,
+): Promise<void> {
+  const config = await loadWhammyConfig(sql, leagueId);
+  if (!config || !config.enabled) return;
+
+  const definitions = await sql<WhammyDefinitionRow[]>`
+    SELECT id, name, type, budget_delta_minor, trigger_rule_json, display_message, offline_action_text, weight, active
+    FROM whammy_definitions WHERE league_id = ${leagueId} AND active = true
+  `;
+  if (definitions.length === 0) return;
+
+  const eligible = definitions.filter((d) => isEligible(d.trigger_rule_json));
+  if (eligible.length === 0) return;
+
+  const selected = weightedRandomPick(eligible);
+  const budgetDelta = selected.budget_delta_minor ?? 0;
+  const teamId = budgetDelta !== 0 ? awardedTeamId : null;
+  const description = selected.display_message;
+
+  if (budgetDelta > 0 && !config.allow_positive) return;
+  if (budgetDelta < 0 && !config.allow_negative) return;
+
+  if (teamId && config.max_per_team !== null) {
+    const [{ count }] = await sql<[{ count: number }]>`
+      SELECT COUNT(*)::int AS count FROM whammy_events
+      WHERE draft_id = ${draftId} AND team_id = ${teamId} AND status = 'APPLIED'
+    `;
+    if (count >= config.max_per_team) return;
+  }
+  if (config.max_per_draft !== null) {
+    const [{ count }] = await sql<[{ count: number }]>`
+      SELECT COUNT(*)::int AS count FROM whammy_events WHERE draft_id = ${draftId} AND status = 'APPLIED'
+    `;
+    if (count >= config.max_per_draft) return;
+  }
+  if (budgetDelta < 0 && teamId) {
+    const feasible = await checkRosterCompletionFeasible(sql, draftId, teamId, budgetDelta);
+    if (!feasible) return;
+  }
+
+  if (config.commissioner_approval_required) {
+    await sql`
+      INSERT INTO whammy_events (draft_id, team_id, amount_minor, description, status, definition_id, trigger_event_sequence)
+      VALUES (${draftId}, ${teamId}, ${budgetDelta}, ${description}, 'PENDING_APPROVAL', ${selected.id}, ${triggerEventSequence})
+    `;
+    return;
+  }
+
+  const pauseUntilMs = await applyWhammyPause(sql, draftId);
+
+  if (teamId) {
+    const result = await applyWhammy(sql, draftId, teamId, budgetDelta, description, null, selected.id, triggerEventSequence);
+    broadcast(draftId, {
+      type: 'WHAMMY_APPLIED',
+      payload: { team_id: teamId, amount_minor: budgetDelta, description, new_remaining_budget_minor: result.newRemainingBudgetMinor, pause_until_ms: pauseUntilMs },
+    });
+  } else {
+    // Message-only definition (no budget delta): no ledger entry, no budget
+    // mutation — record the event and broadcast for display purposes only.
+    await sql`
+      INSERT INTO whammy_events (draft_id, team_id, amount_minor, description, status, definition_id, trigger_event_sequence)
+      VALUES (${draftId}, NULL, 0, ${description}, 'APPLIED', ${selected.id}, ${triggerEventSequence})
+    `;
+    broadcast(draftId, {
+      type: 'WHAMMY_APPLIED',
+      payload: { team_id: null, amount_minor: 0, description, new_remaining_budget_minor: null, pause_until_ms: pauseUntilMs },
+    });
+  }
+  broadcast(draftId, { type: 'DRAFT_STATUS_CHANGED', payload: { draft_id: draftId, status: 'PAUSED' } });
+}
+
+const WHAMMY_PAUSE_MS = 20_000;
+
+async function applyWhammyPause(sql: postgres.Sql, draftId: string): Promise<number> {
+  const resumeAt = new Date(Date.now() + WHAMMY_PAUSE_MS);
+  await sql`
+    UPDATE drafts SET status = 'PAUSED', whammy_resume_at = ${resumeAt.toISOString()}
+    WHERE id = ${draftId}
+  `;
+  scheduleWhammyResume(sql, draftId, resumeAt);
+  return resumeAt.getTime();
+}
+
+export function scheduleWhammyResume(sql: postgres.Sql, draftId: string, resumeAt: Date): void {
+  const rt = getOrCreateRuntime(draftId);
+  if (rt.whammyResumeTimer) clearTimeout(rt.whammyResumeTimer);
+  const delayMs = Math.max(0, resumeAt.getTime() - Date.now());
+  rt.whammyResumeTimer = setTimeout(async () => {
+    rt.whammyResumeTimer = null;
+    try {
+      // Only resume if still paused by this whammy (not paused by commissioner separately)
+      const [row] = await sql<[{ whammy_resume_at: Date | null; status: string }]>`
+        SELECT whammy_resume_at, status FROM drafts WHERE id = ${draftId} LIMIT 1
+      `;
+      if (!row || row.status !== 'PAUSED') return;
+      const storedAt = row.whammy_resume_at ? new Date(row.whammy_resume_at as unknown as string | Date) : null;
+      if (!storedAt || storedAt.getTime() > Date.now() + 500) return; // not yet due
+      await sql`UPDATE drafts SET status = 'RUNNING', whammy_resume_at = NULL WHERE id = ${draftId} AND status = 'PAUSED'`;
+      broadcast(draftId, { type: 'DRAFT_STATUS_CHANGED', payload: { draft_id: draftId, status: 'RUNNING' } });
+    } catch (err) {
+      console.error('[whammy] auto-resume failed:', err);
+    }
+  }, delayMs);
 }

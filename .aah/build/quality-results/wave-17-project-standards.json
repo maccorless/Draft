@@ -1,0 +1,71 @@
+{
+  "scope": "project",
+  "wave": 17,
+  "scopes": [
+    {
+      "stack": "node",
+      "root": ".",
+      "files": []
+    }
+  ],
+  "overall_passed": true,
+  "verdict": "PASS",
+  "status": "pass",
+  "linting": {
+    "passed": true,
+    "status": "pass",
+    "message": "Linting passed"
+  },
+  "static_analysis": {
+    "passed": true,
+    "status": "pass",
+    "message": "Static analysis passed"
+  },
+  "coverage": {
+    "passed": true,
+    "status": "not_applicable"
+  },
+  "type_check": {
+    "passed": true,
+    "status": "not_applicable"
+  },
+  "findings": {
+    "linting": "[{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/server/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/server/src/config/env-check.cjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/shared-types/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/web/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n",
+    "static_analysis": "[{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/server/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/server/src/config/env-check.cjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/shared-types/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/.claude/worktrees/F-MOD-002-rework-05/web/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/eslint.config.mjs\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]},{\"filePath\":\"/Users/kcorless/Projects/Software/Draft/scripts/build-players-csv.js\",\"messages\":[],\"suppressedMessages\":[],\"errorCount\":0,\"fatalErrorCount\":0,\"warningCount\":0,\"fixableErrorCount\":0,\"fixableWarningCount\":0,\"usedDeprecatedRules\":[]}]\n"
+  },
+  "commands": {
+    "linting": "npx eslint . --format=json",
+    "static_analysis": "npx eslint . --rule '{\"no-eval\": \"error\"}' --format=json"
+  },
+  "subject": {
+    "schema_version": 2,
+    "rel_path": ".",
+    "branch": "integration/wave-17",
+    "commit_sha": "26a3b46849ff7e627c3558cfcb8d0f102767443441e8be458b283744915b59b1",
+    "head_sha": "9d02bbe4c2f27d168fbd908db45cd035f4387a06",
+    "clean": true
+  },
+  "schema_version": 1,
+  "attestation": {
+    "method": "subprocess",
+    "command": [
+      "aah",
+      "run",
+      "core.build.quality_checks",
+      "run-project",
+      "--project-path",
+      ".",
+      "--wave",
+      "17"
+    ],
+    "exit_code": 0,
+    "stdout_sha256": "ca295d4e7686e14e69a5cd23216b93d31a1ccc3b7e5ffc1b1583d48846bafeab",
+    "stderr_sha256": "ff32ec3a23f166bdb07394c8081890b535cde4ee85661ab34b6ea75c00ee821c",
+    "duration_ms": 3280,
+    "host_pid": 55434,
+    "timestamp": "2026-09-06T01:36:33.028837+00:00",
+    "session_secret_sha256": "866ac2d0a3e1b61fe17f129b52fb8463e1b44f606eb1edf0b7269fd88971a035",
+    "schema_version": 1,
+    "signature": "a8587f05bc31dfb0420697d48eb544210e21fe62a64c43228cf51439a5acdc74"
+  }
+}

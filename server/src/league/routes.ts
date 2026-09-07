@@ -448,6 +448,7 @@ export async function registerLeagueRoutes(
       }
 
       const patch: Partial<typeof teams.$inferInsert> = {};
+      if (parse.data.name !== undefined) patch.name = parse.data.name;
       if (parse.data.starting_budget_override_minor !== undefined) {
         patch.starting_budget_override_minor = parse.data.starting_budget_override_minor;
       }

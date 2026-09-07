@@ -25,9 +25,10 @@ import { triggerAutoAgentBidsOnNomination } from './auction/auto-agent.js';
 import { registerCorrectionRoutes } from './draft/corrections.js';
 import { registerDraftControlRoutes } from './draft/draft-control.js';
 import { registerReportRoutes } from './draft/reports.js';
+import { registerEspnTransferRoutes } from './draft/espn-transfer.js';
 import { registerStrategyRoutes } from './draft/strategy.js';
 import { registerDoNotDraftRoutes } from './draft/do-not-draft.js';
-import { registerWhammyRoutes } from './draft/whammy.js';
+import { registerWhammyRoutes, scheduleWhammyResume } from './draft/whammy.js';
 import { registerWarRoomRoutes } from './draft/war-room.js';
 import { registerTeamMediaRoutes } from './team-media/routes.js';
 import { registerDevRoutes } from './dev/routes.js';
@@ -92,8 +93,22 @@ export async function buildServer() {
     },
   });
 
+  // FRONTEND_ORIGIN (comma-separated) allows a production frontend's origin
+  // through CORS. Localhost dev origins are added only outside production —
+  // never wildcarded, since CORS with credentials:true + a wildcard origin
+  // is both spec-invalid and a security regression. env-check.cjs enforces
+  // FRONTEND_ORIGIN is set whenever NODE_ENV === 'production'.
+  const configuredOrigins = (process.env['FRONTEND_ORIGIN'] ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+  const corsOrigins =
+    process.env['NODE_ENV'] === 'production'
+      ? configuredOrigins
+      : [...configuredOrigins, 'http://localhost:5173', 'http://127.0.0.1:5173'];
+
   await server.register(fastifyCors, {
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: corsOrigins,
     credentials: true,
   });
 
@@ -141,6 +156,7 @@ export async function buildServer() {
   await registerCorrectionRoutes(server, sql);
   await registerDraftControlRoutes(server, sql);
   await registerReportRoutes(server, sql);
+  await registerEspnTransferRoutes(server, sql);
   await registerStrategyRoutes(server, sql);
   await registerDoNotDraftRoutes(server, sql);
   await registerWhammyRoutes(server, sql);
@@ -161,6 +177,15 @@ export async function buildServer() {
 
 if (process.argv[1]?.endsWith('main.ts') || process.argv[1]?.endsWith('main.js')) {
   await recoverRunningDrafts();
+
+  // Re-arm whammy auto-resume timers for any PAUSED drafts awaiting resume after restart.
+  const whammyPaused = await sql<{ id: string; whammy_resume_at: Date }[]>`
+    SELECT id, whammy_resume_at FROM drafts
+    WHERE status = 'PAUSED' AND whammy_resume_at IS NOT NULL
+  `;
+  for (const draft of whammyPaused) {
+    scheduleWhammyResume(sql, draft.id, new Date(draft.whammy_resume_at as unknown as string | Date));
+  }
 
   const server = await buildServer();
   try {

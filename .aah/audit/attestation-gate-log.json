@@ -1,0 +1,12 @@
+{
+  "events": [
+    {
+      "timestamp": "2026-09-05T22:30:58.291233+00:00",
+      "gate": "promote",
+      "artifact": "final_verification",
+      "verdict": "refuse",
+      "reason": "wrong_branch",
+      "wave": 16
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+feedback_id: UF-18-01
+wave: 18
+source: user
+started_at: '2026-09-06T13:54:46Z'
+feedback_details: |
+  Fix the pre-existing repo-wide bug where DraftEvent/payload JSONB columns are double-encoded: writes throughout server/src/auction/engine.ts, server/src/draft/whammy.ts, server/src/draft/draft-control.ts (and any other module doing `${JSON.stringify(x)}::jsonb` inserts) store `payload` as a JSON string inside a jsonb column instead of a native jsonb object. This was discovered and only locally worked around (via `(payload #>> '{}')::jsonb ->> 'key'`) in the new query added in feature F-MOD-005-rework-01 (server/src/draft/corrections.ts). Fix at the source: correct the write side so payload is inserted as a proper jsonb object (not a double-encoded string), update any read-side code that currently compensates for the double-encoding (including the workaround just added in corrections.ts, which should revert to a normal jsonb read once the write side is fixed), and confirm no regressions across the affected modules' existing tests. (feature: F-MOD-005-rework-01)
+steps:
+- phase: plan
+  completed_at: null
+  affected_modules:
+  - MOD-002
+  - MOD-005
+  - MOD-009
+  - MOD-011
+  blast_radius_features:
+  - F-MOD-002
+  - F-MOD-002-rework-01
+  - F-MOD-002-rework-02
+  - F-MOD-002-rework-03
+  - F-MOD-002-rework-04
+  - F-MOD-002-rework-05
+  - F-MOD-002-rework-06
+  - F-MOD-003
+  - F-MOD-004
+  - F-MOD-004-rework-01
+  - F-MOD-004-rework-02
+  - F-MOD-004-rework-03
+  - F-MOD-005
+  - F-MOD-005-rework-01
+  - F-MOD-006
+  - F-MOD-006-rework-01
+  - F-MOD-008
+  - F-MOD-008-rework-01
+  - F-MOD-009
+  - F-MOD-009-rework-01
+  - F-MOD-010
+  - F-MOD-010-rework-01
+  - F-MOD-011
+  - F-MOD-011-rework-01
+  - F-MOD-011-rework-02
+  - F-MOD-012
+  - F-MOD-012-rework-01
+  - F-MOD-013
+  - F-MOD-013-rework-01
+  - F-MOD-014
+  - F-MOD-014-rework-01
+  - F-MOD-015
+  - F-MOD-017
+  output: >
+    User chose the "narrow direct fix" path (not the full 33-feature rework
+    pipeline) — attempted directly by the calling session, outside the normal
+    plan/rework flow. Root cause confirmed empirically against a real DB:
+    `${JSON.stringify(x)}::jsonb` double-encodes because postgres.js's
+    ParameterDescription-driven type negotiation re-applies its own JSON
+    serializer to an already-stringified value when the parameter's inferred
+    type is unknown (0) and the query casts to ::jsonb. `${sql.json(x)}::jsonb`
+    (the officially-recommended postgres.js pattern) reproduces correctly in
+    every standalone script tested, but broke NOMINATION_STARTED event writes
+    (a core, previously-working auction path) when applied inside the real
+    app/test harness for reasons not fully diagnosed despite deep investigation
+    (bytes.js monkeypatching confirmed the raw object reaches the byte
+    serializer unconverted, but why serialization is skipped only in-app,
+    never in isolation, was not resolved). Given the risk of shipping a fix
+    that breaks core nomination to address a lower-severity data-encoding
+    bug, all changes were reverted; the codebase is back to its original
+    state (JSON.stringify(x)::jsonb writes, unchanged). No fix was shipped.
+  completed_at: '2026-09-06T14:35:00Z'
+status: escalated_to_human
+

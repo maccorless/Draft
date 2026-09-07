@@ -322,6 +322,15 @@ export async function registerAuctionWsHandler(
                 expected_auction_version: commandPayload['expected_auction_version'] !== undefined
                   ? Number(commandPayload['expected_auction_version'])
                   : undefined,
+                client_click_time_ms: commandPayload['client_click_time_ms'] != null
+                  ? Number(commandPayload['client_click_time_ms'])
+                  : null,
+                client_displayed_bid_minor: commandPayload['client_displayed_bid_minor'] != null
+                  ? Number(commandPayload['client_displayed_bid_minor'])
+                  : null,
+                client_auction_version: commandPayload['client_auction_version'] != null
+                  ? Number(commandPayload['client_auction_version'])
+                  : null,
               },
             });
 

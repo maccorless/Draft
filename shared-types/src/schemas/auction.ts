@@ -21,6 +21,12 @@ export const BidCommandSchema = z.object({
     expected_current_bid_minor: z.number().int().optional(),
     /** Required for RELATIVE and NOMINATOR_MATCH */
     expected_auction_version: z.number().int().optional(),
+    /** Telemetry: Unix ms when user clicked bid button */
+    client_click_time_ms: z.number().int().optional().nullable(),
+    /** Telemetry: price client was displaying when they clicked */
+    client_displayed_bid_minor: z.number().int().optional().nullable(),
+    /** Telemetry: auction version client was on when they clicked */
+    client_auction_version: z.number().int().optional().nullable(),
   }),
 });
 export type BidCommand = z.infer<typeof BidCommandSchema>;
@@ -128,3 +134,93 @@ export const DraftStatusResponseSchema = z.object({
   status: z.enum(['CREATED', 'RUNNING', 'PAUSED', 'COMPLETE']),
 });
 export type DraftStatusResponse = z.infer<typeof DraftStatusResponseSchema>;
+
+// ─── New Event Schemas (Sprint Gap Closure) ───────────────────────────────────
+
+export const WhammyAppliedEventSchema = z.object({
+  type: z.literal('WHAMMY_APPLIED'),
+  payload: z.object({
+    team_id: z.string().uuid().nullable(),
+    amount_minor: z.number().int(),
+    description: z.string(),
+    new_remaining_budget_minor: z.number().int().nullable(),
+    /** Unix ms when draft will auto-resume (20s after trigger). Null if no pause. */
+    pause_until_ms: z.number().int().nullable(),
+  }),
+});
+export type WhammyAppliedEvent = z.infer<typeof WhammyAppliedEventSchema>;
+
+export const AntiSnipeExtensionEventSchema = z.object({
+  type: z.literal('ANTI_SNIPE_EXTENSION'),
+  payload: z.object({
+    player_auction_id: z.string().uuid(),
+    new_deadline_ms: z.number().int(),
+    seconds_added: z.number().int(),
+  }),
+});
+export type AntiSnipeExtensionEvent = z.infer<typeof AntiSnipeExtensionEventSchema>;
+
+export const AntiSnipePenaltyAppliedEventSchema = z.object({
+  type: z.literal('ANTI_SNIPE_PENALTY_APPLIED'),
+  payload: z.object({
+    team_id: z.string().uuid(),
+    auctions_remaining: z.number().int(),
+    min_seconds_required: z.number().int(),
+  }),
+});
+export type AntiSnipePenaltyAppliedEvent = z.infer<typeof AntiSnipePenaltyAppliedEventSchema>;
+
+export const AntiSnipePenaltyExpiredEventSchema = z.object({
+  type: z.literal('ANTI_SNIPE_PENALTY_EXPIRED'),
+  payload: z.object({
+    team_id: z.string().uuid(),
+  }),
+});
+export type AntiSnipePenaltyExpiredEvent = z.infer<typeof AntiSnipePenaltyExpiredEventSchema>;
+
+export const PicksFeedEntryEventSchema = z.object({
+  type: z.literal('PICKS_FEED_ENTRY'),
+  payload: z.object({
+    acquisition_id: z.string().uuid(),
+    player_id: z.string().uuid(),
+    player_name: z.string(),
+    team_id: z.string().uuid(),
+    team_name: z.string(),
+    price_minor: z.number().int(),
+    resolution_sequence: z.number().int(),
+    awarded_at: z.string().datetime(),
+  }),
+});
+export type PicksFeedEntryEvent = z.infer<typeof PicksFeedEntryEventSchema>;
+
+// ─── PING/PONG for latency measurement ───────────────────────────────────────
+
+export const PingCommandSchema = z.object({
+  type: z.literal('PING'),
+  payload: z.object({
+    client_time_ms: z.number().int(),
+  }),
+});
+export type PingCommand = z.infer<typeof PingCommandSchema>;
+
+export const PongEventSchema = z.object({
+  type: z.literal('PONG'),
+  payload: z.object({
+    client_time_ms: z.number().int(),
+    server_time_ms: z.number().int(),
+  }),
+});
+export type PongEvent = z.infer<typeof PongEventSchema>;
+
+// ─── REST API Types ───────────────────────────────────────────────────────────
+
+/** GET /leagues/:id/drafts/:draftId/scarcity?position=WR */
+export const ScarcityResponseSchema = z.object({
+  league_wide_compatible_slots: z.number().int(),
+  own_team_compatible_slots: z.number().int(),
+  tier_players_remaining: z.array(z.object({
+    tier: z.number().int(),
+    count: z.number().int(),
+  })),
+});
+export type ScarcityResponse = z.infer<typeof ScarcityResponseSchema>;

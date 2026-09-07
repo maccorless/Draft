@@ -108,7 +108,7 @@ async function readAuthEpoch(
     return team?.auth_epoch ?? null;
   }
 
-  // COMMISSIONER / HOST — check league auth_epoch
+  // COMMISSIONER — check league auth_epoch
   const [league] = await db
     .select({ auth_epoch: leagues.auth_epoch })
     .from(leagues)

@@ -6,13 +6,14 @@
  */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { WifiHigh, WifiMedium, WifiSlash, Robot } from '@phosphor-icons/react';
+import { Robot } from '@phosphor-icons/react';
 
 import { useAuctionSocket } from '../../lib/useAuctionSocket.js';
 import { NominationAudioPlayer } from '../../components/NominationAudioPlayer.js';
 import { TeamIcon } from '../../components/TeamIcon.js';
 import { AuctionCloseCard } from '../../components/AuctionCloseCard.js';
 import { PlayerDetailPopover } from '../../components/PlayerDetailPopover.js';
+import { ConnectionBadge } from '../../components/ConnectionBadge.js';
 import type { AwardEntry } from '../../lib/useAuctionSocket.js';
 import './draft-room.css';
 
@@ -173,6 +174,31 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
       setCloseCardAward(ws.recentAwards[0]!);
     }
   }, [ws.recentAwards.length]);
+
+  // Anti-snipe extension toast: 3s auto-dismiss, re-triggers on each new notice.
+  const [antiSnipeVisible, setAntiSnipeVisible] = useState(false);
+  useEffect(() => {
+    if (!ws.antiSnipeNotice) return;
+    setAntiSnipeVisible(true);
+    const timer = setTimeout(() => setAntiSnipeVisible(false), 3000);
+    return () => clearTimeout(timer);
+  }, [ws.antiSnipeNotice?.receivedAt]);
+
+  // Whammy overlay: not dismissable, 5s minimum then auto-dismiss, or clears
+  // when draft status returns to RUNNING (server auto-resumed after pause).
+  const [whammyVisible, setWhammyVisible] = useState(false);
+  useEffect(() => {
+    if (!ws.whammyNotice) return;
+    setWhammyVisible(true);
+    const timer = setTimeout(() => setWhammyVisible(false), 8000);
+    return () => clearTimeout(timer);
+  }, [ws.whammyNotice?.receivedAt]);
+  useEffect(() => {
+    if (ws.draftStatus === 'RUNNING') setWhammyVisible(false);
+  }, [ws.draftStatus]);
+
+  // Whammy countdown: display-only timer using pause_until_ms.
+  const whammySecondsLeft = useCountdown(ws.whammyNotice?.pause_until_ms ?? null);
 
   // The popover is scoped to whichever player is currently up for auction —
   // close it rather than let it silently show stale data for a new player.
@@ -374,15 +400,6 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
       .finally(() => navigate('/commissioner'));
   }
 
-  const connectionMeta: Record<string, { icon: typeof WifiHigh; label: string }> = {
-    open: { icon: WifiHigh, label: 'Live' },
-    connecting: { icon: WifiMedium, label: 'Connecting…' },
-    reconnecting: { icon: WifiSlash, label: 'Reconnecting…' },
-    closed: { icon: WifiSlash, label: 'Offline' },
-  };
-  const connMeta = connectionMeta[ws.connectionStatus] ?? connectionMeta['closed']!;
-  const ConnIcon = connMeta.icon;
-
   return (
     <div className="draft-room">
       <NominationAudioPlayer cue={ws.nominationAudioCue} />
@@ -400,6 +417,24 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
           comparables={comparablePlayers}
           onClose={() => setShowPopover(false)}
         />
+      )}
+      {/* Whammy overlay — not dismissable, auto-clears after 8s or on draft resume. */}
+      {whammyVisible && ws.whammyNotice && (
+        <div className="draft-room__whammy-overlay" role="alertdialog" aria-label="Whammy" data-testid="whammy-overlay">
+          <div className="draft-room__whammy-body">
+            <p className="draft-room__whammy-title">WHAMMY!</p>
+            <p className="draft-room__whammy-team">
+              {rosterGrid.find((t) => t.team_id === ws.whammyNotice!.team_id)?.team_name ?? 'A team'}
+            </p>
+            <p className="draft-room__whammy-desc">{ws.whammyNotice.description || 'Budget event'}</p>
+            <p className="draft-room__whammy-amount">{formatMoney(ws.whammyNotice.amount_minor)}</p>
+            {ws.whammyNotice.pause_until_ms !== null && whammySecondsLeft > 0 && (
+              <p className="draft-room__whammy-countdown">
+                Draft paused — resuming in {whammySecondsLeft}s
+              </p>
+            )}
+          </div>
+        </div>
       )}
       <header className="draft-room__topbar">
         <span className="draft-room__title">Draft Room</span>
@@ -433,12 +468,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
               Pause Draft
             </button>
           )}
-          <span
-            className={`draft-room__conn draft-room__conn--${ws.connectionStatus}`}
-            data-testid="connection-status"
-          >
-            <ConnIcon size={14} weight="bold" /> {connMeta.label}
-          </span>
+          <ConnectionBadge connectionStatus={ws.connectionStatus} latencyMs={ws.latencyMs} />
         </div>
       </header>
 
@@ -612,6 +642,11 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                 </div>
               </div>
 
+              {antiSnipeVisible && (
+                <div className="draft-room__anti-snipe-badge" role="status" data-testid="anti-snipe-badge">
+                  ⏱ Timer extended — late bid detected
+                </div>
+              )}
               {ws.lastError && (
                 <div className="draft-room__bid-error" role="alert" data-testid="bid-error">
                   {ws.lastError.reason}
@@ -677,6 +712,11 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   <span className="draft-room__bid-ladder-team">
                     {rosterGrid.find((t) => t.team_id === entry.team_id)?.team_name ?? '—'}
                   </span>
+                  {ws.penalizedTeamIds.has(entry.team_id) && (
+                    <span className="draft-room__bid-penalty-badge" data-testid={`penalty-badge-${entry.team_id}`}>
+                      ⚠ Penalty
+                    </span>
+                  )}
                 </li>
               ))}
             </ol>

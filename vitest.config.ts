@@ -15,6 +15,7 @@ export default defineConfig({
     // and are never committed. Tests that need specific behavior override these.
     env: {
       SENDGRID_API_KEY: 'test-sendgrid-key-placeholder',
+      SENDGRID_FROM_EMAIL: 'test-sender@example.com',
       FANTASYPROS_API_KEY: 'test-fantasypros-key-placeholder',
       // Suppresses per-request Pino JSON logs during test runs — the volume across
       // 300+ HTTP-driven tests was overflowing the AAH build harness's output buffer.

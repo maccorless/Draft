@@ -17,6 +17,7 @@ import { DevTools } from './DevTools.js';
 import { DraftControl } from './DraftControl.js';
 import { Corrections } from './Corrections.js';
 import { LeagueSetup } from './LeagueSetup.js';
+import { TeamsTab } from './Teams.js';
 import './commissioner-console.css';
 
 export type DatasetStatus = 'DRAFT' | 'VALIDATED' | 'FROZEN';
@@ -109,12 +110,25 @@ export function CommissionerConsole({
   datasetStatus = null,
   token,
   onCreateDraft,
-  ambiguousRows,
-  onResolveAmbiguity,
+  ambiguousRows: ambiguousRowsProp,
+  onResolveAmbiguity: onResolveAmbiguityProp,
   draftId,
 }: CommissionerConsoleProps = {}): React.ReactElement {
   const [activeSection, setActiveSection] =
     useState<ConsoleSection>('league-setup');
+  const [internalAmbiguousRows, setInternalAmbiguousRows] = useState<AmbiguousRow[]>([]);
+
+  const ambiguousRows = ambiguousRowsProp ?? internalAmbiguousRows;
+  const onResolveAmbiguity = onResolveAmbiguityProp ?? ((resolutions: Record<number, string | 'skip'>) => {
+    if (!datasetId || !token) return;
+    fetch(`/datasets/${datasetId}/ambiguities/resolve`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ resolutions: Object.fromEntries(Object.entries(resolutions).map(([k, v]) => [k, v])) }),
+    })
+      .then(() => setInternalAmbiguousRows([]))
+      .catch(() => setInternalAmbiguousRows([]));
+  });
 
   const activeLabel = SECTIONS.find((s) => s.id === activeSection)?.label ?? '';
 
@@ -164,7 +178,16 @@ export function CommissionerConsole({
           {activeSection === 'dataset-import' && (
             <>
               {leagueId && datasetId && token ? (
-                <DatasetImport leagueId={leagueId} datasetId={datasetId} token={token} />
+                <DatasetImport
+                  leagueId={leagueId}
+                  datasetId={datasetId}
+                  token={token}
+                  onImportComplete={(result) => {
+                    if (result.ambiguous_rows && result.ambiguous_rows.length > 0) {
+                      setInternalAmbiguousRows(result.ambiguous_rows);
+                    }
+                  }}
+                />
               ) : (
                 <ComingSoon label="Dataset Import" />
               )}
@@ -192,7 +215,13 @@ export function CommissionerConsole({
               <ComingSoon label="Corrections & Rollback" />
             )
           )}
-          {activeSection === 'teams' && <ComingSoon label="Teams" />}
+          {activeSection === 'teams' && (
+            leagueId && token ? (
+              <TeamsTab leagueId={leagueId} token={token} />
+            ) : (
+              <ComingSoon label="Teams" />
+            )
+          )}
         </div>
       </main>
     </div>

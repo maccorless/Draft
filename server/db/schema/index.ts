@@ -9,6 +9,7 @@ import {
   jsonb,
   decimal,
   unique,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -55,6 +56,27 @@ export const datasetStatusEnum = pgEnum('dataset_status', [
   'FROZEN',
 ]);
 
+export const exportJobStatusEnum = pgEnum('export_job_status', [
+  'PENDING',
+  'VALIDATED',
+  'GENERATED',
+  'FAILED',
+]);
+
+export const reconciliationItemStatusEnum = pgEnum('reconciliation_item_status', [
+  'PENDING',
+  'CONFIRMED',
+  'AMBIGUOUS',
+  'FAILED',
+]);
+
+export const reportDeliveryStatusEnum = pgEnum('report_delivery_status', [
+  'PENDING',
+  'SENT',
+  'FAILED',
+  'SKIPPED_EMAIL_DISABLED',
+]);
+
 // ─── League & Configuration ───────────────────────────────────────────────────
 
 export const users = pgTable('users', {
@@ -77,6 +99,11 @@ export const leagues = pgTable('leagues', {
   name_lock: boolean('name_lock').notNull().default(false),
   scheduled_draft_start_at: timestamp('scheduled_draft_start_at', { withTimezone: true }),
   status_message: text('status_message'),
+  // Commissioner's contact address for the league-wide DraftSummaryReport
+  // email (F-MOD-006-rework-01). No per-user account model exists yet
+  // (CLAUDE.md #12 — auth is password-based, not account-based), so this
+  // lives on the league row rather than a `users.email` join.
+  commissioner_email: text('commissioner_email'),
   created_at: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -95,6 +122,8 @@ export const teams = pgTable('teams', {
   nomination_audio_url: text('nomination_audio_url'),
   starting_budget_override_minor: integer('starting_budget_override_minor'),
   name_lock: boolean('name_lock').notNull().default(false),
+  // Recipient for that team's DraftTeamReport email (F-MOD-006-rework-01).
+  owner_email: text('owner_email'),
 });
 
 export const memberships = pgTable('memberships', {
@@ -145,6 +174,10 @@ export const auctionConfigurations = pgTable('auction_configurations', {
   anti_snipe_threshold_ms: integer('anti_snipe_threshold_ms').notNull(),
   anti_snipe_extension_ms: integer('anti_snipe_extension_ms').notNull(),
   min_bid_minor: integer('min_bid_minor').notNull().default(100),
+  anti_snipe_mode: varchar('anti_snipe_mode', { length: 20 }).notNull().default('INFORMATIONAL'),
+  anti_snipe_qualifying_bids: integer('anti_snipe_qualifying_bids').notNull().default(3),
+  anti_snipe_penalty_duration_auctions: integer('anti_snipe_penalty_duration_auctions').notNull().default(3),
+  anti_snipe_penalty_min_seconds_required: integer('anti_snipe_penalty_min_seconds_required').notNull().default(5),
 });
 
 export const whammyConfigs = pgTable('whammy_configs', {
@@ -229,6 +262,7 @@ export const drafts = pgTable('drafts', {
   scheduled_at: timestamp('scheduled_at', { withTimezone: true }),
   started_at: timestamp('started_at', { withTimezone: true }),
   completed_at: timestamp('completed_at', { withTimezone: true }),
+  whammy_resume_at: timestamp('whammy_resume_at', { withTimezone: true }),
   created_at: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -249,6 +283,9 @@ export const draftTeamStates = pgTable('draft_team_states', {
   connected_at: timestamp('connected_at', { withTimezone: true }),
   nominator_match_used: boolean('nominator_match_used').notNull().default(false),
   nomination_audio_played: boolean('nomination_audio_played').notNull().default(false),
+  anti_snipe_strike_count: integer('anti_snipe_strike_count').notNull().default(0),
+  anti_snipe_penalty_auctions_remaining: integer('anti_snipe_penalty_auctions_remaining').notNull().default(0),
+  anti_snipe_penalty_min_seconds_required: integer('anti_snipe_penalty_min_seconds_required'),
 });
 
 export const playerAuctions = pgTable('player_auctions', {
@@ -291,6 +328,9 @@ export const bidAttempts = pgTable('bid_attempts', {
     .notNull(),
   accepted: boolean('accepted').notNull(),
   rejection_reason: text('rejection_reason'),
+  client_click_time_ms: integer('client_click_time_ms'),
+  client_displayed_bid_minor: integer('client_displayed_bid_minor'),
+  client_auction_version: integer('client_auction_version'),
 });
 
 export const draftEvents = pgTable('draft_events', {
@@ -329,7 +369,11 @@ export const acquisitions = pgTable('acquisitions', {
   awarded_at: timestamp('awarded_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  // Defense in depth against double-resolving the same player auction —
+  // the app-level guard is the atomic conditional UPDATE in awardAuction.
+  unique('acquisitions_player_auction_id_unique').on(table.player_auction_id),
+]);
 
 export const rosterEntries = pgTable('roster_entries', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -358,18 +402,36 @@ export const whammyEventStatusEnum = pgEnum('whammy_event_status', [
   'REVERSED',
 ]);
 
+export const whammyDefinitions = pgTable('whammy_definitions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  league_id: uuid('league_id')
+    .notNull()
+    .references(() => leagues.id),
+  name: text('name').notNull(),
+  type: text('type').notNull(),
+  budget_delta_minor: integer('budget_delta_minor'),
+  trigger_rule_json: jsonb('trigger_rule_json').notNull().default({}),
+  display_message: text('display_message').notNull(),
+  offline_action_text: text('offline_action_text'),
+  weight: integer('weight').notNull().default(1),
+  active: boolean('active').notNull().default(true),
+});
+
 export const whammyEvents = pgTable('whammy_events', {
   id: uuid('id').primaryKey().defaultRandom(),
   draft_id: uuid('draft_id')
     .notNull()
     .references(() => drafts.id),
+  // Nullable: a message-only/offline-action WhammyDefinition (no budget
+  // delta) has no target team (F-MOD-009-rework-01 auto-trigger).
   team_id: uuid('team_id')
-    .notNull()
     .references(() => teams.id),
   amount_minor: integer('amount_minor').notNull(),
   description: text('description').notNull(),
   status: whammyEventStatusEnum('status').notNull().default('PENDING_APPROVAL'),
   budget_ledger_entry_id: uuid('budget_ledger_entry_id'),
+  definition_id: uuid('definition_id').references(() => whammyDefinitions.id),
+  trigger_event_sequence: integer('trigger_event_sequence'),
   created_at: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -501,4 +563,75 @@ export const ownerTargetValues = pgTable('owner_target_values', {
     .notNull()
     .references(() => players.id),
   target_value_minor: integer('target_value_minor').notNull(),
+});
+
+// ─── ESPN Transfer & Report Delivery (F-MOD-006-rework-01) ───────────────────
+
+export const providerTeamMappings = pgTable('provider_team_mappings', {
+  league_id: uuid('league_id')
+    .notNull()
+    .references(() => leagues.id),
+  provider_code: text('provider_code').notNull(),
+  team_id: uuid('team_id')
+    .notNull()
+    .references(() => teams.id),
+  external_team_id: text('external_team_id'),
+  external_team_name: text('external_team_name'),
+  verified: boolean('verified').notNull().default(false),
+}, (table) => [
+  unique('provider_team_mappings_pk').on(
+    table.league_id,
+    table.provider_code,
+    table.team_id,
+  ),
+]);
+
+export const exportJobs = pgTable('export_jobs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  draft_id: uuid('draft_id')
+    .notNull()
+    .references(() => drafts.id),
+  provider_code: text('provider_code').notNull(),
+  schema_version: text('schema_version').notNull(),
+  status: exportJobStatusEnum('status').notNull().default('PENDING'),
+  artifact_uri: text('artifact_uri'),
+  artifact_checksum: text('artifact_checksum'),
+  validation_json: jsonb('validation_json').notNull().default({}),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (table) => [
+  unique('export_jobs_draft_provider_unique').on(table.draft_id, table.provider_code),
+]);
+
+export const reconciliationItems = pgTable('reconciliation_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  export_job_id: uuid('export_job_id')
+    .notNull()
+    .references(() => exportJobs.id),
+  team_id: uuid('team_id')
+    .notNull()
+    .references(() => teams.id),
+  player_id: uuid('player_id')
+    .notNull()
+    .references(() => players.id),
+  recommended_target_slot: text('recommended_target_slot'),
+  status: reconciliationItemStatusEnum('status').notNull().default('PENDING'),
+  confirmed_by_user_id: uuid('confirmed_by_user_id'),
+  confirmed_at: timestamp('confirmed_at', { withTimezone: true }),
+});
+
+export const reportDeliveryAttempts = pgTable('report_delivery_attempts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  draft_id: uuid('draft_id')
+    .notNull()
+    .references(() => drafts.id),
+  team_id: uuid('team_id').references(() => teams.id),
+  recipient_email: text('recipient_email').notNull(),
+  status: reportDeliveryStatusEnum('status').notNull().default('PENDING'),
+  sent_at: timestamp('sent_at', { withTimezone: true }),
+  error_detail: text('error_detail'),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });

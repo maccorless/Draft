@@ -400,7 +400,10 @@ export function DraftGateway({ auth, onStaleSession }: { auth: AuthState; onStal
         statusMessage={statusMessage}
       />
       {active && (
-        <div style={{ ...styles.center, minHeight: 'auto', paddingBottom: 32 }}>
+        <div style={{ ...styles.center, minHeight: 'auto', paddingBottom: 32, gap: 16, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <a href={`/draft-room?draftId=${active.id}`} style={{ color: '#1a73e8', fontWeight: 600 }}>
+            Enter Draft Room
+          </a>
           <a
             href={`/war-room?draftId=${active.id}`}
             target="_blank"
@@ -408,6 +411,9 @@ export function DraftGateway({ auth, onStaleSession }: { auth: AuthState; onStal
             style={{ color: '#1a73e8' }}
           >
             Open War Room ↗
+          </a>
+          <a href={`/draft-prep?draftId=${active.id}`} style={{ color: '#1a73e8' }}>
+            Draft Prep
           </a>
         </div>
       )}
@@ -635,6 +641,7 @@ export function App() {
   return (
     <BrowserRouter>
       <LogoutButton auth={auth} onLogout={handleLogout} />
+      <div className="app-content">
       <Routes>
         <Route path="/" element={
           auth.role === 'COMMISSIONER'
@@ -647,6 +654,7 @@ export function App() {
         <Route path="/war-room" element={<WarRoomRoute auth={auth} />} />
         <Route path="/draft-complete" element={<DraftCompleteRoute auth={auth} />} />
       </Routes>
+      </div>
     </BrowserRouter>
   );
 }

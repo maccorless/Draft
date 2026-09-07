@@ -17,6 +17,7 @@ import postgres from 'postgres';
 import { AsyncQueue } from './queue.js';
 import { resolveEffectivePrimarySource, resolvePlayerPrimaryAav } from '../player/aav-resolution.js';
 import { getFirstLegalNominationQueueEntry } from '../draft/strategy.js';
+import { evaluateWhammyAutoTrigger } from '../draft/whammy.js';
 
 export interface DraftRuntime {
   queue: AsyncQueue;
@@ -32,6 +33,7 @@ export interface DraftRuntime {
    * or system) or a new turn is dispatched. At most one pending at a time.
    */
   nominationTimer: ReturnType<typeof setTimeout> | null;
+  whammyResumeTimer: ReturnType<typeof setTimeout> | null;
 }
 
 // ─── Per-draft runtimes (keyed by draft_id) ──────────────────────────────────
@@ -54,6 +56,7 @@ export function getOrCreateRuntime(draftId: string): DraftRuntime {
       teamSessions: new Map(),
       graceTimers: new Map(),
       nominationTimer: null,
+      whammyResumeTimer: null,
     };
     draftRuntimes.set(draftId, rt);
   }
@@ -248,6 +251,9 @@ export interface BidCommandPayload {
   bid_type: 'ABSOLUTE' | 'RELATIVE' | 'NOMINATOR_MATCH';
   expected_current_bid_minor?: number;
   expected_auction_version?: number;
+  client_click_time_ms?: number | null;
+  client_displayed_bid_minor?: number | null;
+  client_auction_version?: number | null;
 }
 
 export interface BidContext {
@@ -257,6 +263,7 @@ export interface BidContext {
   serverReceiptTime: Date;
   sql: postgres.Sql;
   command: BidCommandPayload;
+  isAutoAgent?: boolean;
 }
 
 export interface BidResult {
@@ -267,7 +274,7 @@ export interface BidResult {
 }
 
 export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
-  const { draftId, teamId, leagueId, serverReceiptTime, sql, command } = ctx;
+  const { draftId, teamId, leagueId, serverReceiptTime, sql, command, isAutoAgent = false } = ctx;
 
   // 1. Load draft — verify RUNNING and league_id matches token
   const draftRows = await sql<[{
@@ -312,8 +319,14 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     anti_snipe_extension_ms: number;
     min_bid_minor: number;
     rebid_timer_ms: number;
+    anti_snipe_mode: string;
+    anti_snipe_qualifying_bids: number;
+    anti_snipe_penalty_duration_auctions: number;
+    anti_snipe_penalty_min_seconds_required: number;
   }]>`
-    SELECT anti_snipe_threshold_ms, anti_snipe_extension_ms, min_bid_minor, rebid_timer_ms
+    SELECT anti_snipe_threshold_ms, anti_snipe_extension_ms, min_bid_minor, rebid_timer_ms,
+           anti_snipe_mode, anti_snipe_qualifying_bids, anti_snipe_penalty_duration_auctions,
+           anti_snipe_penalty_min_seconds_required
     FROM auction_configurations
     WHERE league_id = ${draft.league_id}
     LIMIT 1
@@ -336,10 +349,13 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     current_leader_id: string | null;
     auction_version: number;
     rebid_deadline: Date | null;
+    player_position: string;
   }]>`
-    SELECT id, draft_id, status, current_bid_minor, current_leader_id, auction_version, rebid_deadline
-    FROM player_auctions
-    WHERE id = ${command.player_auction_id} AND draft_id = ${draftId}
+    SELECT pa.id, pa.draft_id, pa.status, pa.current_bid_minor, pa.current_leader_id,
+           pa.auction_version, pa.rebid_deadline, p.position AS player_position
+    FROM player_auctions pa
+    JOIN players p ON p.id = pa.dataset_player_id
+    WHERE pa.id = ${command.player_auction_id} AND pa.draft_id = ${draftId}
     LIMIT 1
   `;
   const auction = auctionRows[0];
@@ -369,14 +385,18 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
         INSERT INTO bid_attempts
           (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
            expected_current_bid_minor, expected_auction_version,
-           server_receipt_time, accepted, rejection_reason)
+           server_receipt_time, accepted, rejection_reason,
+           client_click_time_ms, client_displayed_bid_minor, client_auction_version)
         VALUES
           (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
            ${command.bid_type},
            ${command.expected_current_bid_minor ?? null},
            ${command.expected_auction_version ?? null},
            ${serverReceiptTime.toISOString()},
-           false, 'STALE_STATE')
+           false, 'STALE_STATE',
+           ${command.client_click_time_ms ?? null},
+           ${command.client_displayed_bid_minor ?? null},
+           ${command.client_auction_version ?? null})
       `;
       broadcast(draftId, {
         type: 'BID_REJECTED',
@@ -395,11 +415,15 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     await sql`
       INSERT INTO bid_attempts
         (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
-         server_receipt_time, accepted, rejection_reason)
+         server_receipt_time, accepted, rejection_reason,
+         client_click_time_ms, client_displayed_bid_minor, client_auction_version)
       VALUES
         (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
          ${command.bid_type}, ${serverReceiptTime.toISOString()},
-         false, 'BID_TOO_LOW')
+         false, 'BID_TOO_LOW',
+         ${command.client_click_time_ms ?? null},
+         ${command.client_displayed_bid_minor ?? null},
+         ${command.client_auction_version ?? null})
     `;
     broadcast(draftId, {
       type: 'BID_REJECTED',
@@ -412,13 +436,18 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
-  // 6. Load DraftTeamState for the bidding team — for max_legal_bid
+  // 6. Load DraftTeamState for the bidding team — for max_legal_bid and penalty state
   const teamStateRows = await sql<[{
     remaining_budget_minor: number;
     required_remaining_spots: number;
     roster_filled_count: number;
+    anti_snipe_strike_count: number;
+    anti_snipe_penalty_auctions_remaining: number;
+    anti_snipe_penalty_min_seconds_required: number | null;
   }]>`
-    SELECT remaining_budget_minor, required_remaining_spots, roster_filled_count
+    SELECT remaining_budget_minor, required_remaining_spots, roster_filled_count,
+           anti_snipe_strike_count, anti_snipe_penalty_auctions_remaining,
+           anti_snipe_penalty_min_seconds_required
     FROM draft_team_states
     WHERE draft_id = ${draftId} AND team_id = ${teamId}
     LIMIT 1
@@ -443,11 +472,15 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     await sql`
       INSERT INTO bid_attempts
         (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
-         server_receipt_time, accepted, rejection_reason)
+         server_receipt_time, accepted, rejection_reason,
+         client_click_time_ms, client_displayed_bid_minor, client_auction_version)
       VALUES
         (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
          ${command.bid_type}, ${serverReceiptTime.toISOString()},
-         false, 'ROSTER_FULL')
+         false, 'ROSTER_FULL',
+         ${command.client_click_time_ms ?? null},
+         ${command.client_displayed_bid_minor ?? null},
+         ${command.client_auction_version ?? null})
     `;
     broadcast(draftId, {
       type: 'BID_REJECTED',
@@ -455,6 +488,37 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
         player_auction_id: command.player_auction_id,
         code: 'ROSTER_FULL',
         reason: 'Your roster is full — no remaining slots for another player',
+      },
+    });
+    return { accepted: false, playerAuctionId: command.player_auction_id };
+  }
+
+  // 6c. Position-eligibility gate — required_remaining_spots > 0 only proves
+  // *some* slot is open, not that one accepts this player's position (e.g.
+  // bench full + only a non-QB starter slot left, bidding on a QB). Without
+  // this, a bid can be accepted that can never legally be awarded, leaving
+  // the auction stuck in processAwardCycle's retry loop forever.
+  const eligibleSlot = await assignRosterSlot(sql, draftId, teamId, leagueId, auction.player_position);
+  if (!eligibleSlot) {
+    await sql`
+      INSERT INTO bid_attempts
+        (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
+         server_receipt_time, accepted, rejection_reason,
+         client_click_time_ms, client_displayed_bid_minor, client_auction_version)
+      VALUES
+        (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
+         ${command.bid_type}, ${serverReceiptTime.toISOString()},
+         false, 'NO_ELIGIBLE_SLOT',
+         ${command.client_click_time_ms ?? null},
+         ${command.client_displayed_bid_minor ?? null},
+         ${command.client_auction_version ?? null})
+    `;
+    broadcast(draftId, {
+      type: 'BID_REJECTED',
+      payload: {
+        player_auction_id: command.player_auction_id,
+        code: 'NO_ELIGIBLE_SLOT',
+        reason: `No roster slot available for position ${auction.player_position}`,
       },
     });
     return { accepted: false, playerAuctionId: command.player_auction_id };
@@ -468,11 +532,15 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     await sql`
       INSERT INTO bid_attempts
         (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
-         server_receipt_time, accepted, rejection_reason)
+         server_receipt_time, accepted, rejection_reason,
+         client_click_time_ms, client_displayed_bid_minor, client_auction_version)
       VALUES
         (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
          ${command.bid_type}, ${serverReceiptTime.toISOString()},
-         false, 'EXCEEDS_MAX_LEGAL_BID')
+         false, 'EXCEEDS_MAX_LEGAL_BID',
+         ${command.client_click_time_ms ?? null},
+         ${command.client_displayed_bid_minor ?? null},
+         ${command.client_auction_version ?? null})
     `;
     broadcast(draftId, {
       type: 'BID_REJECTED',
@@ -483,6 +551,52 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
       },
     });
     return { accepted: false, playerAuctionId: command.player_auction_id };
+  }
+
+  // 6d. Anti-snipe penalty check — penalized teams must wait until the clock is
+  // low enough before bidding again. Only enforced in ENFORCEMENT mode; WARNING
+  // mode broadcasts the penalty but allows the bid through.
+  if (teamState.anti_snipe_penalty_auctions_remaining > 0 && auction.rebid_deadline) {
+    const msToDeadline = new Date(auction.rebid_deadline as unknown as string | Date).getTime()
+      - serverReceiptTime.getTime();
+    const penaltyMinMs = (teamState.anti_snipe_penalty_min_seconds_required ?? auctionCfg.anti_snipe_penalty_min_seconds_required) * 1000;
+    if (msToDeadline > penaltyMinMs) {
+      if (auctionCfg.anti_snipe_mode === 'ENFORCEMENT') {
+        await sql`
+          INSERT INTO bid_attempts
+            (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
+             server_receipt_time, accepted, rejection_reason,
+             client_click_time_ms, client_displayed_bid_minor, client_auction_version)
+          VALUES
+            (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
+             ${command.bid_type}, ${serverReceiptTime.toISOString()},
+             false, 'ANTI_SNIPE_PENALTY',
+             ${command.client_click_time_ms ?? null},
+             ${command.client_displayed_bid_minor ?? null},
+             ${command.client_auction_version ?? null})
+        `;
+        broadcast(draftId, {
+          type: 'BID_REJECTED',
+          payload: {
+            player_auction_id: command.player_auction_id,
+            code: 'ANTI_SNIPE_PENALTY',
+            reason: `You must wait until ${teamState.anti_snipe_penalty_min_seconds_required ?? auctionCfg.anti_snipe_penalty_min_seconds_required}s remain before bidding`,
+          },
+        });
+        return { accepted: false, playerAuctionId: command.player_auction_id };
+      }
+      // WARNING / INFORMATIONAL: accept but notify all of penalty state
+      if (auctionCfg.anti_snipe_mode === 'WARNING') {
+        broadcast(draftId, {
+          type: 'ANTI_SNIPE_PENALTY_APPLIED',
+          payload: {
+            team_id: teamId,
+            auctions_remaining: teamState.anti_snipe_penalty_auctions_remaining,
+            min_seconds_required: teamState.anti_snipe_penalty_min_seconds_required ?? auctionCfg.anti_snipe_penalty_min_seconds_required,
+          },
+        });
+      }
+    }
   }
 
   // 7. Anti-snipe check
@@ -501,8 +615,23 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
   }
 
   // 8. Atomic transaction: UPDATE player_auction + INSERT bid_attempt + INSERT draft_event
+  // + UPDATE draft_team_states strike/penalty if anti-snipe extension occurred
   let newVersion: number;
   let finalRebidDeadlineTs: number;
+  let penaltyApplied = false;
+  let newStrikeCount = teamState.anti_snipe_strike_count;
+  let newPenaltyRemaining = teamState.anti_snipe_penalty_auctions_remaining;
+  let newPenaltyMinSeconds: number | null = teamState.anti_snipe_penalty_min_seconds_required;
+
+  if (antiSnipeExtended && !isAutoAgent) {
+    newStrikeCount = teamState.anti_snipe_strike_count + 1;
+    if (newStrikeCount >= auctionCfg.anti_snipe_qualifying_bids) {
+      penaltyApplied = true;
+      newStrikeCount = 0;
+      newPenaltyRemaining = auctionCfg.anti_snipe_penalty_duration_auctions;
+      newPenaltyMinSeconds = auctionCfg.anti_snipe_penalty_min_seconds_required;
+    }
+  }
 
   try {
     await sql.begin(async (tx) => {
@@ -526,15 +655,30 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
         INSERT INTO bid_attempts
           (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
            expected_current_bid_minor, expected_auction_version,
-           server_receipt_time, accepted, rejection_reason)
+           server_receipt_time, accepted, rejection_reason,
+           client_click_time_ms, client_displayed_bid_minor, client_auction_version)
         VALUES
           (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
            ${command.bid_type},
            ${command.expected_current_bid_minor ?? null},
            ${command.expected_auction_version ?? null},
            ${serverReceiptTime.toISOString()},
-           true, null)
+           true, null,
+           ${command.client_click_time_ms ?? null},
+           ${command.client_displayed_bid_minor ?? null},
+           ${command.client_auction_version ?? null})
       `;
+
+      // UPDATE strike/penalty state if anti-snipe fired for a manual bid
+      if (antiSnipeExtended && !isAutoAgent) {
+        await tx`
+          UPDATE draft_team_states
+          SET anti_snipe_strike_count = ${newStrikeCount},
+              anti_snipe_penalty_auctions_remaining = ${newPenaltyRemaining},
+              anti_snipe_penalty_min_seconds_required = ${newPenaltyMinSeconds}
+          WHERE draft_id = ${draftId} AND team_id = ${teamId}
+        `;
+      }
 
       // INSERT draft_event
       const seq = await nextDraftEventSequence(tx, draftId);
@@ -562,6 +706,9 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
   }
 
   // 9. In-memory update after commit — broadcast BID_ACCEPTED
+  const msRemainingAtReceipt = auction.rebid_deadline
+    ? new Date(auction.rebid_deadline as unknown as string | Date).getTime() - serverReceiptTime.getTime()
+    : null;
   broadcast(draftId, {
     type: 'BID_ACCEPTED',
     payload: {
@@ -571,8 +718,32 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
       auction_version: newVersion!,
       rebid_deadline_ts: finalRebidDeadlineTs!,
       anti_snipe_extended: antiSnipeExtended,
+      bid_type: command.bid_type,
+      ms_remaining_at_receipt: msRemainingAtReceipt,
     },
   });
+
+  if (antiSnipeExtended) {
+    broadcast(draftId, {
+      type: 'ANTI_SNIPE_EXTENSION',
+      payload: {
+        player_auction_id: command.player_auction_id,
+        new_deadline_ms: finalRebidDeadlineTs!,
+        seconds_added: Math.round(auctionCfg.anti_snipe_extension_ms / 1000),
+      },
+    });
+  }
+
+  if (penaltyApplied) {
+    broadcast(draftId, {
+      type: 'ANTI_SNIPE_PENALTY_APPLIED',
+      payload: {
+        team_id: teamId,
+        auctions_remaining: newPenaltyRemaining,
+        min_seconds_required: newPenaltyMinSeconds!,
+      },
+    });
+  }
 
   return {
     accepted: true,
@@ -717,6 +888,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
 
   let auctionId: string;
   let seq: number;
+  let expiredPenaltyTeamIds: { team_id: string }[] = [];
   let nominationPayload: {
     player_auction_id: string;
     player_name: string;
@@ -804,6 +976,19 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
         `;
         nominationAudioPayload = { team_id: teamId, audio_url: audioUrl, duration_cap_ms: 5000 };
       }
+
+      // Decrement anti-snipe penalty counters. Teams hitting 0 get penalty cleared.
+      const decrementedRows = await tx<{ team_id: string; new_remaining: number }[]>`
+        UPDATE draft_team_states
+        SET anti_snipe_penalty_auctions_remaining = anti_snipe_penalty_auctions_remaining - 1,
+            anti_snipe_penalty_min_seconds_required = CASE
+              WHEN anti_snipe_penalty_auctions_remaining - 1 <= 0 THEN NULL
+              ELSE anti_snipe_penalty_min_seconds_required
+            END
+        WHERE draft_id = ${draftId} AND anti_snipe_penalty_auctions_remaining > 0
+        RETURNING team_id, (anti_snipe_penalty_auctions_remaining) AS new_remaining
+      `;
+      expiredPenaltyTeamIds = decrementedRows.filter((r) => r.new_remaining <= 0);
     });
   } catch (err) {
     console.error('[engine] NOMINATE transaction failed:', err);
@@ -821,6 +1006,9 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
   broadcast(draftId, { type: 'NOMINATION_STARTED', payload: nominationPayload! });
   if (nominationAudioPayload) {
     broadcast(draftId, { type: 'TEAM_NOMINATION_AUDIO', payload: nominationAudioPayload });
+  }
+  for (const { team_id } of expiredPenaltyTeamIds) {
+    broadcast(draftId, { type: 'ANTI_SNIPE_PENALTY_EXPIRED', payload: { team_id } });
   }
 
   return {
@@ -1080,6 +1268,40 @@ async function advanceNominationTurn(
 }
 
 /**
+ * Resolves the team currently on the clock: the first ELIGIBLE team
+ * (required_remaining_spots > 0) starting at nomination_cursor. Shared by
+ * triggerCurrentNominationTurn (dispatch) and processPassNomination
+ * (ownership check) so both agree on who "the current nominator" is.
+ */
+async function resolveCurrentNominatorTeamId(
+  sql: postgres.Sql,
+  draftId: string,
+  leagueId: string,
+): Promise<string | null> {
+  const draftRows = await sql<[{ nomination_cursor: number }]>`
+    SELECT nomination_cursor FROM drafts WHERE id = ${draftId} LIMIT 1
+  `;
+  const draft = draftRows[0];
+  if (!draft) return null;
+
+  const teamsRows = await sql<Array<{ id: string }>>`
+    SELECT id FROM teams WHERE league_id = ${leagueId} ORDER BY draft_order ASC
+  `;
+  if (teamsRows.length === 0) return null;
+
+  const stateMap = await loadNominationTurnStates(sql, draftId);
+
+  for (let i = 0; i < teamsRows.length; i++) {
+    const idx = (draft.nomination_cursor + i) % teamsRows.length;
+    const candidate = teamsRows[idx]!;
+    const state = stateMap.get(candidate.id);
+    if (state && state.required_remaining_spots <= 0) continue;
+    return candidate.id;
+  }
+  return null;
+}
+
+/**
  * Dispatches the CURRENT nomination_cursor's turn without advancing it — used
  * once, right after DRAFT_STARTED, to close the gap where a draft with every
  * team on AUTO_AGENT would otherwise never nominate a first player.
@@ -1089,27 +1311,11 @@ export async function triggerCurrentNominationTurn(
   draftId: string,
   leagueId: string,
 ): Promise<void> {
-  const draftRows = await sql<[{ nomination_cursor: number }]>`
-    SELECT nomination_cursor FROM drafts WHERE id = ${draftId} LIMIT 1
-  `;
-  const draft = draftRows[0];
-  if (!draft) return;
-
-  const teamsRows = await sql<Array<{ id: string }>>`
-    SELECT id FROM teams WHERE league_id = ${leagueId} ORDER BY draft_order ASC
-  `;
-  if (teamsRows.length === 0) return;
-
+  const currentTeamId = await resolveCurrentNominatorTeamId(sql, draftId, leagueId);
+  if (!currentTeamId) return;
   const stateMap = await loadNominationTurnStates(sql, draftId);
-
-  for (let i = 0; i < teamsRows.length; i++) {
-    const idx = (draft.nomination_cursor + i) % teamsRows.length;
-    const candidate = teamsRows[idx]!;
-    const state = stateMap.get(candidate.id);
-    if (state && state.required_remaining_spots <= 0) continue;
-    await dispatchNominationTurn(sql, draftId, leagueId, candidate.id, state?.control_mode ?? 'MANUAL');
-    return;
-  }
+  const state = stateMap.get(currentTeamId);
+  await dispatchNominationTurn(sql, draftId, leagueId, currentTeamId, state?.control_mode ?? 'MANUAL');
 }
 
 export async function processPassNomination(
@@ -1123,10 +1329,15 @@ export async function processPassNomination(
   `;
   const draft = draftRows[0];
   if (!draft || draft.league_id !== leagueId || draft.status !== 'RUNNING') return;
-  // NOTE: pre-existing gap, unrelated to this refactor — teamId isn't checked
-  // against the current nominator, so any team can currently pass on another's
-  // turn. Preserved as-is; not part of this fix's scope.
-  void teamId;
+
+  // Only the team currently on the clock may pass its own turn. This
+  // command runs through the per-draft serialized queue (constraint #4), so
+  // this read-then-advance is not racing another PASS_NOMINATION/NOMINATE
+  // call for the same draft — only a concurrent award resolution could, and
+  // that is addressed separately by processAwardCycle's per-draft scoping.
+  const currentNominatorTeamId = await resolveCurrentNominatorTeamId(sql, draftId, leagueId);
+  if (!currentNominatorTeamId || currentNominatorTeamId !== teamId) return;
+
   await advanceNominationTurn(sql, draftId, leagueId);
 }
 
@@ -1144,7 +1355,10 @@ interface AwardableAuction {
   player_position: string;
 }
 
-async function findAwardableAuctions(sql: postgres.Sql): Promise<AwardableAuction[]> {
+async function findAwardableAuctions(
+  sql: postgres.Sql,
+  draftId: string,
+): Promise<AwardableAuction[]> {
   return sql<AwardableAuction[]>`
     SELECT
       pa.id, pa.draft_id, d.league_id, d.dataset_id,
@@ -1153,7 +1367,8 @@ async function findAwardableAuctions(sql: postgres.Sql): Promise<AwardableAuctio
     FROM player_auctions pa
     JOIN drafts d ON d.id = pa.draft_id
     JOIN players p ON p.id = pa.dataset_player_id
-    WHERE pa.status = 'OPEN'
+    WHERE pa.draft_id = ${draftId}
+      AND pa.status = 'OPEN'
       AND pa.rebid_deadline < NOW()
       AND pa.current_bid_minor > 0
       AND pa.current_leader_id IS NOT NULL
@@ -1167,7 +1382,7 @@ async function findAwardableAuctions(sql: postgres.Sql): Promise<AwardableAuctio
  * - Fall back to any unfilled bench slot.
  * - Never reshuffles prior assignments.
  */
-async function assignRosterSlot(
+export async function assignRosterSlot(
   sql: postgres.Sql,
   draftId: string,
   teamId: string,
@@ -1224,10 +1439,10 @@ async function assignRosterSlot(
   return null;
 }
 
-export async function processAwardCycle(sql: postgres.Sql): Promise<void> {
+export async function processAwardCycle(sql: postgres.Sql, draftId: string): Promise<void> {
   let awardable: AwardableAuction[];
   try {
-    awardable = await findAwardableAuctions(sql);
+    awardable = await findAwardableAuctions(sql, draftId);
   } catch {
     return; // DB might be temporarily unavailable
   }
@@ -1279,21 +1494,31 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
   let acceptedBidCount: number;
   let uniqueBidderCount: number;
   let remainingBudgetMinor: number;
+  let playerAwardedEventSeq: number;
+  let claimed = true;
 
   await sql.begin(async (tx) => {
-    // Get next resolution_sequence
+    // Atomic claim: WHERE status = 'OPEN' means Postgres's row lock during
+    // this UPDATE serializes any concurrent resolution attempt on the same
+    // auction, and only one of them affects a row. If another resolution
+    // (a second draft-runtime, a duplicate timer tick, etc.) already
+    // resolved this auction, this UPDATE affects zero rows — bail out
+    // before any acquisition/ledger/roster/event side effects run.
     const seqRows = await tx<[{ max: number | null }]>`
       SELECT COALESCE(MAX(resolution_sequence), 0) + 1 AS max
       FROM acquisitions WHERE draft_id = ${draftId}
     `;
     resolutionSequence = seqRows[0]?.max ?? 1;
 
-    // UPDATE player_auction → AWARDED
-    await tx`
+    const updateResult = await tx`
       UPDATE player_auctions
       SET status = 'AWARDED', resolution_sequence = ${resolutionSequence}
-      WHERE id = ${auctionId}
+      WHERE id = ${auctionId} AND status = 'OPEN'
     `;
+    if (updateResult.count === 0) {
+      claimed = false;
+      return;
+    }
 
     // INSERT acquisition
     const acqRows = await tx<[{ id: string }]>`
@@ -1349,6 +1574,7 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
 
     // INSERT draft_event PLAYER_AWARDED
     const eventSeq = await nextDraftEventSequence(tx, draftId);
+    playerAwardedEventSeq = eventSeq;
     await tx`
       INSERT INTO draft_events
         (draft_id, sequence, event_type, team_id, player_auction_id, payload, created_at)
@@ -1357,6 +1583,7 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
          ${auction.current_leader_id}, ${auctionId},
          ${JSON.stringify({
            player_name: auction.player_name,
+           position: auction.player_position,
            winning_team_id: auction.current_leader_id,
            price_minor: auction.current_bid_minor,
            roster_slot: slot?.slotLabel ?? 'BN',
@@ -1400,11 +1627,14 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
     draftCompletedMap.set(draftId, (unfilled?.cnt ?? 1) === 0);
   });
 
+  if (!claimed) return; // another resolution already claimed this auction
+
   broadcast(draftId, {
     type: 'PLAYER_AWARDED',
     payload: {
       player_auction_id: auctionId,
       player_name: auction.player_name,
+      position: auction.player_position,
       winning_team_id: auction.current_leader_id,
       price_minor: auction.current_bid_minor,
       roster_slot: slot?.slotLabel ?? 'BN',
@@ -1425,6 +1655,15 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
   } else {
     await advanceNominationTurn(sql, draftId, leagueId);
   }
+
+  // Whammy auto-trigger (F-MOD-009-rework-01): evaluated once per pick
+  // resolution, after this resolution's transaction has committed, still
+  // before processAwardCycle's loop moves on to the next awardable auction.
+  try {
+    await evaluateWhammyAutoTrigger(sql, draftId, leagueId, auction.current_leader_id, playerAwardedEventSeq!);
+  } catch (err) {
+    console.error(`[engine] Whammy auto-trigger evaluation failed for draft ${draftId}:`, err);
+  }
 }
 
 // ─── Start/stop award timer for a draft ──────────────────────────────────────
@@ -1433,7 +1672,7 @@ export function startAwardTimer(draftId: string, sql: postgres.Sql): void {
   const rt = getOrCreateRuntime(draftId);
   if (rt.awardTimer) return; // already running
   rt.awardTimer = setInterval(() => {
-    processAwardCycle(sql).catch((err) => {
+    processAwardCycle(sql, draftId).catch((err) => {
       console.error('[engine] award cycle error:', err);
     });
   }, 500);

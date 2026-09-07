@@ -1,7 +1,7 @@
 # Fantasy Football Auction Draft Platform — Product Requirements Document
 
 **Status:** Working PRD  
-**Last updated:** 2026-08-30  
+**Last updated:** 2026-09-07  
 **Primary use case:** Private fantasy-football auction draft with post-draft transfer to ESPN Fantasy Football  
 **Initial league profile:** 12 teams, Standard/non-PPR, approximately 9 starters, salary-cap auction  
 **Primary downstream platform:** ESPN Fantasy Football
@@ -194,21 +194,19 @@ Can:
 
 ### 4.3 Host
 
-Optional presentation/event role.
-
-Can operate presentation surfaces without automatically receiving commissioner roster/budget mutation privileges. Authenticates with a separate, optional host password (§4.4) — never with the commissioner password, which would over-grant mutation rights.
+**Removed.** The Host role has been eliminated. There is no separate host password or host-specific access level. The commissioner handles all presentation and control functions. All other participants are Owners.
 
 ### 4.4 Access and Authentication
 
 MVP authentication is intentionally simple and self-hosted, not account-based:
 
 - A single site-wide password gates entry to the application.
-- After the site password, a user selects a League, then either enters that league's Commissioner password, enters an optional Host password, or selects a Team from that league's team list and enters that team's password to act as that team's Owner.
+- After the site password, a user selects a League, then either enters that league's Commissioner password or selects a Team from that league's team list and enters that team's password to act as that team's Owner.
 - **Commissioner who also owns a team:** the commissioner may designate one team as their own during setup. Their commissioner login then grants a single combined session with both commissioner console access and normal owner bidding rights for that team — no second login or window required. This matters because in a real private league, the person running the draft is almost always also drafting a team.
 - The Commissioner sets the league password, host password (optional), league name, league logo, and each team's password during League setup. The setup UI generates these passwords by default (shown once for the commissioner to distribute); manual override is allowed.
 - There is no self-service account creation or password reset in MVP; all credentials are configured by the commissioner.
 - Passwords are stored hashed (e.g. bcrypt), never in plaintext, even for MVP.
-- Session tokens expire (~48 hours) and carry a revocation epoch: changing a password, or an explicit commissioner "invalidate this team's session" action, immediately invalidates every previously issued token for that scope. This is the recovery path if a device is lost or a password leaks mid-draft.
+- Session tokens expire (~48 hours) and carry a revocation epoch: changing a password immediately invalidates every previously issued token for that scope. This is the recovery path if a device is lost or a password leaks mid-draft. There is no separate commissioner "kick" action; changing the team password is sufficient.
 - All traffic (HTTP and WebSocket) uses TLS in any non-localhost deployment.
 - A future version adds email-based magic-link authentication (e.g. via SendGrid) as an alternative to password entry.
 
@@ -335,18 +333,9 @@ The purpose is draft context, not weekly lineup optimization.
 
 ## 8. Scoring Configuration
 
-Scoring must be represented as structured rules, not merely `STANDARD` or `NON_PPR`.
+Scoring format (e.g., Standard, non-PPR) is configured per league for informational context.
 
-Examples:
-
-- passing TD = 4;
-- passing yards = 0.04 per yard;
-- rushing yards = 0.1 per yard;
-- receiving yards = 0.1 per yard;
-- reception = 0;
-- applicable kicking/DST rules.
-
-Historical and projected fantasy points may be calculated from imported raw stats using the configured scoring rules.
+Projected and historical fantasy points are imported as pre-computed values from the data source. The system does not compute points from raw statistical categories. No scoring-rules table or in-app stat-to-points calculation is needed.
 
 ---
 
@@ -420,12 +409,7 @@ Once the draft begins, freeze:
 - AAVs;
 - tiers.
 
-Optional live refresh may be allowed only for:
-
-- injury status;
-- team/status news.
-
-Every refreshed status must display freshness.
+Injury status and team news are part of the frozen dataset. There is no post-freeze refresh mechanism; the imported dataset is the authoritative source for the duration of the draft.
 
 ---
 
@@ -494,6 +478,16 @@ Preferred display:
 
 `ESPN AAV $42 · My Target $51`
 
+#### Compact Zone A indicator
+
+In the active auction panel (Draft Room Zone A), when a custom target exists for the nominated player, display a compact color-coded badge next to the player name:
+
+- **Green**: current bid is at or under the owner's target;
+- **Yellow**: current bid is within 5% of the target or within $2 of the target, whichever is the greater threshold;
+- **Red**: current bid exceeds the yellow threshold.
+
+The badge is visible only when the owner has set a custom target for that player. No badge appears when the owner has no custom target.
+
 Internally, an Auto-Agent may fall back to Primary AAV where a target has not been customized.
 
 ---
@@ -515,7 +509,7 @@ A Watch List:
 
 Ordered automation list.
 
-Each entry may include an opening nomination amount.
+Auto-nominations from the queue always open at $1. There is no per-entry opening price customization.
 
 If the owner does not act during nomination time, the system may nominate the first legal available queued player according to league policy.
 
@@ -678,15 +672,17 @@ Configurable league rule.
 Possible configuration:
 
 - enabled/disabled;
-- informational-only/warning/enforcement;
-- late-bid threshold;
+- enforcement mode: informational-only / warning / enforcement (commissioner choice per draft);
+- late-bid threshold (seconds remaining when bid is classified as late);
 - number of qualifying late bids before penalty;
-- minimum remaining time required while penalized;
-- penalty duration in subsequent Player Auctions.
+- minimum remaining time required while penalized (seconds);
+- penalty duration in subsequent Player Auctions (number of auctions).
+
+**Penalty behavior in enforcement mode:** A penalized team may not place a bid in the next N auctions unless X or fewer seconds remain on the clock. They are not completely blocked — they can still bid, but only if they themselves are bidding late. `N` and `X` are configured by the commissioner.
 
 Classification uses **server receipt time**, not browser time.
 
-Penalty must be visible to the affected owner and commissioner.
+A badge or indicator must be visible to the affected owner and commissioner whenever a penalty is active, showing how many auctions remain in the penalty window.
 
 ---
 
@@ -873,7 +869,7 @@ Prominent content:
 - authoritative timer;
 - Primary AAV;
 - optional Secondary AAV;
-- custom Target Value only when set;
+- custom Target Value only when set, with compact color-coded Zone A indicator (§11);
 - owner's remaining budget;
 - maximum legal bid;
 - roster/starter-slot context;
@@ -881,8 +877,12 @@ Prominent content:
 - custom bid;
 - Match when applicable;
 - Auto-Agent status;
-- connection/latency health;
+- connection/latency health (always-visible corner badge per §28);
 - compact tier/scarcity cue.
+
+### 25.1 All-picks history feed (Draft Room)
+
+A scrollable chronological feed of every completed pick (player, winning team, price) is available as a secondary panel in the Draft Room. It updates in real time as picks are resolved. This panel may be collapsed to preserve screen space on small viewports.
 
 ---
 
@@ -903,9 +903,19 @@ War Room may show:
 - all rosters and budgets;
 - Watch List;
 - Nomination Queue;
+- Do Not Draft list;
 - bid history;
 - recent acquisitions;
 - chat if included.
+
+### 26.1 All-picks history feed and board (War Room)
+
+The War Room includes two pick-history views:
+
+- **Chronological feed**: identical to the Draft Room feed (§25.1) — every completed pick in order.
+- **Pick board**: picks organized by round/cycle (derived from nomination order cycles) or by position group, giving a roster-level view of what's been taken across all teams.
+
+Both views update in real time.
 
 Every authenticated window shares the same owner/team identity.
 
@@ -914,6 +924,8 @@ Multiple windows do not create multiple drafters.
 ---
 
 ## 27. Mobile UX
+
+Some owners will draft exclusively on a phone. Mobile must support full bidding capability. Some informational features (War Room panels, full pick board, analytics) may be limited or inaccessible on small viewports; the core bidding experience must not be degraded.
 
 Mobile preserves full bidding capability while reducing information density.
 
@@ -934,7 +946,7 @@ Priority:
 
 ## 28. Connection / Latency Indicator
 
-Display a basic realtime connection-health state such as:
+Display a basic realtime connection-health state as an always-visible color-coded pill/badge in the header corner. Example:
 
 `● Excellent — 42 ms`
 
@@ -945,6 +957,8 @@ Possible states:
 - Degraded;
 - Poor;
 - Reconnecting.
+
+The badge is always visible regardless of connection quality — it is not hidden when the connection is good.
 
 This is advisory. Server receipt time remains authoritative.
 
@@ -983,7 +997,7 @@ Commissioner can:
 - correct the purchase price of an already-awarded pick, in place, when the fix stays legal for that team's later picks (§31);
 - rollback the most recent N resolved picks, in order, to fix anything else about an already-awarded pick (§31).
 
-Material corrections require a reason and immutable audit entry.
+Material corrections may include an optional free-text reason field. The reason is stored in the DraftEvent payload. No separate commissioner audit table is required.
 
 ---
 
@@ -995,7 +1009,7 @@ Correction never erases history. Every correction and rollback appends new rows 
 
 **Price-only correction (in-place).** The only correction ever made in place. It applies to any already-awarded pick, no matter how many picks that team has made since — the gate is legality, not chronology: the system replays the team's ledger forward from that pick at the corrected price, and only allows the in-place fix if every later pick by that team stays legal (budget and roster-reserve rules) under it. If the replay fails, direct correction is refused and the commissioner is routed to rollback instead. Only that one team's ledger and roster entry change; no other team or pick is touched.
 
-**Rollback (winner/player changes, or when the replay above fails).** Any change to *who* won a pick or *which player* was awarded always goes through rollback, never in place — those changes can cascade into roster-slot and budget legality for other picks in ways that aren't safe to patch surgically. Rollback undoes the most recently resolved picks in reverse order, one at a time, back through and including the target pick, as a single all-or-nothing operation — the draft must be paused first. The commissioner cannot reach into the middle of the draft and touch only one pick while leaving later picks untouched; fixing an old pick with picks after it means undoing everything back to it. To make that fast rather than painful, once the rollback completes the commissioner is offered a **re-apply assist**: each undone pick, in its original order, one click away from being re-awarded exactly as before (with the erroneous one editable first) — turning "undo 8 picks to fix one" into roughly a minute of clicking rather than a live re-auction of 8 players.
+**Rollback (winner/player changes, or when the replay above fails).** Any change to *who* won a pick or *which player* was awarded always goes through rollback, never in place — those changes can cascade into roster-slot and budget legality for other picks in ways that aren't safe to patch surgically. Rollback undoes the most recently resolved picks in reverse order, one at a time, back through and including the target pick, as a single all-or-nothing operation — the draft must be paused first. The commissioner cannot reach into the middle of the draft and touch only one pick while leaving later picks untouched; fixing an old pick with picks after it means undoing everything back to it. After rollback completes, the draft resumes normally and the commissioner re-runs the affected nominations manually — no automated re-apply assist is provided.
 
 A rollback restores, for each undone pick:
 
@@ -1063,6 +1077,16 @@ Configuration:
 - message/offline action.
 
 Whammy budget effects flow through Budget Ledger.
+
+### Whammy display behavior
+
+When a Whammy fires (from any trigger source — commissioner manual or auto-trigger):
+
+1. A prominent toast or event card is displayed to all participants.
+2. The draft is automatically paused for 20 seconds.
+3. The commissioner may resume the draft before the 20 seconds expires.
+
+The auto-trigger must be wired into the auction resolution event path and fires according to the configured probability/weight rules.
 
 A Whammy should not normally make legal roster completion mathematically impossible unless commissioner explicitly overrides.
 
@@ -1163,26 +1187,28 @@ Delivery:
 
 ## 37. ESPN Transfer
 
-The application should not require or assume a supported ESPN roster-write API.
+The application should not require or assume a supported ESPN roster-write API. ESPN does not expose a supported roster-write API; manual entry via ESPN's Offline Draft UI is the only available mechanism.
 
-At completion:
+### 37.1 CSV export
 
-1. validate internal roster integrity;
-2. map source teams to ESPN teams;
-3. validate player identity and roster capacity;
-4. produce team-by-team ESPN entry order;
-5. guide commissioner through ESPN Offline Draft entry;
-6. track confirmed players;
-7. flag ambiguous/unresolved mappings;
-8. mark transfer reconciled.
+On draft completion, the system produces an ESPN-oriented roster-entry worksheet as a CSV export. This is the primary transfer artifact. Winning prices and full bid history remain authoritative in this application.
 
-Exports include:
+### 37.2 Browser automation script
 
-- canonical JSON;
-- generic CSV;
-- ESPN-oriented roster-entry worksheet/report.
+The actual ESPN entry will be performed via a browser automation script (using Claude-in-Chrome or Playwright) that reads the exported CSV and drives ESPN's Offline Draft entry UI to enter each pick in the correct order. This script is part of the application's tooling, not a UI workflow within the draft platform itself.
 
-Winning prices and full bid history remain authoritative in this application.
+The script should:
+
+- parse the CSV export;
+- navigate ESPN's Offline Draft entry UI;
+- enter each pick (player + price) for each team in the correct order;
+- handle any ambiguous matches or errors by pausing and surfacing them for commissioner review.
+
+A generic CSV export (for other downstream uses) and a canonical JSON export (for archival) are deferred and not part of MVP.
+
+### 37.3 Removed: guided in-app workflow
+
+The multi-step in-app guided workflow (team mapping, per-pick reconciliation, step indicator) described in earlier drafts of this PRD has been removed. The CSV export plus browser automation script covers the actual transfer need.
 
 ---
 
@@ -1321,10 +1347,10 @@ MVP should contain the capabilities required to run the intended real league.
 ### Core MVP
 
 - league/team setup;
-- team icon and optional nomination audio;
+- team icon and optional nomination audio (walk-up, first nomination per team per draft only);
 - team-name locking;
 - configurable/per-team budget;
-- structured scoring rules;
+- scoring format label (non-PPR, Standard, etc.); pre-computed fantasy points from import — no in-app scoring rule computation;
 - roster/starter/flex configuration;
 - deterministic starter-first roster assignment;
 - pre-draft player-data ingestion;
@@ -1356,12 +1382,21 @@ MVP should contain the capabilities required to run the intended real league.
 - broadcast Auto-Agent transition;
 - basic Auto-Agent valuation configuration;
 - commissioner pause/correction;
-- price-only in-place correction and rollback of recent picks;
+- price-only in-place correction and rollback of recent picks (no re-apply assist; commissioner re-runs manually);
+- optional correction reason field stored in event payload;
 - immutable budget/event history;
-- full bid telemetry;
+- full bid telemetry (all §34 fields, pre-launch);
 - ephemeral close card;
-- ESPN transfer package;
-- final rankings.
+- ESPN CSV export + browser automation transfer script;
+- bid analytics (light — bids/owner, snipe count, latency histogram; post-draft curiosity);
+- final rankings;
+- Whammy auto-trigger wired; Whammy display as toast + 20-second draft pause;
+- connection/latency indicator (always-visible corner badge);
+- mobile-first bidding (full bid capability; informational panels may be limited);
+- all-picks history feed (Draft Room panel + War Room feed and pick board);
+- Do Not Draft toggle-only UI in War Room;
+- league-wide scarcity count;
+- target value color-coded badge in Zone A (§11).
 
 ### Likely V1
 
@@ -1475,7 +1510,7 @@ And Team B (the intended winner) has acquired players at picks #20 and #25 since
 When commissioner attempts to change pick #12's winner to Team B  
 Then the system refuses direct correction regardless of Team A's subsequent activity  
 And requires rollback of the most recent picks back through #12  
-And offers the re-apply assist to re-award #13 through #25 after #12 is corrected.
+And after the rollback the draft resumes normally for the commissioner to re-run the affected nominations.
 
 ### Concurrent multi-league drafts
 

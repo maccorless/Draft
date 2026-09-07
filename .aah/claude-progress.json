@@ -1,10 +1,12 @@
 {
-  "last_updated": "2026-09-05T17:33:52.095900+00:00",
+  "last_updated": "2026-09-07T20:40:20.891970+00:00",
   "current_phase": "build",
-  "current_wave": null,
+  "current_wave": 18,
   "current_tier": 0,
-  "last_completed_feature": "F-MOD-011-rework-01",
-  "in_progress_features": [],
+  "last_completed_feature": "F-MOD-002-rework-05",
+  "in_progress_features": [
+    "F-MOD-000-rework-01"
+  ],
   "known_issues": [],
   "environment_state": "unknown",
   "next_steps": "Beginning build phase",
@@ -717,6 +719,499 @@
     {
       "timestamp": "2026-09-05T17:33:52.095682+00:00",
       "summary": "1 commit(s) made. Progress: 21/27 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T17:38:46.213632+00:00",
+      "summary": "3 commit(s) made. Features completed: regression-latest. Progress: 27/27 features passing",
+      "features_completed": [
+        "regression-latest"
+      ]
+    },
+    {
+      "timestamp": "2026-09-05T17:42:23.819803+00:00",
+      "summary": "5 commit(s) made. Progress: 27/27 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T17:45:40.552341+00:00",
+      "summary": "2 commit(s) made. Progress: 27/27 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T18:15:09.693232+00:00",
+      "summary": "3 commit(s) made. Progress: 27/27 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T18:28:03.561076+00:00",
+      "summary": "2 commit(s) made. Progress: 27/27 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T18:29:35.643932+00:00",
+      "summary": "Progress: 27/27 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T21:23:57.887640+00:00",
+      "summary": "2 commit(s) made. Progress: 27/28 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T21:24:25.725079+00:00",
+      "summary": "Progress: 27/28 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T21:26:43.595245+00:00",
+      "summary": "2 commit(s) made. Progress: 27/28 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T21:45:24.032853+00:00",
+      "summary": "3 commit(s) made. Features completed: F-MOD-002-rework-05. Progress: 27/28 features passing",
+      "features_completed": [
+        "F-MOD-002-rework-05"
+      ]
+    },
+    {
+      "timestamp": "2026-09-05T21:49:30.749140+00:00",
+      "summary": "1 commit(s) made. Progress: 27/28 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T21:56:17.393449+00:00",
+      "summary": "Progress: 27/28 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T22:09:02.328855+00:00",
+      "summary": "1 commit(s) made. Progress: 27/28 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-05T22:15:30.763820+00:00",
+      "summary": "Progress: 27/28 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T01:17:28.880820+00:00",
+      "summary": "5 commit(s) made. Progress: 27/28 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T01:41:50.551793+00:00",
+      "summary": "6 commit(s) made. Features completed: regression-latest, F-MOD-002-rework-05. Progress: 28/28 features passing",
+      "features_completed": [
+        "regression-latest",
+        "F-MOD-002-rework-05"
+      ]
+    },
+    {
+      "timestamp": "2026-09-06T03:32:23.289496+00:00",
+      "summary": "37 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T03:32:42.616877+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T11:56:18.623679+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T11:56:48.123416+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T11:57:28.628033+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T11:57:43.990839+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T12:15:39.445776+00:00",
+      "summary": "3 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T12:15:56.539683+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T12:20:13.370158+00:00",
+      "summary": "3 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T12:21:21.911940+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T12:26:32.511965+00:00",
+      "summary": "5 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T12:32:05.040943+00:00",
+      "summary": "8 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T12:36:53.251469+00:00",
+      "summary": "3 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T12:37:41.402318+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T13:09:43.492118+00:00",
+      "summary": "1 commit(s) made. Features completed: F-MOD-000-rework-01. Progress: 28/38 features passing",
+      "features_completed": [
+        "F-MOD-000-rework-01"
+      ]
+    },
+    {
+      "timestamp": "2026-09-06T13:19:43.664384+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T13:39:43.385689+00:00",
+      "summary": "5 commit(s) made. Features completed: F-MOD-002-rework-06. Progress: 28/38 features passing",
+      "features_completed": [
+        "F-MOD-002-rework-06"
+      ]
+    },
+    {
+      "timestamp": "2026-09-06T13:51:49.373075+00:00",
+      "summary": "3 commit(s) made. Features completed: F-MOD-005-rework-01. Progress: 28/38 features passing",
+      "features_completed": [
+        "F-MOD-005-rework-01"
+      ]
+    },
+    {
+      "timestamp": "2026-09-06T13:52:47.121002+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T14:04:58.488144+00:00",
+      "summary": "3 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T14:05:38.277464+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T14:11:21.706716+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T14:15:52.687374+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T14:29:51.194984+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T14:31:16.002820+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T14:42:07.834581+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T14:55:34.698618+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T15:03:48.300136+00:00",
+      "summary": "4 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T15:36:35.532578+00:00",
+      "summary": "3 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T15:37:11.005524+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T17:46:26.598198+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T17:56:28.479543+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T21:18:20.326354+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-06T21:28:57.137077+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T03:23:36.702186+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T03:28:31.370535+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T03:29:12.684300+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:16:03.447377+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:20:09.593618+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:30:55.923435+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:33:06.316658+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:35:11.898234+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:37:28.993492+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:39:28.440781+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:40:20.281833+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:44:27.997233+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:50:17.742353+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:50:28.097108+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:58:13.384174+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T12:58:29.187881+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T13:00:09.443416+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T13:00:25.697453+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T14:22:27.177173+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T14:27:54.314902+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T14:28:26.219325+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T14:28:37.654017+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T14:42:03.685523+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T14:42:34.523398+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T14:52:27.514581+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T15:07:25.146975+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T15:19:13.243567+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T16:17:52.692058+00:00",
+      "summary": "3 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T16:36:36.234620+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T16:45:06.105046+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T16:46:19.915268+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T16:49:14.523470+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T16:55:47.135762+00:00",
+      "summary": "3 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T16:56:22.213592+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T17:01:15.444176+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T18:02:41.482142+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T18:26:36.112084+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T19:22:58.092994+00:00",
+      "summary": "10 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T19:24:11.114315+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T19:30:08.064438+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T19:59:32.757715+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T20:18:56.141748+00:00",
+      "summary": "3 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T20:34:33.880132+00:00",
+      "summary": "2 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T20:36:49.292017+00:00",
+      "summary": "Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T20:40:03.486902+00:00",
+      "summary": "1 commit(s) made. Progress: 28/38 features passing",
+      "features_completed": []
+    },
+    {
+      "timestamp": "2026-09-07T20:40:20.891709+00:00",
+      "summary": "Progress: 28/38 features passing",
       "features_completed": []
     }
   ],

@@ -5,6 +5,7 @@
  * screen-information-architecture.md §0.2.
  */
 import React, { useCallback, useEffect, useState } from 'react';
+import { CaretUp, CaretDown } from '@phosphor-icons/react';
 
 import { TeamMediaUpload, type TeamMedia } from '../../components/TeamMediaUpload.js';
 import './league-setup.css';
@@ -114,6 +115,8 @@ function toDatetimeLocal(iso: string | null): string {
 export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): React.ReactElement {
   const [league, setLeague] = useState<LeagueSummary | null>(null);
   const [teamList, setTeamList] = useState<TeamRow[]>([]);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamPassword, setNewTeamPassword] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [aavSources, setAavSources] = useState<string[]>([]);
   const [readiness, setReadiness] = useState<{ items: ReadinessItem[]; all_ready: boolean } | null>(null);
@@ -425,6 +428,32 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
       .catch(() => report('Failed to update name lock'));
   }
 
+  function addTeam(e: React.FormEvent): void {
+    e.preventDefault();
+    if (!newTeamName.trim() || !newTeamPassword.trim()) return;
+    const draftOrder = teamList.length > 0 ? Math.max(...teamList.map((t) => t.draft_order)) + 1 : 1;
+    authedJson<TeamRow>(`/leagues/${leagueId}/teams`, token, {
+      method: 'POST',
+      body: JSON.stringify({ name: newTeamName.trim(), team_password: newTeamPassword, draft_order: draftOrder }),
+    })
+      .then(() => {
+        setNewTeamName('');
+        setNewTeamPassword('');
+        refreshTeams();
+        refreshReadiness();
+      })
+      .catch(() => report('Failed to add team'));
+  }
+
+  function removeTeam(team: TeamRow): void {
+    authedJson(`/leagues/${leagueId}/teams/${team.id}`, token, { method: 'DELETE' })
+      .then(() => {
+        refreshTeams();
+        refreshReadiness();
+      })
+      .catch((err: unknown) => report(err instanceof Error ? err.message : 'Failed to remove team'));
+  }
+
   function moveTeam(index: number, dir: -1 | 1): void {
     const target = teamList[index + dir];
     const current = teamList[index];
@@ -512,27 +541,35 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
       <section className="league-setup__panel" aria-label="League Identity">
         <h2 className="league-setup__heading">League Identity</h2>
         <form className="league-setup__form" onSubmit={submitIdentity}>
-          <label htmlFor="league-name">League name</label>
-          <input id="league-name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
-          <label htmlFor="league-logo">Logo URL</label>
-          <input id="league-logo" type="text" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+          <div className="league-setup__field">
+            <label htmlFor="league-name">League name</label>
+            <input id="league-name" type="text" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="league-setup__field">
+            <label htmlFor="league-logo">Logo URL</label>
+            <input id="league-logo" type="text" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+          </div>
           <label className="league-setup__checkbox-label">
             <input type="checkbox" checked={nameLock} onChange={(e) => setNameLock(e.target.checked)} />
             Lock league name
           </label>
-          <label htmlFor="scheduled-start">Scheduled draft start</label>
-          <input
-            id="scheduled-start"
-            type="datetime-local"
-            value={scheduledAt}
-            onChange={(e) => setScheduledAt(e.target.value)}
-          />
-          <label htmlFor="status-message">Status message (shown to owners in the Lobby)</label>
-          <textarea
-            id="status-message"
-            value={statusMessage}
-            onChange={(e) => setStatusMessage(e.target.value)}
-          />
+          <div className="league-setup__field">
+            <label htmlFor="scheduled-start">Scheduled draft start</label>
+            <input
+              id="scheduled-start"
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+            />
+          </div>
+          <div className="league-setup__field">
+            <label htmlFor="status-message">Status message (shown to owners in the Lobby)</label>
+            <textarea
+              id="status-message"
+              value={statusMessage}
+              onChange={(e) => setStatusMessage(e.target.value)}
+            />
+          </div>
           <button type="submit" disabled={!identityDirty}>Save League Identity</button>
         </form>
       </section>
@@ -540,23 +577,27 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
       <section className="league-setup__panel" aria-label="Password Generation">
         <h2 className="league-setup__heading">Passwords</h2>
         <form className="league-setup__form" onSubmit={submitGeneratePassword}>
-          <label htmlFor="password-scope">Scope</label>
-          <select id="password-scope" value={passwordScope} onChange={(e) => setPasswordScope(e.target.value as typeof passwordScope)}>
-            <option value="COMMISSIONER">Commissioner</option>
-            <option value="HOST">Host</option>
-            <option value="TEAM">Team</option>
-          </select>
+          <div className="league-setup__field">
+            <label htmlFor="password-scope">Scope</label>
+            <select id="password-scope" value={passwordScope} onChange={(e) => setPasswordScope(e.target.value as typeof passwordScope)}>
+              <option value="COMMISSIONER">Commissioner</option>
+              <option value="HOST">Host</option>
+              <option value="TEAM">Team</option>
+            </select>
+          </div>
           {passwordScope === 'TEAM' && (
-            <>
+            <div className="league-setup__field">
               <label htmlFor="password-team">Team</label>
               <select id="password-team" value={passwordTeamId} onChange={(e) => setPasswordTeamId(e.target.value)}>
                 <option value="">Select team…</option>
                 {teamList.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
-            </>
+            </div>
           )}
-          <label htmlFor="custom-password">Custom password (optional — leave blank to generate)</label>
-          <input id="custom-password" type="text" value={customPassword} onChange={(e) => setCustomPassword(e.target.value)} />
+          <div className="league-setup__field">
+            <label htmlFor="custom-password">Custom password (optional — leave blank to generate)</label>
+            <input id="custom-password" type="text" value={customPassword} onChange={(e) => setCustomPassword(e.target.value)} />
+          </div>
           <button type="submit" disabled={passwordScope === 'TEAM' && !passwordTeamId}>Generate</button>
         </form>
         {generatedPassword && (
@@ -569,8 +610,10 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
       <section className="league-setup__panel" aria-label="Roster Configuration">
         <h2 className="league-setup__heading">Roster Configuration</h2>
         <form className="league-setup__form" onSubmit={submitRosterConfig}>
-          <label htmlFor="bench-slots">Bench slots</label>
-          <input id="bench-slots" type="number" min={0} value={benchSlots} onChange={(e) => setBenchSlots(e.target.value)} />
+          <div className="league-setup__field">
+            <label htmlFor="bench-slots">Bench slots</label>
+            <input id="bench-slots" type="number" min={0} value={benchSlots} onChange={(e) => setBenchSlots(e.target.value)} />
+          </div>
           <p className="league-setup__hint">
             Every drafted player counts toward roster size regardless of position — there's no
             limit on how many of one position a team can draft. Each row here is a starter
@@ -609,18 +652,32 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
       <section className="league-setup__panel" aria-label="Auction Configuration">
         <h2 className="league-setup__heading">Auction Configuration</h2>
         <form className="league-setup__form" onSubmit={submitAuctionConfig}>
-          <label htmlFor="initial-budget">Starting budget ($)</label>
-          <input id="initial-budget" type="number" min={1} value={initialBudget} onChange={(e) => setInitialBudget(e.target.value)} />
-          <label htmlFor="nomination-timer">Nomination timer (s)</label>
-          <input id="nomination-timer" type="number" min={1} value={nominationTimer} onChange={(e) => setNominationTimer(e.target.value)} />
-          <label htmlFor="second-bid-timer">Second-bid timer (s)</label>
-          <input id="second-bid-timer" type="number" min={1} value={secondBidTimer} onChange={(e) => setSecondBidTimer(e.target.value)} />
-          <label htmlFor="rebid-timer">Rebid timer (s)</label>
-          <input id="rebid-timer" type="number" min={1} value={rebidTimer} onChange={(e) => setRebidTimer(e.target.value)} />
-          <label htmlFor="anti-snipe-threshold">Anti-snipe threshold (s)</label>
-          <input id="anti-snipe-threshold" type="number" min={0} value={antiSnipeThreshold} onChange={(e) => setAntiSnipeThreshold(e.target.value)} />
-          <label htmlFor="anti-snipe-extension">Anti-snipe extension (s)</label>
-          <input id="anti-snipe-extension" type="number" min={0} value={antiSnipeExtension} onChange={(e) => setAntiSnipeExtension(e.target.value)} />
+          <div className="league-setup__field-grid">
+            <div className="league-setup__field">
+              <label htmlFor="initial-budget">Starting budget ($)</label>
+              <input id="initial-budget" type="number" min={1} value={initialBudget} onChange={(e) => setInitialBudget(e.target.value)} />
+            </div>
+            <div className="league-setup__field">
+              <label htmlFor="nomination-timer">Nomination timer (s)</label>
+              <input id="nomination-timer" type="number" min={1} value={nominationTimer} onChange={(e) => setNominationTimer(e.target.value)} />
+            </div>
+            <div className="league-setup__field">
+              <label htmlFor="second-bid-timer">Second-bid timer (s)</label>
+              <input id="second-bid-timer" type="number" min={1} value={secondBidTimer} onChange={(e) => setSecondBidTimer(e.target.value)} />
+            </div>
+            <div className="league-setup__field">
+              <label htmlFor="rebid-timer">Rebid timer (s)</label>
+              <input id="rebid-timer" type="number" min={1} value={rebidTimer} onChange={(e) => setRebidTimer(e.target.value)} />
+            </div>
+            <div className="league-setup__field">
+              <label htmlFor="anti-snipe-threshold">Anti-snipe threshold (s)</label>
+              <input id="anti-snipe-threshold" type="number" min={0} value={antiSnipeThreshold} onChange={(e) => setAntiSnipeThreshold(e.target.value)} />
+            </div>
+            <div className="league-setup__field">
+              <label htmlFor="anti-snipe-extension">Anti-snipe extension (s)</label>
+              <input id="anti-snipe-extension" type="number" min={0} value={antiSnipeExtension} onChange={(e) => setAntiSnipeExtension(e.target.value)} />
+            </div>
+          </div>
           <button type="submit" disabled={!auctionDirty}>Save Auction Configuration</button>
         </form>
       </section>
@@ -628,16 +685,22 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
       <section className="league-setup__panel" aria-label="AAV Sources">
         <h2 className="league-setup__heading">AAV Sources</h2>
         <form className="league-setup__form" onSubmit={submitAavSources}>
-          <label htmlFor="primary-source">Primary</label>
-          <select id="primary-source" value={primarySource} onChange={(e) => setPrimarySource(e.target.value)} disabled={aavSources.length === 0}>
-            <option value="">Select source…</option>
-            {aavSources.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <label htmlFor="secondary-source">Secondary</label>
-          <select id="secondary-source" value={secondarySource} onChange={(e) => setSecondarySource(e.target.value)} disabled={aavSources.length === 0}>
-            <option value="">(none)</option>
-            {aavSources.map((s) => <option key={s} value={s}>{s}</option>)}
-          </select>
+          <div className="league-setup__field-grid">
+            <div className="league-setup__field">
+              <label htmlFor="primary-source">Primary</label>
+              <select id="primary-source" value={primarySource} onChange={(e) => setPrimarySource(e.target.value)} disabled={aavSources.length === 0}>
+                <option value="">Select source…</option>
+                {aavSources.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="league-setup__field">
+              <label htmlFor="secondary-source">Secondary</label>
+              <select id="secondary-source" value={secondarySource} onChange={(e) => setSecondarySource(e.target.value)} disabled={aavSources.length === 0}>
+                <option value="">(none)</option>
+                {aavSources.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
           <button type="submit" disabled={aavSources.length === 0 || !primarySource || !datasetId || !aavSourcesDirty}>Save AAV Sources</button>
         </form>
       </section>
@@ -649,12 +712,20 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
             <input type="checkbox" checked={whammyEnabled} onChange={(e) => setWhammyEnabled(e.target.checked)} />
             Enabled
           </label>
-          <label htmlFor="whammy-max-amount">Max amount ($)</label>
-          <input id="whammy-max-amount" type="number" min={0} value={whammyMaxAmount} onChange={(e) => setWhammyMaxAmount(e.target.value)} />
-          <label htmlFor="whammy-max-per-team">Max per team (blank = unlimited)</label>
-          <input id="whammy-max-per-team" type="number" min={0} value={whammyMaxPerTeam} onChange={(e) => setWhammyMaxPerTeam(e.target.value)} />
-          <label htmlFor="whammy-max-per-draft">Max per draft (blank = unlimited)</label>
-          <input id="whammy-max-per-draft" type="number" min={0} value={whammyMaxPerDraft} onChange={(e) => setWhammyMaxPerDraft(e.target.value)} />
+          <div className="league-setup__field-grid">
+            <div className="league-setup__field">
+              <label htmlFor="whammy-max-amount">Max amount ($)</label>
+              <input id="whammy-max-amount" type="number" min={0} value={whammyMaxAmount} onChange={(e) => setWhammyMaxAmount(e.target.value)} />
+            </div>
+            <div className="league-setup__field">
+              <label htmlFor="whammy-max-per-team">Max per team (blank = unlimited)</label>
+              <input id="whammy-max-per-team" type="number" min={0} value={whammyMaxPerTeam} onChange={(e) => setWhammyMaxPerTeam(e.target.value)} />
+            </div>
+            <div className="league-setup__field">
+              <label htmlFor="whammy-max-per-draft">Max per draft (blank = unlimited)</label>
+              <input id="whammy-max-per-draft" type="number" min={0} value={whammyMaxPerDraft} onChange={(e) => setWhammyMaxPerDraft(e.target.value)} />
+            </div>
+          </div>
           <label className="league-setup__checkbox-label">
             <input type="checkbox" checked={whammyApprovalRequired} onChange={(e) => setWhammyApprovalRequired(e.target.checked)} />
             Commissioner approval required
@@ -667,15 +738,21 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
         <h2 className="league-setup__heading">Teams</h2>
         <table className="league-setup__team-table">
           <thead>
-            <tr><th>Order</th><th>Team</th><th>Starting Budget Override ($)</th><th>Name Lock</th><th>Media</th></tr>
+            <tr><th>Order</th><th>Team</th><th>Starting Budget Override ($)</th><th>Name Lock</th><th>Media</th><th>Remove</th></tr>
           </thead>
           <tbody>
             {teamList.map((team, i) => (
               <tr key={team.id}>
                 <td>
-                  <button type="button" aria-label="Move up" onClick={() => moveTeam(i, -1)} disabled={i === 0}>↑</button>
-                  <button type="button" aria-label="Move down" onClick={() => moveTeam(i, 1)} disabled={i === teamList.length - 1}>↓</button>
-                  {team.draft_order}
+                  <span className="league-setup__order-controls">
+                    <button type="button" className="league-setup__icon-button" aria-label="Move up" onClick={() => moveTeam(i, -1)} disabled={i === 0}>
+                      <CaretUp size={14} weight="bold" />
+                    </button>
+                    <button type="button" className="league-setup__icon-button" aria-label="Move down" onClick={() => moveTeam(i, 1)} disabled={i === teamList.length - 1}>
+                      <CaretDown size={14} weight="bold" />
+                    </button>
+                  </span>
+                  <span className="league-setup__order-number">{team.draft_order}</span>
                 </td>
                 <td>{team.name}</td>
                 <td>
@@ -700,13 +777,34 @@ export function LeagueSetup({ leagueId, token, datasetId }: LeagueSetupProps): R
                     onChange={(media) => handleTeamMediaChange(team.id, media)}
                   />
                 </td>
+                <td>
+                  <button type="button" aria-label={`Remove ${team.name}`} onClick={() => removeTeam(team)}>
+                    Remove
+                  </button>
+                </td>
               </tr>
             ))}
             {teamList.length === 0 && (
-              <tr><td colSpan={5} className="league-setup__idle-small">No teams yet.</td></tr>
+              <tr><td colSpan={6} className="league-setup__idle-small">No teams yet.</td></tr>
             )}
           </tbody>
         </table>
+        <form className="league-setup__add-team" aria-label="Add Team" onSubmit={addTeam}>
+          <input
+            aria-label="New team name"
+            placeholder="Team name"
+            value={newTeamName}
+            onChange={(e) => setNewTeamName(e.target.value)}
+          />
+          <input
+            aria-label="New team password"
+            placeholder="Team password"
+            type="password"
+            value={newTeamPassword}
+            onChange={(e) => setNewTeamPassword(e.target.value)}
+          />
+          <button type="submit" disabled={!newTeamName.trim() || !newTeamPassword.trim()}>Add Team</button>
+        </form>
       </section>
 
       <section className="league-setup__panel league-setup__readiness" aria-label="Pre-Draft Readiness">

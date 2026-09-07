@@ -59,6 +59,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/TeamSummary"
 
+    delete:
+      operationId: deleteTeam
+      summary: Commissioner removes a team from the league
+      tags: [league-setup]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - $ref: "#/components/parameters/teamId"
+      responses:
+        "200":
+          description: Team removed
+        "409":
+          description: League's draft has left CREATED status — teams can no longer be removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /leagues/{leagueId}/passwords/generate:
     post:
       operationId: generatePasswords
@@ -119,6 +136,29 @@ paths:
       responses:
         "200":
           description: Whammy configuration saved
+
+  /leagues/{leagueId}/datasets/{datasetId}/ambiguities/resolve:
+    post:
+      operationId: resolveAmbiguousMatch
+      summary: Commissioner resolves ambiguous player-name matches from a dataset import
+      tags: [league-setup]
+      parameters:
+        - $ref: "#/components/parameters/leagueId"
+        - name: datasetId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResolveAmbiguousMatchRequest"
+      responses:
+        "200":
+          description: Ambiguous rows resolved
 
 components:
   securitySchemes:
@@ -310,3 +350,15 @@ components:
           type: string
         message:
           type: string
+
+    ResolveAmbiguousMatchRequest:
+      type: object
+      required: [resolutions]
+      properties:
+        resolutions:
+          type: object
+          description: >-
+            Map of ambiguous row identifier -> chosen player_id, or the literal
+            string "skip" to leave that row unresolved.
+          additionalProperties:
+            type: string

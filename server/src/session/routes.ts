@@ -3,7 +3,10 @@
  *   GET /leagues/:leagueId/drafts  — list drafts for a league (lobby/reconnect flow)
  *   GET /drafts/:draftId/state     — full DraftStateSnapshot (REST fallback; WS preferred)
  *
- * Both require a valid bearer JWT. auth_epoch is re-read from DB on every request.
+ * Both require a valid bearer JWT. auth_epoch is re-read from DB on every
+ * request, against the correct scope for the token's own role — teams.auth_epoch
+ * for OWNER, leagues.auth_epoch for COMMISSIONER/HOST (constraint #12; same
+ * role-aware check as server/src/league/auth-hook.ts's verifyAndCheckEpoch).
  * Per constraint #11: every request also verifies league_id matches token.
  */
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
@@ -32,7 +35,27 @@ async function verifyTokenAndEpoch(
     return null;
   }
 
-  // Re-read auth_epoch from DB — constraint #12
+  // Re-read auth_epoch from DB — constraint #12 — against the scope that
+  // actually owns this token's role. OWNER tokens are issued and revoked
+  // against teams.auth_epoch, never leagues.auth_epoch.
+  if (claims.role === 'OWNER' && claims.team_id) {
+    const rows = await sql<[{ auth_epoch: number }]>`
+      SELECT auth_epoch FROM teams
+      WHERE id = ${claims.team_id} AND league_id = ${claims.league_id}
+      LIMIT 1
+    `;
+    const team = rows[0];
+    if (!team) {
+      reply.status(404).send({ code: 'NOT_FOUND', message: 'Team not found in this league' });
+      return null;
+    }
+    if (claims.auth_epoch !== team.auth_epoch) {
+      reply.status(401).send({ code: 'TOKEN_REVOKED', message: 'Token has been revoked' });
+      return null;
+    }
+    return claims;
+  }
+
   const rows = await sql<[{ auth_epoch: number }]>`
     SELECT auth_epoch FROM leagues WHERE id = ${claims.league_id} LIMIT 1
   `;

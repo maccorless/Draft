@@ -138,6 +138,31 @@ x-websocket-protocol:
         code: string
         reason: string
 
+    - type: WHAMMY_APPLIED
+      payload:
+        whammy_id: uuid
+        team_id: uuid
+        amount_minor: integer
+        description: string
+        new_remaining_budget_minor: integer
+      description: >
+        Broadcast whenever a Whammy event is applied (manually by the
+        commissioner, or automatically per MOD-009's probability/weight
+        auto-trigger) so every connected client can surface it, not just
+        the commissioner who triggered it.
+
+    - type: SNIPING_PENALTY_APPLIED
+      payload:
+        team_id: uuid
+        player_auction_id: uuid
+        penalty_mode: "INFORMATIONAL | WARNING | ENFORCEMENT"
+        qualifying_late_bid_count: integer
+        penalty_active_until_sequence: integer
+      description: >
+        Broadcast when a team's qualifying late-bid count triggers an
+        anti-snipe penalty (enforcement mode), so Draft Room and War Room
+        can show a visible penalty indicator for the affected team.
+
 components:
   securitySchemes:
     bearerAuth:

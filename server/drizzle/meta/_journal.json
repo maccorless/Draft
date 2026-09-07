@@ -64,6 +64,48 @@
       "when": 1789100000000,
       "tag": "0008_auto_agent_per_player_ceiling",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1789200000000,
+      "tag": "0009_espn_transfer_and_report_delivery",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1789300000000,
+      "tag": "0010_whammy_definitions",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1789400000000,
+      "tag": "0011_acquisitions_unique_player_auction",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789500000000,
+      "tag": "0012_anti_snipe_penalty",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1789600000000,
+      "tag": "0013_bid_attempt_telemetry",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1789700000000,
+      "tag": "0014_whammy_resume",
+      "breakpoints": true
     }
   ]
 }

@@ -15,9 +15,9 @@
  *
  * Per screen-information-architecture.md §8/§18 (Draft Complete screen).
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-// ─── Types (mirrors server/src/draft/reports.ts / MOD-006-api-schema.yaml) ─────
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface AcquisitionEntry {
   player_name: string;
@@ -53,19 +53,44 @@ export interface DraftSummaryReport {
   league_totals: LeagueTotals;
 }
 
+// Bid analytics types (mirrors GET /drafts/:id/analytics/bids)
+export interface BidAnalyticsTeam {
+  team_id: string;
+  team_name: string;
+  total_bids: number;
+  match_bids: number;
+  absolute_bids: number;
+}
+
+export interface LatencyBucket {
+  bucket: string;
+  count: number;
+}
+
+export interface BidAnalytics {
+  draft_id: string;
+  per_team: BidAnalyticsTeam[];
+  snipe_event_count: number;
+  latency_histogram: LatencyBucket[];
+}
+
 export interface DraftCompleteProps {
   draftId: string;
   report: DraftSummaryReport;
   isCommissioner: boolean;
   /** The signed-in owner's team, if any (null for a commissioner or spectator). */
   currentTeamId?: string | null;
+  /** League id — when present along with token, renders the ESPN transfer CTA. */
+  leagueId?: string;
+  /** Auth token — required alongside leagueId for the ESPN transfer CTA. */
+  token?: string;
   /** Called when user clicks Export Worksheet; receives the blob URL */
   onExportWorksheet?: () => void;
   /** Called when user clicks Send Summary Email; receives recipients count */
-  onEmailReport?: () => Promise<{ recipients: number }>;
+  onEmailReport?: () => Promise<{ recipients: number; failed_count?: number }>;
 }
 
-type ViewMode = 'owner' | 'league';
+type ViewMode = 'owner' | 'league' | 'bids';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -140,6 +165,8 @@ export function DraftComplete({
   report,
   isCommissioner,
   currentTeamId,
+  leagueId,
+  token,
   onExportWorksheet,
   onEmailReport,
 }: DraftCompleteProps): React.ReactElement {
@@ -147,8 +174,26 @@ export function DraftComplete({
   const [view, setView] = useState<ViewMode>(myTeam ? 'owner' : 'league');
 
   const [emailStatus, setEmailStatus] = useState<
-    { state: 'idle' } | { state: 'sending' } | { state: 'sent'; recipients: number } | { state: 'error'; message: string }
+    | { state: 'idle' }
+    | { state: 'sending' }
+    | { state: 'sent'; recipients: number }
+    | { state: 'partial'; recipients: number; failed_count: number }
+    | { state: 'error'; message: string }
   >({ state: 'idle' });
+
+  const [bidAnalytics, setBidAnalytics] = useState<BidAnalytics | null>(null);
+  const [bidAnalyticsError, setBidAnalyticsError] = useState<string | null>(null);
+
+  // Fetch bid analytics once on mount — REST, no WS subscription
+  useEffect(() => {
+    fetch(`/drafts/${draftId}/analytics/bids`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json() as Promise<BidAnalytics>;
+      })
+      .then(setBidAnalytics)
+      .catch(() => setBidAnalyticsError('Could not load bid analytics'));
+  }, [draftId]);
 
   const handleExportWorksheet = () => {
     // Trigger file download by navigating to the endpoint
@@ -164,8 +209,15 @@ export function DraftComplete({
     try {
       const result = onEmailReport
         ? await onEmailReport()
-        : await fetch(`/drafts/${draftId}/report/email`, { method: 'POST' }).then((r) => r.json() as Promise<{ recipients: number }>);
-      setEmailStatus({ state: 'sent', recipients: result.recipients });
+        : await fetch(`/drafts/${draftId}/report/email`, { method: 'POST' }).then(
+            (r) => r.json() as Promise<{ recipients: number; failed_count?: number }>,
+          );
+      const failed = result.failed_count ?? 0;
+      if (failed > 0) {
+        setEmailStatus({ state: 'partial', recipients: result.recipients, failed_count: failed });
+      } else {
+        setEmailStatus({ state: 'sent', recipients: result.recipients });
+      }
     } catch {
       setEmailStatus({ state: 'error', message: 'Email dispatch failed' });
     }
@@ -221,10 +273,26 @@ export function DraftComplete({
               Summary email sent to {emailStatus.recipients} team{emailStatus.recipients !== 1 ? 's' : ''}.
             </p>
           )}
+          {emailStatus.state === 'partial' && (
+            <p className="draft-complete__email-error" role="alert">
+              {emailStatus.failed_count} of {emailStatus.recipients} emails failed to send.
+            </p>
+          )}
           {emailStatus.state === 'error' && (
             <p className="draft-complete__email-error" role="alert">
               {emailStatus.message}
             </p>
+          )}
+
+          {leagueId && token && (
+            <button
+              type="button"
+              className="draft-complete__btn draft-complete__btn--espn"
+              aria-label="Open guided ESPN roster transfer"
+              onClick={() => { window.open(`/espn-transfer?leagueId=${encodeURIComponent(leagueId)}&token=${encodeURIComponent(token)}`, '_blank'); }}
+            >
+              ESPN roster transfer
+            </button>
           )}
         </section>
       )}
@@ -247,6 +315,14 @@ export function DraftComplete({
           onClick={() => setView('league')}
         >
           League Summary
+        </button>
+        <button
+          type="button"
+          className={`draft-complete__tab${view === 'bids' ? ' draft-complete__tab--active' : ''}`}
+          aria-pressed={view === 'bids'}
+          onClick={() => setView('bids')}
+        >
+          Bid Activity
         </button>
       </nav>
 
@@ -311,6 +387,69 @@ export function DraftComplete({
               )}
             </tbody>
           </table>
+        </section>
+      )}
+
+      {view === 'bids' && (
+        <section className="draft-complete__bid-activity" aria-label="Bid activity">
+          <h2>Bid Activity</h2>
+          {bidAnalyticsError && (
+            <p role="alert" className="draft-complete__error">{bidAnalyticsError}</p>
+          )}
+          {!bidAnalytics && !bidAnalyticsError && (
+            <p>Loading bid analytics…</p>
+          )}
+          {bidAnalytics && (
+            <>
+              <p className="draft-complete__snipe-count">
+                Anti-snipe extensions: <strong>{bidAnalytics.snipe_event_count}</strong>
+              </p>
+
+              <h3>Bids per team</h3>
+              <table className="draft-complete__bid-table" aria-label="Bids per team">
+                <thead>
+                  <tr>
+                    <th scope="col">Team</th>
+                    <th scope="col">Total bids</th>
+                    <th scope="col">Match bids</th>
+                    <th scope="col">Custom bids</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bidAnalytics.per_team.map((t) => (
+                    <tr key={t.team_id}>
+                      <td>{t.team_name}</td>
+                      <td>{t.total_bids}</td>
+                      <td>{t.match_bids}</td>
+                      <td>{t.absolute_bids}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {bidAnalytics.latency_histogram.some((b) => b.count > 0) && (
+                <>
+                  <h3>Bid latency distribution</h3>
+                  <table className="draft-complete__latency-table" aria-label="Bid latency histogram">
+                    <thead>
+                      <tr>
+                        <th scope="col">Bucket</th>
+                        <th scope="col">Bids</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bidAnalytics.latency_histogram.map((b) => (
+                        <tr key={b.bucket}>
+                          <td>{b.bucket}</td>
+                          <td>{b.count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </>
+          )}
         </section>
       )}
 

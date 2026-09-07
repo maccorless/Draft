@@ -291,6 +291,7 @@ describe('F-MOD-017 AuctionCloseCard', () => {
   const award: AwardEntry = {
     player_auction_id: 'pa-1',
     player_name: 'Justin Jefferson',
+    position: 'WR',
     winning_team_id: 't2',
     price_minor: 6000,
     roster_slot: 'WR',
