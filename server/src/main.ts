@@ -93,8 +93,22 @@ export async function buildServer() {
     },
   });
 
+  // FRONTEND_ORIGIN (comma-separated) allows a production frontend's origin
+  // through CORS. Localhost dev origins are added only outside production —
+  // never wildcarded, since CORS with credentials:true + a wildcard origin
+  // is both spec-invalid and a security regression. env-check.cjs enforces
+  // FRONTEND_ORIGIN is set whenever NODE_ENV === 'production'.
+  const configuredOrigins = (process.env['FRONTEND_ORIGIN'] ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+  const corsOrigins =
+    process.env['NODE_ENV'] === 'production'
+      ? configuredOrigins
+      : [...configuredOrigins, 'http://localhost:5173', 'http://127.0.0.1:5173'];
+
   await server.register(fastifyCors, {
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: corsOrigins,
     credentials: true,
   });
 
