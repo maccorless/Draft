@@ -266,6 +266,54 @@ describe('F-MOD-010 Team Roster', () => {
     const call = calls.find((c) => c.url === `/leagues/${LEAGUE_ID}/teams/t1`)!;
     expect((call.body as { starting_budget_override_minor: number }).starting_budget_override_minor).toBe(15000);
   });
+
+  it('test_F_MOD_010_add_team_form_submits_and_refreshes_list', async () => {
+    const { calls } = await renderAndLoad({
+      'POST /leagues/league-1/teams': { status: 201, body: { id: 't3', name: 'Team Three', draft_order: 3 } },
+    });
+    fireEvent.change(screen.getByLabelText('New team name'), { target: { value: 'Team Three' } });
+    fireEvent.change(screen.getByLabelText('New team password'), { target: { value: 'pw123' } });
+    fireEvent.click(screen.getByText('Add Team'));
+
+    await waitFor(() => {
+      const call = calls.find((c) => c.url === `/leagues/${LEAGUE_ID}/teams` && c.method === 'POST');
+      expect(call).toBeTruthy();
+    });
+    const call = calls.find((c) => c.url === `/leagues/${LEAGUE_ID}/teams` && c.method === 'POST')!;
+    expect((call.body as { name: string; team_password: string; draft_order: number }).name).toBe('Team Three');
+    expect((call.body as { team_password: string }).team_password).toBe('pw123');
+    // Refreshes the team list after adding.
+    await waitFor(() => {
+      const refetch = calls.filter((c) => c.url === `/leagues/${LEAGUE_ID}/teams` && c.method === 'GET');
+      expect(refetch.length).toBeGreaterThan(1);
+    });
+  });
+
+  it('test_F_MOD_010_remove_team_calls_delete_and_refreshes_list', async () => {
+    const { calls } = await renderAndLoad({
+      'DELETE /leagues/league-1/teams/t1': { status: 200, body: { ok: true } },
+    });
+    fireEvent.click(screen.getByLabelText('Remove Team One'));
+
+    await waitFor(() => {
+      const call = calls.find((c) => c.url === `/leagues/${LEAGUE_ID}/teams/t1` && c.method === 'DELETE');
+      expect(call).toBeTruthy();
+    });
+  });
+
+  it('test_F_MOD_010_remove_team_409_shows_error_message', async () => {
+    await renderAndLoad({
+      'DELETE /leagues/league-1/teams/t1': {
+        status: 409,
+        body: { code: 'DRAFT_ALREADY_STARTED', message: "Cannot remove a team once this league's draft has left CREATED status" },
+      },
+    });
+    fireEvent.click(screen.getByLabelText('Remove Team One'));
+
+    await waitFor(() =>
+      expect(screen.getByText("Cannot remove a team once this league's draft has left CREATED status")).toBeTruthy(),
+    );
+  });
 });
 
 describe('F-MOD-010 Readiness Checklist', () => {

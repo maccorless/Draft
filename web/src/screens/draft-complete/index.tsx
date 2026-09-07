@@ -16,6 +16,7 @@
  * Per screen-information-architecture.md §8/§18 (Draft Complete screen).
  */
 import React, { useState } from 'react';
+import { EspnTransferFlow } from './EspnTransferFlow.js';
 
 // ─── Types (mirrors server/src/draft/reports.ts / MOD-006-api-schema.yaml) ─────
 
@@ -62,7 +63,10 @@ export interface DraftCompleteProps {
   /** Called when user clicks Export Worksheet; receives the blob URL */
   onExportWorksheet?: () => void;
   /** Called when user clicks Send Summary Email; receives recipients count */
-  onEmailReport?: () => Promise<{ recipients: number }>;
+  onEmailReport?: () => Promise<{ recipients: number; failed_count?: number }>;
+  /** Needed for the guided ESPN transfer flow's authenticated calls (commissioner-only). */
+  leagueId?: string;
+  token?: string;
 }
 
 type ViewMode = 'owner' | 'league';
@@ -142,9 +146,12 @@ export function DraftComplete({
   currentTeamId,
   onExportWorksheet,
   onEmailReport,
+  leagueId,
+  token,
 }: DraftCompleteProps): React.ReactElement {
   const myTeam = currentTeamId ? report.teams.find((t) => t.team_id === currentTeamId) ?? null : null;
   const [view, setView] = useState<ViewMode>(myTeam ? 'owner' : 'league');
+  const [showEspnTransfer, setShowEspnTransfer] = useState(false);
 
   const [emailStatus, setEmailStatus] = useState<
     { state: 'idle' } | { state: 'sending' } | { state: 'sent'; recipients: number } | { state: 'error'; message: string }
@@ -164,8 +171,12 @@ export function DraftComplete({
     try {
       const result = onEmailReport
         ? await onEmailReport()
-        : await fetch(`/drafts/${draftId}/report/email`, { method: 'POST' }).then((r) => r.json() as Promise<{ recipients: number }>);
-      setEmailStatus({ state: 'sent', recipients: result.recipients });
+        : await fetch(`/drafts/${draftId}/report/email`, { method: 'POST' }).then((r) => r.json() as Promise<{ recipients: number; failed_count?: number }>);
+      if (result.failed_count) {
+        setEmailStatus({ state: 'error', message: `${result.failed_count} of ${result.recipients} email(s) failed to send` });
+      } else {
+        setEmailStatus({ state: 'sent', recipients: result.recipients });
+      }
     } catch {
       setEmailStatus({ state: 'error', message: 'Email dispatch failed' });
     }
@@ -226,7 +237,47 @@ export function DraftComplete({
               {emailStatus.message}
             </p>
           )}
+
+          {leagueId && token && (
+            <button
+              type="button"
+              className="draft-complete__btn draft-complete__btn--espn-transfer"
+              aria-label="Open guided ESPN roster transfer"
+              onClick={() => setShowEspnTransfer((v) => !v)}
+            >
+              {showEspnTransfer ? 'Close ESPN Transfer' : 'Guided ESPN Transfer'}
+            </button>
+          )}
+
+          {leagueId && token && (
+            <a
+              className="draft-complete__btn draft-complete__btn--canonical-export"
+              aria-label="Download canonical JSON export"
+              href={`/drafts/${draftId}/canonical-export`}
+              onClick={(e) => {
+                e.preventDefault();
+                fetch(`/drafts/${draftId}/canonical-export`, { headers: { Authorization: `Bearer ${token}` } })
+                  .then((r) => r.json())
+                  .then((data) => {
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `draft-${draftId}-canonical.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  })
+                  .catch(() => {});
+              }}
+            >
+              Download canonical JSON
+            </a>
+          )}
         </section>
+      )}
+
+      {leagueId && token && showEspnTransfer && (
+        <EspnTransferFlow draftId={draftId} leagueId={leagueId} token={token} />
       )}
 
       {/* Owner view / League summary view tabs — visible to every owner (PRD §36.4) */}

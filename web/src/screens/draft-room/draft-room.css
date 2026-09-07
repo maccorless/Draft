@@ -300,7 +300,7 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  padding: var(--space-8) var(--space-6);
+  padding: var(--space-5) var(--space-6);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -308,8 +308,23 @@
   gap: var(--space-5);
 }
 
+/* Everything above "Available Players" — the current nomination/bid area.
+   Fixed height + centered content so switching between "waiting" / "your
+   turn to nominate" / an active auction never resizes the panel around it,
+   and it reads as one compact, constant-size instrument panel rather than
+   the tallest possible stack of optional badges. */
+.draft-room__bid-area {
+  width: 100%;
+  height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  overflow: hidden;
+}
+
 .draft-room__no-auction {
-  padding: var(--space-10) 0;
   color: var(--color-text-subtle);
 }
 
@@ -387,59 +402,95 @@
   color: var(--color-text);
 }
 
-.draft-room__player-list-rows {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: 360px;
+/* Fixed height (not max-height) so this panel is always the same size —
+   internal scroll handles overflow, and it doesn't shrink as players get
+   drafted off the list. */
+.draft-room__player-list-table-wrap {
+  height: 360px;
   overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 
-.draft-room__player-list-row {
+.draft-room__player-list-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.draft-room__player-list-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surface);
+  text-align: left;
+  color: var(--color-text-subtle);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border-strong);
+  white-space: nowrap;
+}
+
+.draft-room__player-list-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.draft-room__player-list-sortable:hover {
+  color: var(--color-text);
+}
+
+.draft-room__player-list-row td {
+  padding: var(--space-1) var(--space-3);
   border-bottom: 1px solid var(--color-border);
 }
 
-.draft-room__player-list-row:last-child {
+.draft-room__player-list-row:last-child td {
   border-bottom: none;
 }
 
+.draft-room__player-list-row:hover td {
+  background: var(--color-surface-alt);
+}
+
 .draft-room__player-list-row-btn {
-  width: 100%;
-  min-height: 44px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: var(--space-2) var(--space-4);
+  min-height: 40px;
+  padding: 0;
   border: none;
-  background: var(--color-surface);
+  background: transparent;
+  color: var(--color-text);
+  font-weight: var(--font-weight-semibold);
   text-align: left;
+  cursor: pointer;
 }
 
 .draft-room__player-list-row-btn:hover:not(:disabled) {
-  background: var(--color-surface-alt);
+  text-decoration: underline;
 }
 
 .draft-room__player-list-row-btn:disabled {
   cursor: default;
-  opacity: 0.7;
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
 }
 
-.draft-room__player-list-row-name {
-  color: var(--color-text);
-  font-weight: var(--font-weight-semibold);
-}
-
-.draft-room__player-list-row-meta {
-  font-size: var(--text-xs);
+.draft-room__player-list-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-subtle);
+}
+
+.draft-room__player-list-empty {
+  text-align: center;
+  color: var(--color-text-subtle);
+  padding: var(--space-5) 0;
 }
 
 .draft-room__player-name {
   font-family: var(--font-display);
-  font-size: 2.75rem;
+  font-size: 1.75rem;
   letter-spacing: 0.01em;
   color: var(--color-text);
   margin: 0;
@@ -479,10 +530,27 @@
   vertical-align: middle;
 }
 
-.draft-room__player-aav {
+.draft-room__player-stats-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-1) 0 0;
+}
+
+.draft-room__player-aav,
+.draft-room__player-proj-points,
+.draft-room__player-bye {
   font-family: var(--font-mono);
   color: var(--color-text-subtle);
   font-size: var(--text-sm);
+}
+
+/* Reserved-height slot so "My Target" appearing/disappearing (only set for
+   some players) never shifts the bid area's fixed height. */
+.draft-room__my-target-slot {
+  min-height: 1.4em;
   margin: var(--space-1) 0 0;
 }
 
@@ -502,7 +570,7 @@
 
 .draft-room__current-bid {
   font-family: var(--font-mono);
-  font-size: 4rem;
+  font-size: 2.25rem;
   font-weight: var(--font-weight-semibold);
   line-height: 1;
   color: var(--color-text);
@@ -510,15 +578,24 @@
 
 .draft-room__leader {
   color: var(--color-text-muted);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
 }
 
 .draft-room__timer {
   font-family: var(--font-mono);
-  font-size: var(--text-2xl);
+  font-size: var(--text-lg);
   color: var(--color-text-muted);
-  margin-top: var(--space-2);
+  margin-top: var(--space-1);
   transition: color var(--transition-base);
+}
+
+.draft-room__status-strip {
+  width: 100%;
+  max-width: 420px;
+}
+
+.draft-room__bid-footer {
+  min-height: 1.4em;
 }
 
 .draft-room__timer--urgent {

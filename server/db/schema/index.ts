@@ -390,18 +390,36 @@ export const whammyEventStatusEnum = pgEnum('whammy_event_status', [
   'REVERSED',
 ]);
 
+export const whammyDefinitions = pgTable('whammy_definitions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  league_id: uuid('league_id')
+    .notNull()
+    .references(() => leagues.id),
+  name: text('name').notNull(),
+  type: text('type').notNull(),
+  budget_delta_minor: integer('budget_delta_minor'),
+  trigger_rule_json: jsonb('trigger_rule_json').notNull().default({}),
+  display_message: text('display_message').notNull(),
+  offline_action_text: text('offline_action_text'),
+  weight: integer('weight').notNull().default(1),
+  active: boolean('active').notNull().default(true),
+});
+
 export const whammyEvents = pgTable('whammy_events', {
   id: uuid('id').primaryKey().defaultRandom(),
   draft_id: uuid('draft_id')
     .notNull()
     .references(() => drafts.id),
+  // Nullable: a message-only/offline-action WhammyDefinition (no budget
+  // delta) has no target team (F-MOD-009-rework-01 auto-trigger).
   team_id: uuid('team_id')
-    .notNull()
     .references(() => teams.id),
   amount_minor: integer('amount_minor').notNull(),
   description: text('description').notNull(),
   status: whammyEventStatusEnum('status').notNull().default('PENDING_APPROVAL'),
   budget_ledger_entry_id: uuid('budget_ledger_entry_id'),
+  definition_id: uuid('definition_id').references(() => whammyDefinitions.id),
+  trigger_event_sequence: integer('trigger_event_sequence'),
   created_at: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

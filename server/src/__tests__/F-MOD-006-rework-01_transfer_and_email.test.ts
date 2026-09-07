@@ -465,10 +465,11 @@ describe.skipIf(SKIP_DB)('F-MOD-006-rework-01 ESPN transfer + SendGrid delivery'
       headers: { authorization: `Bearer ${commToken}` },
     });
     expect(res.statusCode).toBe(202);
-    const body = res.json<{ accepted: boolean; recipients: number }>();
+    const body = res.json<{ accepted: boolean; recipients: number; failed_count: number }>();
     expect(body.accepted).toBe(true);
     // team1 (owner_email set) + commissioner — team2 has no owner_email.
     expect(body.recipients).toBe(2);
+    expect(body.failed_count).toBe(0);
 
     expect(receivedSends.map((s) => s.to).sort()).toEqual(
       ['commish@example.com', 'owner1@example.com'].sort(),
@@ -501,9 +502,12 @@ describe.skipIf(SKIP_DB)('F-MOD-006-rework-01 ESPN transfer + SendGrid delivery'
       headers: { authorization: `Bearer ${commToken}` },
     });
     expect(res.statusCode).toBe(202);
-    const body = res.json<{ accepted: boolean; recipients: number }>();
+    const body = res.json<{ accepted: boolean; recipients: number; failed_count: number }>();
     expect(body.accepted).toBe(true);
     expect(body.recipients).toBe(2);
+    // F-MOD-013-rework-01: the UI needs this to distinguish "actually sent"
+    // from merely accepted for logging.
+    expect(body.failed_count).toBe(1);
 
     const rows = await sql<Array<{ recipient_email: string; status: string; error_detail: string | null }>>`
       SELECT recipient_email, status, error_detail FROM report_delivery_attempts WHERE draft_id = ${draftId}

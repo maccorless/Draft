@@ -100,7 +100,8 @@ the auth_epoch against the correct table for the token's own role
 (`leagues.auth_epoch` for COMMISSIONER/HOST, `teams.auth_epoch` for OWNER) —
 never compare an OWNER token's epoch against the league row.
 
-<!-- AAH:BEGIN -->
+<!-- AAH:BEGIN — disabled 2026-09-06, project moved off the AAH framework onto standard skills (ce-plan/ce-work/ce-debug/tdd/code-review). Everything below to AAH:END is commented out; do not follow these rules.
+
 # AAH Delivery Project — Draft
 
 This project (Draft, stack: <unspecified>) uses the AAH (Ascend Agentic
@@ -244,4 +245,16 @@ Harness) delivery framework for standardized AI-assisted software delivery.
 - `.aah/deploy/infra/` — Infrastructure provisioning templates
 - `.aah/codebase-intel/` — Codebase intelligence artifacts (unified for greenfield and brownfield)
 - `.aah/audit/` — Phase logs, traceability matrix
-<!-- AAH:END -->
+
+AAH:END -->
+
+## Delivery Workflow (current)
+
+This project no longer uses the AAH framework or its orchestrator. Work is planned and executed with the standard skill set instead:
+
+- Plan multi-step work with `ce-plan` / `ce-brainstorm`.
+- Implement with `ce-work` / `tdd` (red-green, no orchestrator gate).
+- Debug bugs and regressions with `ce-debug` / `systematic-debugging`.
+- Review completed work with `code-review` / `ce-code-review` before calling it done.
+- Run tests directly (`npm test`, `npm run typecheck`) — no wrapper scripts required.
+- `.aah/` directories remain as historical record of the prior framework's state (feature list, test results, decision registry) but are no longer read or written as part of the workflow, and `feature-list.json` is no longer protected — edit it like any other file if it's useful, or ignore it.

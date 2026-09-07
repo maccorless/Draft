@@ -123,9 +123,12 @@ export async function registerDraftRoutes(
       const rosterCfg = rosterRows[0];
       const totalRosterSize = rosterCfg?.total_roster_size ?? 0;
 
-      // Get all teams for this league
-      const teamsRows = await sql<Array<{ id: string }>>`
-        SELECT id FROM teams WHERE league_id = ${draft.league_id}
+      // Get all teams for this league, including each team's own budget
+      // override (falls back to the league-wide initial_budget_minor when
+      // null — F-MOD-010-rework-01 item 3: this seeding step previously
+      // ignored starting_budget_override_minor entirely).
+      const teamsRows = await sql<Array<{ id: string; starting_budget_override_minor: number | null }>>`
+        SELECT id, starting_budget_override_minor FROM teams WHERE league_id = ${draft.league_id}
       `;
 
       await sql.begin(async (tx) => {
@@ -143,12 +146,13 @@ export async function registerDraftRoutes(
             LIMIT 1
           `;
           if (!existing[0]) {
+            const seedBudgetMinor = team.starting_budget_override_minor ?? cfg.initial_budget_minor;
             await tx`
               INSERT INTO draft_team_states
                 (draft_id, team_id, remaining_budget_minor, roster_filled_count,
                  required_remaining_spots, control_mode)
               VALUES
-                (${draft.id}, ${team.id}, ${cfg.initial_budget_minor}, 0,
+                (${draft.id}, ${team.id}, ${seedBudgetMinor}, 0,
                  ${totalRosterSize}, 'MANUAL')
             `;
           }

@@ -48,7 +48,7 @@ describe('identity switch resets the URL', () => {
   beforeEach(() => {
     sessionStorage.clear();
     window.history.replaceState(null, '', '/commissioner');
-    global.fetch = routedFetchMock();
+    global.fetch = routedFetchMock() as unknown as typeof fetch;
   });
 
   afterEach(() => {

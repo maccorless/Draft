@@ -127,6 +127,29 @@ async function applyPlayerIntelligence(
   await db.update(players).set(patch).where(eq(players.id, playerId));
 }
 
+export interface AmbiguousRowCandidate {
+  id: string;
+  name: string;
+  position: string;
+  nfl_team: string | null;
+}
+
+export interface AmbiguousRowResponse {
+  row_number: number;
+  raw_name: string;
+  raw_position: string;
+  candidates: AmbiguousRowCandidate[];
+}
+
+/**
+ * Ambiguous rows found by the most recent import per dataset, keyed by the
+ * row_number handed to the client — held in memory only (single-process
+ * server, F-MOD-010-rework-01 gap-review item 2) so the resolve endpoint can
+ * finish that row's upsert once the commissioner picks a candidate or skips.
+ * A new import for the same dataset replaces its entry entirely.
+ */
+const pendingAmbiguousRows = new Map<string, Map<number, { row: ParsedRow; source: ImportSource }>>();
+
 /**
  * UPSERT a set of parsed rows into players + player_aav_sources.
  * Upsert key is (dataset_id, player_id, source) — one row per player per
@@ -139,11 +162,19 @@ async function upsertRows(
   datasetId: string,
   result: AdapterResult,
   source: ImportSource,
-): Promise<{ rowsImported: number; importErrors: Array<{ row: number; message: string }> }> {
+): Promise<{
+  rowsImported: number;
+  importErrors: Array<{ row: number; message: string }>;
+  ambiguousRows: AmbiguousRowResponse[];
+}> {
   let rowsImported = 0;
   const importErrors = [...result.errors];
+  const ambiguousRows: AmbiguousRowResponse[] = [];
+  const pendingForDataset = new Map<number, { row: ParsedRow; source: ImportSource }>();
 
+  let rowNumber = 0;
   for (const row of result.rows) {
+    rowNumber++;
     try {
       let playerId: string;
 
@@ -167,7 +198,7 @@ async function upsertRows(
         }
       } else {
         const existing = await db
-          .select({ id: players.id })
+          .select({ id: players.id, name: players.name, position: players.position, nfl_team: players.nfl_team })
           .from(players)
           .where(and(eq(players.name, row.name), eq(players.position, row.position)));
 
@@ -175,6 +206,13 @@ async function upsertRows(
           playerId = existing[0]!.id;
         } else if (existing.length > 1) {
           importErrors.push({ row: 0, message: `Ambiguous player match for '${row.name}' (${row.position})` });
+          ambiguousRows.push({
+            row_number: rowNumber,
+            raw_name: row.name,
+            raw_position: row.position,
+            candidates: existing.map((c) => ({ id: c.id, name: c.name, position: c.position, nfl_team: c.nfl_team })),
+          });
+          pendingForDataset.set(rowNumber, { row, source });
           continue;
         } else {
           const [p] = await db.insert(players)
@@ -217,7 +255,61 @@ async function upsertRows(
     }
   }
 
-  return { rowsImported, importErrors };
+  pendingAmbiguousRows.set(datasetId, pendingForDataset);
+  return { rowsImported, importErrors, ambiguousRows };
+}
+
+/**
+ * Applies one resolved ambiguous row: links the chosen player into
+ * player_aav_sources for this dataset (mirrors upsertRows' own success
+ * path), or discards the row on 'skip'. No-ops silently if the row_number
+ * is no longer pending (already resolved, or from a superseded import).
+ */
+async function resolveAmbiguousRow(
+  db: PostgresJsDatabase,
+  datasetId: string,
+  rowNumber: number,
+  resolution: string,
+): Promise<void> {
+  const pendingForDataset = pendingAmbiguousRows.get(datasetId);
+  const pending = pendingForDataset?.get(rowNumber);
+  if (!pending) return;
+
+  if (resolution !== 'skip') {
+    const playerId = resolution;
+    await applyPlayerIntelligence(db, playerId, pending.row);
+
+    const existingEntry = await db
+      .select({ id: playerAavSources.id })
+      .from(playerAavSources)
+      .where(and(
+        eq(playerAavSources.dataset_id, datasetId),
+        eq(playerAavSources.player_id, playerId),
+        eq(playerAavSources.source, pending.source),
+      ))
+      .limit(1);
+
+    if (existingEntry.length === 0) {
+      await db.insert(playerAavSources).values({
+        dataset_id: datasetId,
+        player_id: playerId,
+        aav_minor: pending.row.aav_minor,
+        projected_points: pending.row.projected_points !== null ? String(pending.row.projected_points) : null,
+        tier: pending.row.tier,
+        source: pending.source,
+      });
+    } else {
+      await db.update(playerAavSources)
+        .set({
+          aav_minor: pending.row.aav_minor,
+          projected_points: pending.row.projected_points !== null ? String(pending.row.projected_points) : null,
+          tier: pending.row.tier,
+        })
+        .where(eq(playerAavSources.id, existingEntry[0]!.id));
+    }
+  }
+
+  pendingForDataset!.delete(rowNumber);
 }
 
 export async function registerPlayerRoutes(
@@ -337,8 +429,8 @@ export async function registerPlayerRoutes(
         return reply.send({ rows_imported: 0, source: 'CSV', errors: result.errors });
       }
 
-      const { rowsImported, importErrors } = await upsertRows(db, datasetId, result, 'CSV');
-      return reply.send({ rows_imported: rowsImported, source: 'CSV', errors: importErrors });
+      const { rowsImported, importErrors, ambiguousRows } = await upsertRows(db, datasetId, result, 'CSV');
+      return reply.send({ rows_imported: rowsImported, source: 'CSV', errors: importErrors, ambiguous_rows: ambiguousRows });
     },
   );
 
@@ -376,8 +468,8 @@ export async function registerPlayerRoutes(
         return reply.status(500).send({ code: 'WORKER_ERROR', message: `Excel parsing failed: ${String(err)}` });
       }
 
-      const { rowsImported, importErrors } = await upsertRows(db, datasetId, result, 'EXCEL');
-      return reply.send({ rows_imported: rowsImported, source: 'EXCEL', errors: importErrors });
+      const { rowsImported, importErrors, ambiguousRows } = await upsertRows(db, datasetId, result, 'EXCEL');
+      return reply.send({ rows_imported: rowsImported, source: 'EXCEL', errors: importErrors, ambiguous_rows: ambiguousRows });
     },
   );
 
@@ -418,8 +510,8 @@ export async function registerPlayerRoutes(
         result = { rows: [], errors: [{ row: 0, message: `PDF parsing failed: ${String(err)}` }] };
       }
 
-      const { rowsImported, importErrors } = await upsertRows(db, datasetId, result, 'ESPN_PDF');
-      return reply.send({ rows_imported: rowsImported, source: 'ESPN_PDF', errors: importErrors });
+      const { rowsImported, importErrors, ambiguousRows } = await upsertRows(db, datasetId, result, 'ESPN_PDF');
+      return reply.send({ rows_imported: rowsImported, source: 'ESPN_PDF', errors: importErrors, ambiguous_rows: ambiguousRows });
     },
   );
 
@@ -450,8 +542,8 @@ export async function registerPlayerRoutes(
         return reply.status(502).send({ code: 'FANTASYPROS_ERROR', message: String(err) });
       }
 
-      const { rowsImported, importErrors } = await upsertRows(db, datasetId, result, 'FANTASYPROS');
-      return reply.send({ rows_imported: rowsImported, source: 'FANTASYPROS', errors: importErrors });
+      const { rowsImported, importErrors, ambiguousRows } = await upsertRows(db, datasetId, result, 'FANTASYPROS');
+      return reply.send({ rows_imported: rowsImported, source: 'FANTASYPROS', errors: importErrors, ambiguous_rows: ambiguousRows });
     },
   );
 
@@ -499,6 +591,34 @@ export async function registerPlayerRoutes(
         });
 
       return reply.send(updated);
+    },
+  );
+
+  /**
+   * POST /leagues/:leagueId/datasets/:datasetId/ambiguities/resolve
+   * Body: { resolutions: Record<string, string> } — each value is a
+   * player_id to link, or the literal 'skip' (F-MOD-010-rework-01 item 2).
+   */
+  server.post<{ Params: DatasetParams; Body: { resolutions?: Record<string, string> } }>(
+    '/leagues/:leagueId/datasets/:datasetId/ambiguities/resolve',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const { leagueId, datasetId } = req.params;
+      const dataset = await findDataset(db, datasetId, leagueId, reply);
+      if (!dataset) return;
+
+      const resolutions = req.body?.resolutions;
+      if (!resolutions || typeof resolutions !== 'object') {
+        return reply.status(400).send({ code: 'VALIDATION_ERROR', message: 'resolutions is required' });
+      }
+
+      for (const [rowNumberStr, resolution] of Object.entries(resolutions)) {
+        const rowNumber = Number(rowNumberStr);
+        if (!Number.isInteger(rowNumber)) continue;
+        await resolveAmbiguousRow(db, datasetId, rowNumber, resolution);
+      }
+
+      return reply.status(200).send({ ok: true });
     },
   );
 

@@ -461,6 +461,7 @@ export async function registerReportRoutes(
       `;
 
       let recipients = 0;
+      let failedCount = 0;
 
       for (const t of teamRows) {
         const team = report.teams.find((entry) => entry.team_id === t.team_id);
@@ -489,6 +490,7 @@ export async function registerReportRoutes(
             UPDATE report_delivery_attempts SET status = 'SENT', sent_at = NOW() WHERE id = ${attempt!.id}
           `;
         } else {
+          failedCount++;
           await sql`
             UPDATE report_delivery_attempts SET status = 'FAILED', error_detail = ${result.errorDetail ?? ''} WHERE id = ${attempt!.id}
           `;
@@ -512,13 +514,17 @@ export async function registerReportRoutes(
             UPDATE report_delivery_attempts SET status = 'SENT', sent_at = NOW() WHERE id = ${attempt!.id}
           `;
         } else {
+          failedCount++;
           await sql`
             UPDATE report_delivery_attempts SET status = 'FAILED', error_detail = ${result.errorDetail ?? ''} WHERE id = ${attempt!.id}
           `;
         }
       }
 
-      return reply.status(202).send({ accepted: true, recipients });
+      // failed_count lets the UI distinguish "actually sent" from "accepted
+      // for logging" (F-MOD-013-rework-01 gap-review: the button previously
+      // always showed success regardless of per-recipient SendGrid failures).
+      return reply.status(202).send({ accepted: true, recipients, failed_count: failedCount });
     },
   );
 }

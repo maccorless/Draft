@@ -126,6 +126,8 @@ function positionMatchesTab(playerPosition: string, tab: string): boolean {
   return false;
 }
 
+type PlayerListSortKey = 'name' | 'position' | 'aav' | 'points';
+
 function useCountdown(deadlineTs: number | null): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -148,6 +150,12 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
   // state — separate from bid-related state above.
   const [playerListTab, setPlayerListTab] = useState('ALL');
   const [playerListSearch, setPlayerListSearch] = useState('');
+  // Sortable columns (name/position/projected points) added alongside the
+  // default AAV-desc ranking below — clicking a header switches to it.
+  const [playerListSort, setPlayerListSort] = useState<{ key: PlayerListSortKey; dir: 'asc' | 'desc' }>({
+    key: 'aav',
+    dir: 'desc',
+  });
   const [targets, setTargets] = useState<TargetItem[]>([]);
   const [closeCardAward, setCloseCardAward] = useState<AwardEntry | null>(null);
   const [showPopover, setShowPopover] = useState(false);
@@ -358,21 +366,43 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
   }, [config]);
 
   // Persistent, position-filterable, sortable undrafted-player list — default
-  // sorted aav_minor desc, projected_points desc as tiebreak; free-text search
-  // narrows further without replacing the persistent listing.
+  // sorted aav_minor desc, projected_points desc as tiebreak (unless the
+  // owner has clicked a Name/Position/Projected Points column header); free-
+  // text search narrows further without replacing the persistent listing.
   const rankedPlayers = useMemo(() => {
     const q = playerListSearch.trim().toLowerCase();
+    const dirMul = playerListSort.dir === 'asc' ? 1 : -1;
     return players
       .filter((p) => !drafted.has(p.name))
       .filter((p) => positionMatchesTab(p.position, playerListTab))
       .filter((p) => !q || p.name.toLowerCase().includes(q))
       .sort((a, b) => {
-        if (b.aav_minor !== a.aav_minor) return b.aav_minor - a.aav_minor;
-        const bp = b.projected_points ?? -Infinity;
-        const ap = a.projected_points ?? -Infinity;
-        return bp - ap;
+        switch (playerListSort.key) {
+          case 'name':
+            return dirMul * a.name.localeCompare(b.name);
+          case 'position':
+            return dirMul * a.position.localeCompare(b.position);
+          case 'points': {
+            const bp = b.projected_points ?? -Infinity;
+            const ap = a.projected_points ?? -Infinity;
+            return dirMul * (ap - bp);
+          }
+          case 'aav':
+          default: {
+            if (b.aav_minor !== a.aav_minor) return dirMul * (a.aav_minor - b.aav_minor);
+            const bp = b.projected_points ?? -Infinity;
+            const ap = a.projected_points ?? -Infinity;
+            return bp - ap;
+          }
+        }
       });
-  }, [players, drafted, playerListTab, playerListSearch]);
+  }, [players, drafted, playerListTab, playerListSearch, playerListSort]);
+
+  function togglePlayerListSort(key: PlayerListSortKey): void {
+    setPlayerListSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' },
+    );
+  }
 
   // Re-enable the +$1 button once a NEWER auction-state broadcast has been
   // applied (a different player_auction_id, or a version bump on the same
@@ -634,6 +664,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
         </aside>
 
         <main className="draft-room__active-auction" aria-label="Active Auction">
+          <div className="draft-room__bid-area">
           {!auction ? (
             <div className="draft-room__no-auction">
               {ws.draftStatus === 'COMPLETE' ? (
@@ -675,12 +706,26 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   {auction.position} · {auction.nfl_team}
                   {auction.tier !== null && ` · Tier ${auction.tier}`}
                 </p>
-                <p className="draft-room__player-aav">AAV {formatMoney(auction.aav_minor)}</p>
-                {myTargetValueMinor !== null && (
-                  <p className="draft-room__my-target" data-testid="my-target-value">
-                    My Target {formatMoney(myTargetValueMinor)}
-                  </p>
-                )}
+                <p className="draft-room__player-stats-row">
+                  <span className="draft-room__player-aav">AAV {formatMoney(auction.aav_minor)}</span>
+                  {activePlayerDetail?.projected_points != null && (
+                    <span className="draft-room__player-proj-points" data-testid="active-player-projected-points">
+                      Proj {activePlayerDetail.projected_points.toFixed(1)} pts
+                    </span>
+                  )}
+                  {activePlayerDetail?.bye_week != null && (
+                    <span className="draft-room__player-bye" data-testid="active-player-bye-week">
+                      Bye {activePlayerDetail.bye_week}
+                    </span>
+                  )}
+                </p>
+                <p className="draft-room__my-target-slot">
+                  {myTargetValueMinor !== null && (
+                    <span className="draft-room__my-target" data-testid="my-target-value">
+                      My Target {formatMoney(myTargetValueMinor)}
+                    </span>
+                  )}
+                </p>
               </div>
 
               <div className="draft-room__price-block">
@@ -697,18 +742,20 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                 </div>
               </div>
 
-              {antiSnipeVisible && (
-                <div className="draft-room__anti-snipe-badge" role="status" data-testid="anti-snipe-badge">
-                  Deadline extended — anti-snipe
-                </div>
-              )}
+              <div className="draft-room__status-strip">
+                {antiSnipeVisible && (
+                  <div className="draft-room__anti-snipe-badge" role="status" data-testid="anti-snipe-badge">
+                    Deadline extended — anti-snipe
+                  </div>
+                )}
 
-              {ws.lastError && (
-                <div className="draft-room__bid-error" role="alert" data-testid="bid-error">
-                  {ws.lastError.reason}
-                  <button onClick={ws.clearError} aria-label="Dismiss">×</button>
-                </div>
-              )}
+                {ws.lastError && (
+                  <div className="draft-room__bid-error" role="alert" data-testid="bid-error">
+                    {ws.lastError.reason}
+                    <button onClick={ws.clearError} aria-label="Dismiss">×</button>
+                  </div>
+                )}
+              </div>
 
               <div className="draft-room__bid-controls" aria-label="Bid controls">
                 <button
@@ -738,11 +785,13 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
                   </button>
                 </form>
 
-                {canMatch && (
-                  <button className="draft-room__match-btn" onClick={ws.nominatorMatch} data-testid="match-button">
-                    MATCH {formatMoney(auction.current_bid_minor)}
-                  </button>
-                )}
+                <div className="draft-room__bid-footer">
+                  {canMatch && (
+                    <button className="draft-room__match-btn" onClick={ws.nominatorMatch} data-testid="match-button">
+                      MATCH {formatMoney(auction.current_bid_minor)}
+                    </button>
+                  )}
+                </div>
 
                 {isLeading && <p className="draft-room__leading-note">You're winning this auction.</p>}
               </div>
@@ -754,6 +803,7 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
               )}
             </>
           )}
+          </div>
 
           {/* UF-17-07 item 1: persistent, position-filterable, sortable player
               list — replaces the old search-only-during-your-turn flow.
@@ -785,25 +835,73 @@ export function DraftRoom({ draftId, leagueId, token, teamId, role }: DraftRoomP
               aria-label="Search available players"
               data-testid="player-list-search"
             />
-            <ul className="draft-room__player-list-rows" data-testid="player-list-rows">
-              {rankedPlayers.map((p) => (
-                <li key={p.dataset_entry_id} className="draft-room__player-list-row" data-testid={`player-list-row-${p.dataset_entry_id}`}>
-                  <button
-                    type="button"
-                    className="draft-room__player-list-row-btn"
-                    onClick={() => handleNominate(p.dataset_entry_id, p.aav_minor)}
-                    disabled={!isMyNominationTurn}
-                    data-testid={`player-list-nominate-${p.dataset_entry_id}`}
-                  >
-                    <span className="draft-room__player-list-row-name">{p.name}</span>
-                    <span className="draft-room__player-list-row-meta">
-                      {p.position} · {p.nfl_team} · AAV {formatMoney(p.aav_minor)}
-                      {p.projected_points !== null && ` · ${p.projected_points} pts`}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <div className="draft-room__player-list-table-wrap" data-testid="player-list-rows">
+              <table className="draft-room__player-list-table">
+                <thead>
+                  <tr>
+                    <th
+                      className="draft-room__player-list-sortable"
+                      onClick={() => togglePlayerListSort('name')}
+                      data-testid="player-list-sort-name"
+                    >
+                      Name{playerListSort.key === 'name' && (playerListSort.dir === 'asc' ? ' ▲' : ' ▼')}
+                    </th>
+                    <th
+                      className="draft-room__player-list-sortable"
+                      onClick={() => togglePlayerListSort('position')}
+                      data-testid="player-list-sort-position"
+                    >
+                      Pos{playerListSort.key === 'position' && (playerListSort.dir === 'asc' ? ' ▲' : ' ▼')}
+                    </th>
+                    <th>Team</th>
+                    <th
+                      className="draft-room__player-list-sortable"
+                      onClick={() => togglePlayerListSort('aav')}
+                      data-testid="player-list-sort-aav"
+                    >
+                      AAV{playerListSort.key === 'aav' && (playerListSort.dir === 'asc' ? ' ▲' : ' ▼')}
+                    </th>
+                    <th
+                      className="draft-room__player-list-sortable"
+                      onClick={() => togglePlayerListSort('points')}
+                      data-testid="player-list-sort-points"
+                    >
+                      Proj Pts{playerListSort.key === 'points' && (playerListSort.dir === 'asc' ? ' ▲' : ' ▼')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rankedPlayers.map((p) => (
+                    <tr
+                      key={p.dataset_entry_id}
+                      className="draft-room__player-list-row"
+                      data-testid={`player-list-row-${p.dataset_entry_id}`}
+                    >
+                      <td>
+                        <button
+                          type="button"
+                          className="draft-room__player-list-row-btn"
+                          onClick={() => handleNominate(p.dataset_entry_id, p.aav_minor)}
+                          disabled={!isMyNominationTurn}
+                          data-testid={`player-list-nominate-${p.dataset_entry_id}`}
+                        >
+                          {p.name}
+                        </button>
+                      </td>
+                      <td>{p.position}</td>
+                      <td>{p.nfl_team}</td>
+                      <td className="draft-room__player-list-num">{formatMoney(p.aav_minor)}</td>
+                      <td className="draft-room__player-list-num">{p.projected_points !== null ? p.projected_points : '—'}</td>
+                    </tr>
+                  ))}
+                  {rankedPlayers.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="draft-room__player-list-empty">No players match.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </section>
         </main>
 

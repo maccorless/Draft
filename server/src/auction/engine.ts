@@ -17,6 +17,7 @@ import postgres from 'postgres';
 import { AsyncQueue } from './queue.js';
 import { resolveEffectivePrimarySource, resolvePlayerPrimaryAav } from '../player/aav-resolution.js';
 import { getFirstLegalNominationQueueEntry } from '../draft/strategy.js';
+import { evaluateWhammyAutoTrigger } from '../draft/whammy.js';
 
 export interface DraftRuntime {
   queue: AsyncQueue;
@@ -336,10 +337,13 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     current_leader_id: string | null;
     auction_version: number;
     rebid_deadline: Date | null;
+    player_position: string;
   }]>`
-    SELECT id, draft_id, status, current_bid_minor, current_leader_id, auction_version, rebid_deadline
-    FROM player_auctions
-    WHERE id = ${command.player_auction_id} AND draft_id = ${draftId}
+    SELECT pa.id, pa.draft_id, pa.status, pa.current_bid_minor, pa.current_leader_id,
+           pa.auction_version, pa.rebid_deadline, p.position AS player_position
+    FROM player_auctions pa
+    JOIN players p ON p.id = pa.dataset_player_id
+    WHERE pa.id = ${command.player_auction_id} AND pa.draft_id = ${draftId}
     LIMIT 1
   `;
   const auction = auctionRows[0];
@@ -455,6 +459,33 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
         player_auction_id: command.player_auction_id,
         code: 'ROSTER_FULL',
         reason: 'Your roster is full — no remaining slots for another player',
+      },
+    });
+    return { accepted: false, playerAuctionId: command.player_auction_id };
+  }
+
+  // 6c. Position-eligibility gate — required_remaining_spots > 0 only proves
+  // *some* slot is open, not that one accepts this player's position (e.g.
+  // bench full + only a non-QB starter slot left, bidding on a QB). Without
+  // this, a bid can be accepted that can never legally be awarded, leaving
+  // the auction stuck in processAwardCycle's retry loop forever.
+  const eligibleSlot = await assignRosterSlot(sql, draftId, teamId, leagueId, auction.player_position);
+  if (!eligibleSlot) {
+    await sql`
+      INSERT INTO bid_attempts
+        (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
+         server_receipt_time, accepted, rejection_reason)
+      VALUES
+        (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
+         ${command.bid_type}, ${serverReceiptTime.toISOString()},
+         false, 'NO_ELIGIBLE_SLOT')
+    `;
+    broadcast(draftId, {
+      type: 'BID_REJECTED',
+      payload: {
+        player_auction_id: command.player_auction_id,
+        code: 'NO_ELIGIBLE_SLOT',
+        reason: `No roster slot available for position ${auction.player_position}`,
       },
     });
     return { accepted: false, playerAuctionId: command.player_auction_id };
@@ -1199,7 +1230,7 @@ async function findAwardableAuctions(
  * - Fall back to any unfilled bench slot.
  * - Never reshuffles prior assignments.
  */
-async function assignRosterSlot(
+export async function assignRosterSlot(
   sql: postgres.Sql,
   draftId: string,
   teamId: string,
@@ -1311,6 +1342,7 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
   let acceptedBidCount: number;
   let uniqueBidderCount: number;
   let remainingBudgetMinor: number;
+  let playerAwardedEventSeq: number;
   let claimed = true;
 
   await sql.begin(async (tx) => {
@@ -1390,6 +1422,7 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
 
     // INSERT draft_event PLAYER_AWARDED
     const eventSeq = await nextDraftEventSequence(tx, draftId);
+    playerAwardedEventSeq = eventSeq;
     await tx`
       INSERT INTO draft_events
         (draft_id, sequence, event_type, team_id, player_auction_id, payload, created_at)
@@ -1467,6 +1500,15 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
     broadcast(draftId, { type: 'DRAFT_COMPLETE', payload: { draft_id: draftId } });
   } else {
     await advanceNominationTurn(sql, draftId, leagueId);
+  }
+
+  // Whammy auto-trigger (F-MOD-009-rework-01): evaluated once per pick
+  // resolution, after this resolution's transaction has committed, still
+  // before processAwardCycle's loop moves on to the next awardable auction.
+  try {
+    await evaluateWhammyAutoTrigger(sql, draftId, leagueId, auction.current_leader_id, playerAwardedEventSeq!);
+  } catch (err) {
+    console.error(`[engine] Whammy auto-trigger evaluation failed for draft ${draftId}:`, err);
   }
 }
 

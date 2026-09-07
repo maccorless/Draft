@@ -6,6 +6,7 @@
  * keyboard-accessible (RX-A11Y-001).
  */
 import React, { useRef, useState } from 'react';
+import type { AmbiguousRow } from './AmbiguityResolution.js';
 import './dataset-import.css';
 
 interface ImportError {
@@ -13,10 +14,11 @@ interface ImportError {
   message: string;
 }
 
-interface ImportResult {
+export interface ImportResult {
   rows_imported: number;
   source?: string;
   errors: ImportError[];
+  ambiguous_rows?: AmbiguousRow[];
 }
 
 interface DatasetImportProps {

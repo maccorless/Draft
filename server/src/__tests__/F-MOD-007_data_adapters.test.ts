@@ -130,6 +130,9 @@ describe('F-MOD-007 env checker — FANTASYPROS_API_KEY', () => {
         DATABASE_URL: 'postgres://localhost/test',
         JWT_SECRET: 'test-secret-at-least-32-chars-long',
         NODE_ENV: 'test',
+        // SENDGRID_API_KEY/SENDGRID_FROM_EMAIL are required (F-MOD-006-rework-01).
+        SENDGRID_API_KEY: 'test-sendgrid-key',
+        SENDGRID_FROM_EMAIL: 'test-sender@example.com',
         // FANTASYPROS_API_KEY intentionally absent — must not block boot
       },
       encoding: 'utf8',

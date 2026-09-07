@@ -272,6 +272,151 @@ describe.skipIf(SKIP_DB)('F-MOD-001 dataset and draft', () => {
     expect(res.statusCode).toBe(409);
   });
 
+  // ── Ambiguous player matches (F-MOD-010-rework-01 item 2) ────────────────
+
+  it('test_F_MOD_010_csv_import_returns_structured_ambiguous_rows', async () => {
+    const { leagueId, token } = await createLeague('Ambiguity League');
+
+    // Two existing players sharing name+position — a later CSV row for the
+    // same name/position cannot be resolved to a unique player.
+    const dup1 = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('Mike Williams', 'WR', 'LAC') RETURNING id
+    `;
+    const dup2 = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('Mike Williams', 'WR', 'NYJ') RETURNING id
+    `;
+
+    const dsRes = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const datasetId = dsRes.json<{ id: string }>().id;
+
+    const csv = [
+      'name,position,nfl_team,aav_minor,projected_points,tier',
+      'Mike Williams,WR,LAC,2000,150,3',
+      'Clean Player,QB,KC,1000,300,1',
+    ].join('\n');
+
+    const { body, contentType } = multipartBody('file', csv);
+    const res = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets/${datasetId}/import/csv`,
+      headers: { authorization: `Bearer ${token}`, 'content-type': contentType },
+      body,
+    });
+
+    expect(res.statusCode).toBe(200);
+    const result = res.json<{
+      rows_imported: number;
+      ambiguous_rows: Array<{ row_number: number; raw_name: string; raw_position: string; candidates: Array<{ id: string }> }>;
+    }>();
+    expect(result.rows_imported).toBe(1); // only 'Clean Player' imported
+    expect(result.ambiguous_rows).toHaveLength(1);
+    expect(result.ambiguous_rows[0]!.raw_name).toBe('Mike Williams');
+    expect(result.ambiguous_rows[0]!.raw_position).toBe('WR');
+    const candidateIds = result.ambiguous_rows[0]!.candidates.map((c) => c.id).sort();
+    expect(candidateIds).toEqual([dup1[0]!.id, dup2[0]!.id].sort());
+
+    await sql`DELETE FROM players WHERE id = ANY(${[dup1[0]!.id, dup2[0]!.id]})`;
+  });
+
+  it('test_F_MOD_010_resolve_ambiguity_links_chosen_candidate', async () => {
+    const { leagueId, token } = await createLeague('Ambiguity Resolve League');
+
+    const dup1 = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('Josh Allen', 'QB', 'BUF') RETURNING id
+    `;
+    const dup2 = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('Josh Allen', 'QB', 'JAX') RETURNING id
+    `;
+
+    const dsRes = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const datasetId = dsRes.json<{ id: string }>().id;
+
+    const csv = ['name,position,nfl_team,aav_minor,projected_points,tier', 'Josh Allen,QB,BUF,6000,400,1'].join('\n');
+    const { body, contentType } = multipartBody('file', csv);
+    const importRes = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets/${datasetId}/import/csv`,
+      headers: { authorization: `Bearer ${token}`, 'content-type': contentType },
+      body,
+    });
+    const { ambiguous_rows } = importRes.json<{ ambiguous_rows: Array<{ row_number: number }> }>();
+    expect(ambiguous_rows).toHaveLength(1);
+    const rowNumber = ambiguous_rows[0]!.row_number;
+
+    const resolveRes = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets/${datasetId}/ambiguities/resolve`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { resolutions: { [rowNumber]: dup1[0]!.id } },
+    });
+    expect(resolveRes.statusCode).toBe(200);
+
+    const [link] = await sql<[{ aav_minor: number } | undefined]>`
+      SELECT aav_minor FROM player_aav_sources WHERE dataset_id = ${datasetId} AND player_id = ${dup1[0]!.id}
+    `;
+    expect(link?.aav_minor).toBe(6000);
+
+    const [skippedLink] = await sql<[{ id: string } | undefined]>`
+      SELECT id FROM player_aav_sources WHERE dataset_id = ${datasetId} AND player_id = ${dup2[0]!.id}
+    `;
+    expect(skippedLink).toBeUndefined();
+
+    await sql`DELETE FROM player_aav_sources WHERE dataset_id = ${datasetId}`;
+    await sql`DELETE FROM players WHERE id = ANY(${[dup1[0]!.id, dup2[0]!.id]})`;
+  });
+
+  it('test_F_MOD_010_resolve_ambiguity_skip_discards_row', async () => {
+    const { leagueId, token } = await createLeague('Ambiguity Skip League');
+
+    const dup1 = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('Skip Guy', 'RB', 'GB') RETURNING id
+    `;
+    const dup2 = await sql<[{ id: string }]>`
+      INSERT INTO players (name, position, nfl_team) VALUES ('Skip Guy', 'RB', 'DAL') RETURNING id
+    `;
+
+    const dsRes = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets`,
+      headers: { authorization: `Bearer ${token}` },
+    });
+    const datasetId = dsRes.json<{ id: string }>().id;
+
+    const csv = ['name,position,nfl_team,aav_minor', 'Skip Guy,RB,GB,2500'].join('\n');
+    const { body, contentType } = multipartBody('file', csv);
+    const importRes = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets/${datasetId}/import/csv`,
+      headers: { authorization: `Bearer ${token}`, 'content-type': contentType },
+      body,
+    });
+    const { ambiguous_rows } = importRes.json<{ ambiguous_rows: Array<{ row_number: number }> }>();
+    const rowNumber = ambiguous_rows[0]!.row_number;
+
+    const resolveRes = await server.inject({
+      method: 'POST',
+      url: `/leagues/${leagueId}/datasets/${datasetId}/ambiguities/resolve`,
+      headers: { authorization: `Bearer ${token}` },
+      payload: { resolutions: { [rowNumber]: 'skip' } },
+    });
+    expect(resolveRes.statusCode).toBe(200);
+
+    const links = await sql<Array<{ id: string }>>`
+      SELECT id FROM player_aav_sources WHERE dataset_id = ${datasetId}
+    `;
+    expect(links).toHaveLength(0);
+
+    await sql`DELETE FROM players WHERE id = ANY(${[dup1[0]!.id, dup2[0]!.id]})`;
+  });
+
   // ── POST .../freeze ───────────────────────────────────────────────────────
 
   it('test_F_MOD_001_freeze_dataset_sets_status_FROZEN_and_records_frozen_at', async () => {

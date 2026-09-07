@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 import { hash } from '@node-rs/bcrypt';
 import { randomBytes } from 'node:crypto';
 
@@ -469,6 +469,45 @@ export async function registerLeagueRoutes(
         });
 
       return reply.send(updated);
+    },
+  );
+
+  /**
+   * DELETE /leagues/:leagueId/teams/:teamId
+   * Commissioner JWT required. Blocked (409) once any draft for this league
+   * has left CREATED status — the draft engine has already assigned
+   * budget/roster state keyed to this team by then (F-MOD-010-rework-01
+   * gap-review item 1).
+   */
+  server.delete<{ Params: { leagueId: string; teamId: string } }>(
+    '/leagues/:leagueId/teams/:teamId',
+    { preHandler: requireCommissioner(server, db) },
+    async (req, reply) => {
+      const { leagueId, teamId } = req.params;
+
+      const [existing] = await db
+        .select({ id: teams.id })
+        .from(teams)
+        .where(and(eq(teams.id, teamId), eq(teams.league_id, leagueId)))
+        .limit(1);
+      if (!existing) {
+        return reply.status(404).send({ code: 'NOT_FOUND', message: 'Team not found in this league' });
+      }
+
+      const [startedDraft] = await db
+        .select({ id: drafts.id })
+        .from(drafts)
+        .where(and(eq(drafts.league_id, leagueId), ne(drafts.status, 'CREATED')))
+        .limit(1);
+      if (startedDraft) {
+        return reply.status(409).send({
+          code: 'DRAFT_ALREADY_STARTED',
+          message: 'Cannot remove a team once this league\'s draft has left CREATED status',
+        });
+      }
+
+      await db.delete(teams).where(eq(teams.id, teamId));
+      return reply.status(200).send({ ok: true });
     },
   );
 

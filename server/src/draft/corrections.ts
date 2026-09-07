@@ -381,6 +381,49 @@ export async function registerCorrectionRoutes(
       // All-or-nothing transaction (constraint #4: atomicity)
       try {
         await sql.begin(async (tx) => {
+          // Reverse any APPLIED Whammy tied to a pick sequence being undone —
+          // constraint #10 and F-MOD-012-rework-01's spec both require a
+          // rollback to unwind Whammy financial effects, not just the awards
+          // themselves. Same WHAMMY_APPLIED-event join the preview endpoint
+          // below already uses to find these interactions (EXTRACTED-014: no
+          // Whammy-specific rollback logic beyond finding what to reverse —
+          // the reversal itself is the same generic ledger-entry/status-flip
+          // pattern as everything else here).
+          const minResolutionSeq = Math.min(...picks.map((p) => p.resolution_sequence));
+          const affectedWhammies = await tx<Array<{
+            id: string;
+            team_id: string | null;
+            amount_minor: number;
+          }>>`
+            SELECT DISTINCT we.id, we.team_id, we.amount_minor
+            FROM whammy_events we
+            JOIN budget_ledger_entries ble ON ble.reference_id = we.id AND ble.entry_type = 'WHAMMY' AND ble.active = true
+            JOIN draft_events de
+              ON de.draft_id = ${draft.id}
+             AND de.event_type = 'WHAMMY_APPLIED'
+             AND ((de.payload #>> '{}')::jsonb ->> 'whammy_event_id') = we.id::text
+            WHERE we.draft_id = ${draft.id} AND we.status = 'APPLIED' AND de.sequence >= ${minResolutionSeq}
+          `;
+
+          for (const w of affectedWhammies) {
+            await tx`
+              INSERT INTO budget_ledger_entries
+                (draft_id, team_id, amount_minor, entry_type, reference_id, active)
+              VALUES
+                (${draft.id}, ${w.team_id}, ${-w.amount_minor}, 'ROLLBACK', ${w.id}, true)
+            `;
+            if (w.team_id) {
+              await tx`
+                UPDATE draft_team_states
+                SET remaining_budget_minor = remaining_budget_minor - ${w.amount_minor}
+                WHERE draft_id = ${draft.id} AND team_id = ${w.team_id}
+              `;
+            }
+            await tx`
+              UPDATE whammy_events SET status = 'REVERSED' WHERE id = ${w.id}
+            `;
+          }
+
           for (const pick of picks) {
             // 1. Mark acquisition inactive (append-only: supersede, never delete)
             await tx`

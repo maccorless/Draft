@@ -1,5 +1,7 @@
 # Gap Review — TODO
 
+- [ ] 2026-09-06: `.env` needs a real `SENDGRID_FROM_EMAIL` value (and confirmed `SENDGRID_API_KEY`) — F-MOD-006-rework-01's official (non-provisional) test evidence couldn't be produced without it; currently only accepted on provisional evidence (25/25 passing).
+
 Full-solution review against `knowledge/PRD.md`, `knowledge/data-model.md` §21,
 `knowledge/state-machine-flows.md`, and `knowledge/screen-information-architecture.md`,
 plus hands-on testing of the running app (backend on :3050, frontend on :5173,

@@ -6,7 +6,7 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Binoculars, ListNumbers, Target, X } from '@phosphor-icons/react';
+import { Binoculars, ListNumbers, Target, X, Prohibit } from '@phosphor-icons/react';
 
 import { useAuctionSocket } from '../../lib/useAuctionSocket.js';
 import { TeamIcon } from '../../components/TeamIcon.js';
@@ -59,11 +59,13 @@ interface DatasetPlayer {
   nfl_team: string;
   aav_minor: number;
   tier: number | null;
+  projected_points?: number | null;
   bye_week?: number | null;
   injury_status?: string | null;
   injury_detail?: string | null;
   injury_updated_at?: string | null;
   aav_sources?: AavSourceEntry[];
+  prior_season_stats?: unknown;
 }
 
 interface ActivityEntry {
@@ -74,6 +76,8 @@ interface ActivityEntry {
   team_id: string;
   team_name: string;
   bid_count: number;
+  unique_bidder_count: number;
+  aav_diff_minor: number | null;
 }
 
 interface WatchlistItem {
@@ -115,6 +119,10 @@ function formatFreshness(isoTimestamp: string): string {
   return `updated ${days}d ago`;
 }
 
+function isPlainObject(value: unknown): value is Record<string, string | number> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 async function authedJson<T>(url: string, token: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
@@ -125,7 +133,12 @@ async function authedJson<T>(url: string, token: string, init?: RequestInit): Pr
   return res.json() as Promise<T>;
 }
 
-type PrepTab = 'watchlist' | 'queue' | 'targets';
+interface DoNotDraftEntry {
+  player_id: string;
+  player_name?: string;
+}
+
+type PrepTab = 'watchlist' | 'queue' | 'targets' | 'do-not-draft';
 
 const CONNECTION_LABEL: Record<string, string> = {
   open: 'Live',
@@ -138,18 +151,24 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
   const ws = useAuctionSocket(draftId, token);
   const navigate = useNavigate();
   const [rosterSlots, setRosterSlots] = useState<RosterSlotDef[]>([]);
+  const [minBidMinor, setMinBidMinor] = useState<number | null>(null);
   const [rosterGrid, setRosterGrid] = useState<GridTeam[]>([]);
   const [players, setPlayers] = useState<DatasetPlayer[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [targets, setTargets] = useState<TargetItem[]>([]);
+  const [doNotDraft, setDoNotDraft] = useState<DoNotDraftEntry[]>([]);
   const [prepTab, setPrepTab] = useState<PrepTab>('watchlist');
+  const [showAllTargetablePlayers, setShowAllTargetablePlayers] = useState(false);
   const [targetDraft, setTargetDraft] = useState('');
 
   useEffect(() => {
-    authedJson<{ roster_slots: RosterSlotDef[] }>(`/drafts/${draftId}/config`, token)
-      .then((d) => setRosterSlots(d.roster_slots ?? []))
+    authedJson<{ roster_slots: RosterSlotDef[]; auction: { min_bid_minor: number } | null }>(`/drafts/${draftId}/config`, token)
+      .then((d) => {
+        setRosterSlots(d.roster_slots ?? []);
+        setMinBidMinor(d.auction?.min_bid_minor ?? null);
+      })
       .catch(() => {});
     authedJson<{ players: DatasetPlayer[] }>(`/leagues/${leagueId}/players`, token)
       .then((d) => setPlayers(d.players ?? []))
@@ -224,11 +243,40 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
     [draftId, teamId, token],
   );
 
+  const refreshDoNotDraft = useMemo(
+    () => () => {
+      if (!teamId) return;
+      authedJson<{ entries: DoNotDraftEntry[] }>(`/drafts/${draftId}/teams/${teamId}/do-not-draft`, token)
+        .then((d) => setDoNotDraft(d.entries ?? []))
+        .catch(() => {});
+    },
+    [draftId, teamId, token],
+  );
+
   useEffect(() => {
     refreshWatchlist();
     refreshQueue();
     refreshTargets();
-  }, [refreshWatchlist, refreshQueue, refreshTargets]);
+    refreshDoNotDraft();
+  }, [refreshWatchlist, refreshQueue, refreshTargets, refreshDoNotDraft]);
+
+  function addToDoNotDraft(playerId: string): void {
+    if (!teamId) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/do-not-draft`, token, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ player_id: playerId }),
+    })
+      .then(refreshDoNotDraft)
+      .catch(() => {});
+  }
+
+  function removeFromDoNotDraft(playerId: string): void {
+    if (!teamId) return;
+    authedJson(`/drafts/${draftId}/teams/${teamId}/do-not-draft/${playerId}`, token, { method: 'DELETE' })
+      .then(refreshDoNotDraft)
+      .catch(() => {});
+  }
 
   const drafted = useMemo(() => new Set(ws.recentAwards.map((a) => a.player_name)), [ws.recentAwards]);
   const auction = ws.currentAuction;
@@ -237,6 +285,9 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
     () => (auction ? players.find((p) => p.name === auction.player_name) ?? null : null),
     [auction, players],
   );
+  const priorSeasonStats = isPlainObject(activePlayerDetail?.prior_season_stats)
+    ? activePlayerDetail.prior_season_stats
+    : null;
 
   const tierBoard = useMemo(() => {
     if (!auction || auction.tier === null) return [];
@@ -260,10 +311,54 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
     for (const a of activity) draftedByPos[a.position] = (draftedByPos[a.position] ?? 0) + 1;
     const totalBudgetMinor = rosterGrid.reduce((sum, t) => sum + t.remaining_budget_minor, 0);
     const avgBudgetMinor = rosterGrid.length > 0 ? Math.round(totalBudgetMinor / rosterGrid.length) : 0;
-    return { spentMinor, draftedByPos, totalBudgetMinor, avgBudgetMinor };
-  }, [activity, rosterGrid]);
+
+    // Actual-vs-AAV comparison: sum(price) - sum(aav) across rows that carry
+    // a resolved AAV baseline. No awards yet → $0/0%, never NaN.
+    const priced = activity.filter((a) => a.aav_diff_minor !== null);
+    const aavDiffMinor = priced.reduce((sum, a) => sum + a.aav_diff_minor!, 0);
+    const aavBaselineMinor = priced.reduce((sum, a) => sum + (a.price_minor - a.aav_diff_minor!), 0);
+    const aavDiffPct = aavBaselineMinor > 0 ? (aavDiffMinor / aavBaselineMinor) * 100 : 0;
+
+    const remainingByTier: Record<number, number> = {};
+    for (const p of players) {
+      if (drafted.has(p.name) || p.tier === null) continue;
+      remainingByTier[p.tier] = (remainingByTier[p.tier] ?? 0) + 1;
+    }
+
+    return { spentMinor, draftedByPos, totalBudgetMinor, avgBudgetMinor, aavDiffMinor, aavDiffPct, remainingByTier };
+  }, [activity, rosterGrid, players, drafted]);
 
   const isMyNominationTurn = teamId !== null && !auction && ws.currentNominatorTeamId === teamId;
+
+  // Position-focus highlighting (visual emphasis only, never reorders rows):
+  // teams with an open compatible starter slot for the active position, and
+  // the team(s) with the highest remaining budget.
+  const highestBudgetMinor = useMemo(
+    () => (rosterGrid.length > 0 ? Math.max(...rosterGrid.map((t) => t.remaining_budget_minor)) : null),
+    [rosterGrid],
+  );
+  const teamsWithOpenSlotForPosition = useMemo(() => {
+    if (!auction) return new Set<string>();
+    return new Set(
+      rosterGrid
+        .filter((t) =>
+          t.slots.some(
+            (s) => s.is_starter && s.filled < s.total && (s.position === auction.position || s.position === 'FLEX' || s.position === 'SUPERFLEX'),
+          ),
+        )
+        .map((t) => t.team_id),
+    );
+  }, [auction, rosterGrid]);
+
+  // Whammy toast: same ephemeral, self-dismissing pattern Draft Room already
+  // uses for the same ws.whammyNotice event (F-MOD-008-rework-01 gap-review).
+  const [whammyVisible, setWhammyVisible] = useState(false);
+  useEffect(() => {
+    if (!ws.whammyNotice) return;
+    setWhammyVisible(true);
+    const timer = setTimeout(() => setWhammyVisible(false), 4000);
+    return () => clearTimeout(timer);
+  }, [ws.whammyNotice?.receivedAt]);
 
   function addToWatchlist(entryId: string): void {
     if (!teamId) return;
@@ -343,6 +438,12 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
 
   return (
     <div className="war-room">
+      {whammyVisible && ws.whammyNotice && (
+        <div className="war-room__whammy-toast" role="status" data-testid="whammy-toast">
+          {(rosterGrid.find((t) => t.team_id === ws.whammyNotice!.team_id)?.team_name ?? 'A team')} —{' '}
+          {ws.whammyNotice.description || 'Whammy'} ({formatMoney(ws.whammyNotice.amount_minor)})
+        </div>
+      )}
       <header className="war-room__topbar">
         <span className="war-room__title">War Room</span>
         <div className="war-room__topbar-actions">
@@ -421,6 +522,16 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
                   ))}
                 </dl>
               )}
+              {priorSeasonStats && (
+                <dl className="war-room__prior-stats" aria-label="Prior season stats" data-testid="prior-season-stats">
+                  {Object.entries(priorSeasonStats).map(([key, value]) => (
+                    <div key={key}>
+                      <dt>{key}</dt>
+                      <dd>{value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
               {teamId && (
                 <form className="war-room__target-form" onSubmit={handleSetTarget}>
                   <label htmlFor="target-input">Set my target</label>
@@ -470,16 +581,23 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
                   <th>Player</th>
                   <th>Tier</th>
                   <th>AAV</th>
+                  <th>Proj</th>
+                  <th>My Target</th>
                 </tr>
               </thead>
               <tbody>
-                {comparable.map((p) => (
-                  <tr key={p.dataset_entry_id}>
-                    <td>{p.name}</td>
-                    <td>{p.tier ?? '—'}</td>
-                    <td className="war-room__mono">{formatMoney(p.aav_minor)}</td>
-                  </tr>
-                ))}
+                {comparable.map((p) => {
+                  const target = targets.find((t) => t.player_name === p.name) ?? null;
+                  return (
+                    <tr key={p.dataset_entry_id}>
+                      <td>{p.name}</td>
+                      <td>{p.tier ?? '—'}</td>
+                      <td className="war-room__mono">{formatMoney(p.aav_minor)}</td>
+                      <td className="war-room__mono">{p.projected_points != null ? p.projected_points.toFixed(1) : '—'}</td>
+                      <td className="war-room__mono">{target ? formatMoney(target.target_value_minor) : ''}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           ) : (
@@ -514,6 +632,14 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
             >
               <Target size={16} /> Targets
             </button>
+            <button
+              role="tab"
+              aria-selected={prepTab === 'do-not-draft'}
+              className={prepTab === 'do-not-draft' ? 'war-room__prep-tab--active' : ''}
+              onClick={() => setPrepTab('do-not-draft')}
+            >
+              <Prohibit size={16} /> Do Not Draft
+            </button>
           </div>
 
           {!teamId ? (
@@ -523,9 +649,17 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
               {prepTab === 'watchlist' && (
                 <ul className="war-room__prep-list">
                   {watchlist.length === 0 && <li className="war-room__idle-small">Nothing watched yet.</li>}
-                  {watchlist.map((w) => (
+                  {watchlist.map((w) => {
+                    const hasCustomTarget = targets.some((t) => t.dataset_player_id === w.dataset_player_id);
+                    const status = players.find((p) => p.name === w.player_name)?.injury_status;
+                    return (
                     <li key={w.dataset_player_id} className="war-room__prep-item">
-                      <span>{w.player_name}</span>
+                      <span>
+                        {w.player_name}
+                        <span className="war-room__mono"> {formatMoney(w.aav_minor)}</span>
+                        {hasCustomTarget && <span title="Custom target set"> ★</span>}
+                        {status && <span className="war-room__watchlist-status"> · {status}</span>}
+                      </span>
                       <div className="war-room__prep-actions">
                         {isMyNominationTurn && (
                           <button onClick={() => ws.nominate(w.dataset_player_id, 100)} className="war-room__prep-nominate">
@@ -541,7 +675,8 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
                         </button>
                       </div>
                     </li>
-                  ))}
+                    );
+                  })}
                   {auction && !watchlist.some((w) => w.player_name === auction.player_name) && (
                     <li className="war-room__prep-add">
                       <button onClick={() => addToWatchlist(players.find((p) => p.name === auction.player_name)?.dataset_entry_id ?? '')}>
@@ -558,7 +693,11 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
                   {queue.map((q, i) => (
                     <li key={q.dataset_player_id} className="war-room__prep-item">
                       <span className="war-room__queue-pos">{i + 1}.</span>
-                      <span>{q.player_name}</span>
+                      <span>
+                        {q.player_name}
+                        {minBidMinor !== null && <span className="war-room__mono"> {formatMoney(minBidMinor)}</span>}
+                        {drafted.has(q.player_name) && <span className="war-room__queue-drafted"> (drafted)</span>}
+                      </span>
                       <div className="war-room__prep-actions">
                         <button aria-label="Move up" onClick={() => moveQueueItem(i, -1)} disabled={i === 0}>↑</button>
                         <button aria-label="Move down" onClick={() => moveQueueItem(i, 1)} disabled={i === queue.length - 1}>↓</button>
@@ -583,14 +722,63 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
               )}
 
               {prepTab === 'targets' && (
+                <>
+                  <label className="war-room__targets-toggle">
+                    <input
+                      type="checkbox"
+                      checked={showAllTargetablePlayers}
+                      onChange={(e) => setShowAllTargetablePlayers(e.target.checked)}
+                    />
+                    {' '}All tracked players
+                  </label>
+                  <ul className="war-room__prep-list">
+                    {!showAllTargetablePlayers ? (
+                      <>
+                        {targets.length === 0 && <li className="war-room__idle-small">No custom targets set.</li>}
+                        {targets.map((t) => (
+                          <li key={t.dataset_player_id} className="war-room__prep-item">
+                            <span>{t.player_name}</span>
+                            <span className="war-room__mono">{formatMoney(t.target_value_minor)}</span>
+                          </li>
+                        ))}
+                      </>
+                    ) : (
+                      players.map((p) => {
+                        const target = targets.find((t) => t.dataset_player_id === p.dataset_entry_id);
+                        return (
+                          <li key={p.dataset_entry_id} className="war-room__prep-item">
+                            <span>{p.name}</span>
+                            <span className="war-room__mono">{target ? formatMoney(target.target_value_minor) : ''}</span>
+                          </li>
+                        );
+                      })
+                    )}
+                  </ul>
+                </>
+              )}
+
+              {prepTab === 'do-not-draft' && (
                 <ul className="war-room__prep-list">
-                  {targets.length === 0 && <li className="war-room__idle-small">No custom targets set.</li>}
-                  {targets.map((t) => (
-                    <li key={t.dataset_player_id} className="war-room__prep-item">
-                      <span>{t.player_name}</span>
-                      <span className="war-room__mono">{formatMoney(t.target_value_minor)}</span>
+                  {doNotDraft.length === 0 && <li className="war-room__idle-small">No players on your Do Not Draft list.</li>}
+                  {doNotDraft.map((d) => (
+                    <li key={d.player_id} className="war-room__prep-item">
+                      <span>{d.player_name ?? d.player_id}</span>
+                      <button
+                        aria-label={`Remove ${d.player_name ?? d.player_id} from Do Not Draft`}
+                        onClick={() => removeFromDoNotDraft(d.player_id)}
+                        className="war-room__prep-remove"
+                      >
+                        <X size={14} />
+                      </button>
                     </li>
                   ))}
+                  {auction && !doNotDraft.some((d) => d.player_name === auction.player_name) && (
+                    <li className="war-room__prep-add">
+                      <button onClick={() => addToDoNotDraft(players.find((p) => p.name === auction.player_name)?.dataset_entry_id ?? '')}>
+                        + Do Not Draft {auction.player_name}
+                      </button>
+                    </li>
+                  )}
                 </ul>
               )}
             </>
@@ -616,7 +804,14 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
               </thead>
               <tbody>
                 {rosterGrid.map((team) => (
-                  <tr key={team.team_id} className={team.team_id === auction?.leading_team_id ? 'war-room__grid-row--leading' : ''}>
+                  <tr
+                    key={team.team_id}
+                    className={[
+                      team.team_id === auction?.leading_team_id ? 'war-room__grid-row--leading' : '',
+                      teamsWithOpenSlotForPosition.has(team.team_id) ? 'war-room__grid-row--open-slot' : '',
+                      highestBudgetMinor !== null && team.remaining_budget_minor === highestBudgetMinor ? 'war-room__grid-row--top-budget' : '',
+                    ].filter(Boolean).join(' ')}
+                  >
                     <td className="war-room__grid-team-name">
                       <TeamIcon iconUrl={team.icon_url} className="war-room__team-icon" />
                       {team.team_name}
@@ -665,7 +860,12 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
                 <div>
                   <strong>{a.player_name}</strong> — {formatMoney(a.price_minor)}
                   <div className="war-room__activity-meta">
-                    {a.team_name} · {a.bid_count} {a.bid_count === 1 ? 'bid' : 'bids'}
+                    {a.team_name} · {a.bid_count} {a.bid_count === 1 ? 'bid' : 'bids'} · {a.unique_bidder_count} {a.unique_bidder_count === 1 ? 'bidder' : 'bidders'}
+                    {a.aav_diff_minor !== null && (
+                      <span className={a.aav_diff_minor >= 0 ? 'war-room__aav-diff--over' : 'war-room__aav-diff--under'}>
+                        {' '}· {a.aav_diff_minor >= 0 ? '+' : '−'}{formatMoney(Math.abs(a.aav_diff_minor))} vs AAV
+                      </span>
+                    )}
                   </div>
                 </div>
               </li>
@@ -689,6 +889,13 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
               <dt>Avg. budget remaining</dt>
               <dd className="war-room__mono">{formatMoney(marketContext.avgBudgetMinor)}</dd>
             </div>
+            <div>
+              <dt>Actual vs AAV</dt>
+              <dd className="war-room__mono" data-testid="market-aav-baseline">
+                {marketContext.aavDiffMinor >= 0 ? '+' : '−'}{formatMoney(Math.abs(marketContext.aavDiffMinor))}
+                {' '}({marketContext.aavDiffPct >= 0 ? '+' : ''}{marketContext.aavDiffPct.toFixed(1)}%)
+              </dd>
+            </div>
           </dl>
           {Object.keys(marketContext.draftedByPos).length > 0 && (
             <>
@@ -700,6 +907,21 @@ export function WarRoom({ draftId, leagueId, token, teamId }: WarRoomProps): Rea
                     <span className="war-room__mono">{n}</span>
                   </li>
                 ))}
+              </ul>
+            </>
+          )}
+          {Object.keys(marketContext.remainingByTier).length > 0 && (
+            <>
+              <h3 className="war-room__panel-subheading">Remaining by tier</h3>
+              <ul className="war-room__market-positions" data-testid="market-remaining-by-tier">
+                {Object.entries(marketContext.remainingByTier)
+                  .sort(([a], [b]) => Number(a) - Number(b))
+                  .map(([tier, n]) => (
+                    <li key={tier}>
+                      <span>Tier {tier}</span>
+                      <span className="war-room__mono">{n}</span>
+                    </li>
+                  ))}
               </ul>
             </>
           )}

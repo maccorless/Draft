@@ -58,6 +58,19 @@ function jsonResponse(status: number, body: unknown): Promise<Response> {
   } as Response);
 }
 
+function buildDefaultRollbackPreview(count: number, stateVersion = 1): unknown {
+  const picks = defaultPicks.slice(0, count).map((p) => ({
+    acquisition_id: p.acquisition_id,
+    player_name: p.player_name,
+    team_id: p.team_id,
+    price_minor: p.price_minor,
+    budget_return_minor: p.price_minor,
+    vacated_roster_slot: p.position,
+    whammy_interactions: [],
+  }));
+  return { would_roll_back: picks.length, picks, state_version: stateVersion };
+}
+
 function installFetchMock(overrides: Record<string, RouteOverride> = {}): { calls: FetchCall[] } {
   const calls: FetchCall[] = [];
   global.fetch = vi.fn((url: string, init?: RequestInit) => {
@@ -70,6 +83,10 @@ function installFetchMock(overrides: Record<string, RouteOverride> = {}): { call
     if (overrides[key]) {
       const { status, body: respBody } = overrides[key];
       return jsonResponse(status, respBody);
+    }
+    if (url.includes('/rollback/preview')) {
+      const count = Number(new URL(url, 'http://x').searchParams.get('count') ?? '0');
+      return jsonResponse(200, buildDefaultRollbackPreview(count));
     }
     if (url.endsWith('/roster-grid')) return jsonResponse(200, { teams: defaultTeams });
     if (url.endsWith('/activity')) return jsonResponse(200, { recent: defaultPicks });
@@ -197,13 +214,68 @@ describe('F-MOD-012 Rollback', () => {
     await renderAndLoad();
     fireEvent.change(screen.getByTestId('rollback-count-input'), { target: { value: '2' } });
 
-    expect(screen.getByTestId('rollback-preview-statement').textContent).toBe(
-      'This will undo picks #18 through #11 (2 players). Those players return to the pool.',
+    await waitFor(() =>
+      expect(screen.getByTestId('rollback-preview-statement').textContent).toBe(
+        'This will undo picks #18 through #11 (2 players). Those players return to the pool.',
+      ),
     );
     const list = within(screen.getByTestId('rollback-preview-list'));
     expect(list.getByText(/Player C/)).toBeTruthy();
     expect(list.getByText(/Player B/)).toBeTruthy();
     expect(list.queryByText(/Player A/)).toBeNull();
+
+    // Detailed per-pick breakdown (F-MOD-012-rework-01): budget returned + vacated slot.
+    const pickC = screen.getByTestId('rollback-preview-pick-a3');
+    expect(pickC.textContent).toContain('Budget returned: $5');
+    expect(pickC.textContent).toContain('Slot vacated: RB');
+  });
+
+  it('test_F_MOD_012_rollback_preview_shows_whammy_interaction_when_present', async () => {
+    await renderAndLoad({
+      'GET /drafts/draft-1/rollback/preview?count=1': {
+        status: 200,
+        body: {
+          would_roll_back: 1,
+          picks: [{
+            acquisition_id: 'a3', player_name: 'Player C', team_id: 't1', price_minor: 500,
+            budget_return_minor: 500, vacated_roster_slot: 'RB',
+            whammy_interactions: [{ whammy_id: 'w1', amount_minor: -200, description: 'Budget penalty' }],
+          }],
+          state_version: 1,
+        },
+      },
+    });
+    fireEvent.change(screen.getByTestId('rollback-count-input'), { target: { value: '1' } });
+
+    await waitFor(() => expect(screen.getByTestId('rollback-preview-whammy-w1')).toBeTruthy());
+    expect(screen.getByTestId('rollback-preview-whammy-w1').textContent).toContain('Budget penalty');
+  });
+
+  it('test_F_MOD_012_rollback_confirm_reflects_stale_preview_when_state_version_advanced', async () => {
+    let previewCallCount = 0;
+    await renderAndLoad({});
+    const originalFetch = global.fetch;
+    global.fetch = vi.fn((url: string, init?: RequestInit) => {
+      if (typeof url === 'string' && url.includes('/rollback/preview')) {
+        previewCallCount++;
+        const stateVersion = previewCallCount === 1 ? 1 : 2;
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          text: () => Promise.resolve(JSON.stringify(buildDefaultRollbackPreview(2, stateVersion))),
+        } as Response);
+      }
+      return (originalFetch as typeof fetch)(url, init);
+    }) as unknown as typeof fetch;
+
+    fireEvent.change(screen.getByTestId('rollback-count-input'), { target: { value: '2' } });
+    await waitFor(() => expect(screen.getByTestId('rollback-preview')).toBeTruthy());
+
+    await waitFor(() => expect(screen.getByTestId('rollback-confirm')).toBeTruthy());
+    fireEvent.click(screen.getByTestId('rollback-confirm'));
+
+    await waitFor(() => expect(screen.getByTestId('rollback-error').textContent).toContain('Draft state changed'));
+    expect(screen.queryByTestId('rollback-reapply-list')).toBeNull();
   });
 
   it('test_F_MOD_012_rollback_pauses_draft_first_when_not_paused', async () => {
@@ -214,6 +286,7 @@ describe('F-MOD-012 Rollback', () => {
       },
     });
     fireEvent.change(screen.getByTestId('rollback-count-input'), { target: { value: '1' } });
+    await waitFor(() => expect(screen.getByTestId('rollback-confirm')).toBeTruthy());
     fireEvent.click(screen.getByTestId('rollback-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('rollback-reapply-list')).toBeTruthy());
@@ -232,6 +305,7 @@ describe('F-MOD-012 Rollback', () => {
       },
     });
     fireEvent.change(screen.getByTestId('rollback-count-input'), { target: { value: '1' } });
+    await waitFor(() => expect(screen.getByTestId('rollback-confirm')).toBeTruthy());
     fireEvent.click(screen.getByTestId('rollback-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('rollback-reapply-list')).toBeTruthy());
@@ -252,6 +326,7 @@ describe('F-MOD-012 Rollback', () => {
       },
     });
     fireEvent.change(screen.getByTestId('rollback-count-input'), { target: { value: '2' } });
+    await waitFor(() => expect(screen.getByTestId('rollback-confirm')).toBeTruthy());
     fireEvent.click(screen.getByTestId('rollback-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('rollback-reapply-list')).toBeTruthy());
@@ -275,6 +350,7 @@ describe('F-MOD-012 Rollback', () => {
       },
     });
     fireEvent.change(screen.getByTestId('rollback-count-input'), { target: { value: '1' } });
+    await waitFor(() => expect(screen.getByTestId('rollback-confirm')).toBeTruthy());
     fireEvent.click(screen.getByTestId('rollback-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('rollback-error')).toBeTruthy());
@@ -295,6 +371,7 @@ describe('F-MOD-012 Rollback', () => {
       },
     });
     fireEvent.change(screen.getByTestId('rollback-count-input'), { target: { value: '1' } });
+    await waitFor(() => expect(screen.getByTestId('rollback-confirm')).toBeTruthy());
     fireEvent.click(screen.getByTestId('rollback-confirm'));
     await waitFor(() => expect(screen.getByTestId('rollback-reapply-list')).toBeTruthy());
 

@@ -10,7 +10,7 @@ import React, { useState } from 'react';
 import { Gear, UploadSimple, Gavel, ArrowCounterClockwise, UsersThree } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 
-import { DatasetImport } from './DatasetImport.js';
+import { DatasetImport, type ImportResult } from './DatasetImport.js';
 import { AmbiguityResolution } from './AmbiguityResolution.js';
 import type { AmbiguousRow } from './AmbiguityResolution.js';
 import { DevTools } from './DevTools.js';
@@ -99,6 +99,7 @@ interface CommissionerConsoleProps {
   onCreateDraft?: () => void;
   ambiguousRows?: AmbiguousRow[];
   onResolveAmbiguity?: (resolutions: Record<number, string | 'skip'>) => void;
+  onImportComplete?: (result: ImportResult) => void;
   /** Active draft to operate, if one exists (F-MOD-011 Draft Control section). */
   draftId?: string | null;
 }
@@ -111,6 +112,7 @@ export function CommissionerConsole({
   onCreateDraft,
   ambiguousRows,
   onResolveAmbiguity,
+  onImportComplete,
   draftId,
 }: CommissionerConsoleProps = {}): React.ReactElement {
   const [activeSection, setActiveSection] =
@@ -164,7 +166,7 @@ export function CommissionerConsole({
           {activeSection === 'dataset-import' && (
             <>
               {leagueId && datasetId && token ? (
-                <DatasetImport leagueId={leagueId} datasetId={datasetId} token={token} />
+                <DatasetImport leagueId={leagueId} datasetId={datasetId} token={token} onImportComplete={onImportComplete} />
               ) : (
                 <ComingSoon label="Dataset Import" />
               )}
@@ -192,7 +194,13 @@ export function CommissionerConsole({
               <ComingSoon label="Corrections & Rollback" />
             )
           )}
-          {activeSection === 'teams' && <ComingSoon label="Teams" />}
+          {activeSection === 'teams' && (
+            leagueId && token ? (
+              <LeagueSetup leagueId={leagueId} token={token} datasetId={datasetId} />
+            ) : (
+              <ComingSoon label="Teams" />
+            )
+          )}
         </div>
       </main>
     </div>

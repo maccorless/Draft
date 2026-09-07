@@ -6,8 +6,11 @@
 import postgres from 'postgres';
 
 export async function setup() {
-  const DATABASE_URL = process.env['DATABASE_URL'];
-  if (!DATABASE_URL || !DATABASE_URL.includes('draft_test')) {
+  // Same fallback every test file uses — globalSetup runs before any test file's
+  // module-level `process.env['DATABASE_URL'] ??=` assignment, so without this
+  // default the truncate below is silently skipped on a bare `npm test`.
+  const DATABASE_URL = process.env['DATABASE_URL'] ?? 'postgres://localhost/draft_test';
+  if (!DATABASE_URL.includes('draft_test')) {
     // Only truncate the designated test database — never prod or dev
     console.warn('[globalSetup] Skipping truncate: DATABASE_URL is not draft_test');
     return;

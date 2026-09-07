@@ -13,6 +13,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import postgres from 'postgres';
 
 import { computeMaxLegalBid } from '../auction/engine.js';
+import { resolveEffectivePrimarySource } from '../player/aav-resolution.js';
 
 interface TokenClaims {
   league_id: string;
@@ -257,6 +258,11 @@ export async function registerWarRoomRoutes(
       if (!ctx) return;
       const { draft } = ctx;
 
+      const [draftRow] = await sql<[{ dataset_id: string }]>`
+        SELECT dataset_id FROM drafts WHERE id = ${draft.id} LIMIT 1
+      `;
+      const primarySource = draftRow ? await resolveEffectivePrimarySource(sql, draftRow.dataset_id) : null;
+
       const rows = await sql<Array<{
         acquisition_id: string;
         player_name: string;
@@ -267,6 +273,8 @@ export async function registerWarRoomRoutes(
         team_name: string;
         awarded_at: Date;
         bid_count: number;
+        unique_bidder_count: number;
+        aav_minor: number | null;
       }>>`
         SELECT
           a.id AS acquisition_id,
@@ -277,15 +285,19 @@ export async function registerWarRoomRoutes(
           a.team_id,
           t.name AS team_name,
           a.awarded_at,
-          COUNT(ba.id)::int AS bid_count
+          COUNT(ba.id)::int AS bid_count,
+          COUNT(DISTINCT ba.team_id)::int AS unique_bidder_count,
+          pas.aav_minor
         FROM acquisitions a
         JOIN player_auctions pa ON pa.id = a.player_auction_id
         JOIN players p ON p.id = pa.dataset_player_id
         JOIN teams t ON t.id = a.team_id
         LEFT JOIN bid_attempts ba ON ba.player_auction_id = a.player_auction_id AND ba.accepted = true
+        LEFT JOIN player_aav_sources pas
+          ON pas.dataset_id = ${draftRow?.dataset_id ?? null} AND pas.player_id = pa.dataset_player_id AND pas.source = ${primarySource}
         WHERE a.draft_id = ${draft.id} AND a.active = true
         GROUP BY a.id, p.name, p.position, a.price_minor, a.resolution_sequence,
-                 a.team_id, t.name, a.awarded_at
+                 a.team_id, t.name, a.awarded_at, pas.aav_minor
         ORDER BY a.resolution_sequence DESC
         LIMIT 15
       `;
@@ -301,6 +313,10 @@ export async function registerWarRoomRoutes(
           team_name: r.team_name,
           awarded_at: r.awarded_at instanceof Date ? r.awarded_at.toISOString() : r.awarded_at,
           bid_count: r.bid_count,
+          // A win with zero competing bids beyond the opener still has one
+          // accepted bid attempt (the winner's own) — never 0.
+          unique_bidder_count: r.unique_bidder_count > 0 ? r.unique_bidder_count : 1,
+          aav_diff_minor: r.aav_minor !== null ? r.price_minor - r.aav_minor : null,
         })),
       });
     },
