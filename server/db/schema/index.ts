@@ -357,7 +357,11 @@ export const acquisitions = pgTable('acquisitions', {
   awarded_at: timestamp('awarded_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (table) => [
+  // Defense in depth against double-resolving the same player auction —
+  // the app-level guard is the atomic conditional UPDATE in awardAuction.
+  unique('acquisitions_player_auction_id_unique').on(table.player_auction_id),
+]);
 
 export const rosterEntries = pgTable('roster_entries', {
   id: uuid('id').primaryKey().defaultRandom(),

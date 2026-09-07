@@ -8,7 +8,7 @@ import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import WebSocket from 'ws';
 import postgres from 'postgres';
-import { computeMaxLegalBid, stopAwardTimer } from '../auction/engine.js';
+import { computeMaxLegalBid, stopAwardTimer, processAwardCycle } from '../auction/engine.js';
 
 const DATABASE_URL =
   process.env['DATABASE_URL'] ?? 'postgres://localhost/draft_test';
@@ -1118,6 +1118,70 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
     // team3 is cleaned up by afterEach's `DELETE FROM teams WHERE league_id = ...`.
   }, 10000);
 
+  // ── Code-review P1: award resolution cannot double-resolve an auction ─────
+
+  it('test_F_MOD_002_award_cycle_double_resolution_is_prevented_by_atomic_claim', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const nomResp = await sendAndReceive(ws1, {
+      type: 'NOMINATE_COMMAND',
+      payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+    });
+    const auctionId = String(nomResp.payload?.['player_auction_id'] ?? '');
+    ws1.close();
+
+    // Stop the real timer so it can't interleave with the manual concurrent
+    // calls below, then force the auction expired.
+    stopAwardTimer(draftId);
+    await sql`UPDATE player_auctions SET rebid_deadline = NOW() - INTERVAL '1 second' WHERE id = ${auctionId}`;
+
+    // Two "concurrent" award-cycle ticks racing on the same expired auction —
+    // simulates two draft-runtime timers (or an overlapping slow tick) both
+    // picking it up. Only one should actually resolve it.
+    await Promise.all([
+      processAwardCycle(sql, draftId),
+      processAwardCycle(sql, draftId),
+    ]);
+
+    const acqRows = await sql<[{ count: string }]>`
+      SELECT COUNT(*)::int AS count FROM acquisitions WHERE player_auction_id = ${auctionId}
+    `;
+    expect(Number(acqRows[0]!.count)).toBe(1);
+
+    const [auction] = await sql<[{ status: string }]>`
+      SELECT status FROM player_auctions WHERE id = ${auctionId}
+    `;
+    expect(auction!.status).toBe('AWARDED');
+  }, 15000);
+
+  it('test_F_MOD_002_award_cycle_scoped_to_own_draft', async () => {
+    await setupDraft();
+    await server.inject({ method: 'POST', url: `/drafts/${draftId}/start`, headers: { authorization: `Bearer ${commToken}` } });
+
+    const ws1 = await connectAndAuth(serverPort, draftId, team1Token);
+    const nomResp = await sendAndReceive(ws1, {
+      type: 'NOMINATE_COMMAND',
+      payload: { player_dataset_entry_id: player1EntryId, opening_bid_minor: 100 },
+    });
+    const auctionId = String(nomResp.payload?.['player_auction_id'] ?? '');
+    ws1.close();
+
+    stopAwardTimer(draftId);
+    await sql`UPDATE player_auctions SET rebid_deadline = NOW() - INTERVAL '1 second' WHERE id = ${auctionId}`;
+
+    // Running the award cycle for an unrelated draft id must not touch this
+    // draft's expired auction (per-draft scoping — findAwardableAuctions no
+    // longer fans out across all running drafts).
+    await processAwardCycle(sql, '00000000-0000-0000-0000-000000000000');
+
+    const [auction] = await sql<[{ status: string }]>`
+      SELECT status FROM player_auctions WHERE id = ${auctionId}
+    `;
+    expect(auction!.status).toBe('OPEN');
+  }, 10000);
+
   // ── Code-review P1: PASS_NOMINATION must reject a non-nominator team ──────
 
   it('test_F_MOD_002_pass_nomination_rejects_non_nominator', async () => {
@@ -1448,18 +1512,20 @@ describe.skipIf(SKIP_DB)('F-MOD-002 auction engine', () => {
       JOIN roster_configurations rc ON rc.id = rsd.config_id
       WHERE rc.league_id = ${leagueId}
     `;
-    const [dummyAuction] = await sql<[{ id: string }]>`
-      INSERT INTO player_auctions
-        (draft_id, dataset_player_id, status, current_bid_minor, current_leader_id, auction_version, resolution_sequence)
-      VALUES
-        (${draftId}, ${player1EntryId}, 'AWARDED', 100, ${team1Id}, 1, 1)
-      RETURNING id
-    `;
     // Fill each slot definition to its full slot_count — a single roster_entry
     // per definition would leave e.g. RB (slot_count 2) or BN (slot_count 6)
-    // with room, so assignRosterSlot() would still find a home there.
+    // with room, so assignRosterSlot() would still find a home there. Each
+    // dummy acquisition needs its own player_auction row (one acquisition
+    // per player_auction is a DB-enforced invariant — code-review P1 fix).
     for (const slot of slotDefs) {
       for (let i = 0; i < slot.slot_count; i++) {
+        const [dummyAuction] = await sql<[{ id: string }]>`
+          INSERT INTO player_auctions
+            (draft_id, dataset_player_id, status, current_bid_minor, current_leader_id, auction_version, resolution_sequence)
+          VALUES
+            (${draftId}, ${player1EntryId}, 'AWARDED', 100, ${team1Id}, 1, 1)
+          RETURNING id
+        `;
         const [acq] = await sql<[{ id: string }]>`
           INSERT INTO acquisitions (draft_id, team_id, player_auction_id, price_minor, resolution_sequence, active)
           VALUES (${draftId}, ${team1Id}, ${dummyAuction!.id}, 1, 1, true)

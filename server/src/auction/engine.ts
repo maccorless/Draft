@@ -1172,7 +1172,10 @@ interface AwardableAuction {
   player_position: string;
 }
 
-async function findAwardableAuctions(sql: postgres.Sql): Promise<AwardableAuction[]> {
+async function findAwardableAuctions(
+  sql: postgres.Sql,
+  draftId: string,
+): Promise<AwardableAuction[]> {
   return sql<AwardableAuction[]>`
     SELECT
       pa.id, pa.draft_id, d.league_id, d.dataset_id,
@@ -1181,7 +1184,8 @@ async function findAwardableAuctions(sql: postgres.Sql): Promise<AwardableAuctio
     FROM player_auctions pa
     JOIN drafts d ON d.id = pa.draft_id
     JOIN players p ON p.id = pa.dataset_player_id
-    WHERE pa.status = 'OPEN'
+    WHERE pa.draft_id = ${draftId}
+      AND pa.status = 'OPEN'
       AND pa.rebid_deadline < NOW()
       AND pa.current_bid_minor > 0
       AND pa.current_leader_id IS NOT NULL
@@ -1252,10 +1256,10 @@ async function assignRosterSlot(
   return null;
 }
 
-export async function processAwardCycle(sql: postgres.Sql): Promise<void> {
+export async function processAwardCycle(sql: postgres.Sql, draftId: string): Promise<void> {
   let awardable: AwardableAuction[];
   try {
-    awardable = await findAwardableAuctions(sql);
+    awardable = await findAwardableAuctions(sql, draftId);
   } catch {
     return; // DB might be temporarily unavailable
   }
@@ -1307,21 +1311,30 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
   let acceptedBidCount: number;
   let uniqueBidderCount: number;
   let remainingBudgetMinor: number;
+  let claimed = true;
 
   await sql.begin(async (tx) => {
-    // Get next resolution_sequence
+    // Atomic claim: WHERE status = 'OPEN' means Postgres's row lock during
+    // this UPDATE serializes any concurrent resolution attempt on the same
+    // auction, and only one of them affects a row. If another resolution
+    // (a second draft-runtime, a duplicate timer tick, etc.) already
+    // resolved this auction, this UPDATE affects zero rows — bail out
+    // before any acquisition/ledger/roster/event side effects run.
     const seqRows = await tx<[{ max: number | null }]>`
       SELECT COALESCE(MAX(resolution_sequence), 0) + 1 AS max
       FROM acquisitions WHERE draft_id = ${draftId}
     `;
     resolutionSequence = seqRows[0]?.max ?? 1;
 
-    // UPDATE player_auction → AWARDED
-    await tx`
+    const updateResult = await tx`
       UPDATE player_auctions
       SET status = 'AWARDED', resolution_sequence = ${resolutionSequence}
-      WHERE id = ${auctionId}
+      WHERE id = ${auctionId} AND status = 'OPEN'
     `;
+    if (updateResult.count === 0) {
+      claimed = false;
+      return;
+    }
 
     // INSERT acquisition
     const acqRows = await tx<[{ id: string }]>`
@@ -1428,6 +1441,8 @@ async function awardAuction(sql: postgres.Sql, auction: AwardableAuction): Promi
     draftCompletedMap.set(draftId, (unfilled?.cnt ?? 1) === 0);
   });
 
+  if (!claimed) return; // another resolution already claimed this auction
+
   broadcast(draftId, {
     type: 'PLAYER_AWARDED',
     payload: {
@@ -1461,7 +1476,7 @@ export function startAwardTimer(draftId: string, sql: postgres.Sql): void {
   const rt = getOrCreateRuntime(draftId);
   if (rt.awardTimer) return; // already running
   rt.awardTimer = setInterval(() => {
-    processAwardCycle(sql).catch((err) => {
+    processAwardCycle(sql, draftId).catch((err) => {
       console.error('[engine] award cycle error:', err);
     });
   }, 500);
