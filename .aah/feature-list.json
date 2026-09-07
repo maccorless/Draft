@@ -2338,7 +2338,7 @@
       "passes": true
     },
     {
-      "status": "done",
+      "status": "planned",
       "id": "F-MOD-008-rework-01",
       "title": "Owner Strategy Tools and War Room Screen",
       "module_ref": "MOD-008",
@@ -2568,7 +2568,7 @@
       "passes": true
     },
     {
-      "status": "done",
+      "status": "planned",
       "id": "F-MOD-009-rework-01",
       "title": "Commissioner Whammy: Budget Entertainment Events",
       "module_ref": "MOD-009",
@@ -2788,7 +2788,7 @@
       "passes": true
     },
     {
-      "status": "done",
+      "status": "planned",
       "id": "F-MOD-010-rework-01",
       "title": "Commissioner League Setup and Readiness Checklist",
       "module_ref": "MOD-010",
@@ -2900,7 +2900,7 @@
       "passes": false
     },
     {
-      "status": "done",
+      "status": "in_progress",
       "id": "F-MOD-010",
       "title": "Commissioner League Setup and Readiness Checklist",
       "module_ref": "MOD-010",
@@ -3334,7 +3334,7 @@
       "passes": true
     },
     {
-      "status": "done",
+      "status": "planned",
       "id": "F-MOD-012-rework-01",
       "title": "Commissioner Corrections, Rollback, and Whammy UI",
       "module_ref": "MOD-012",
@@ -3544,7 +3544,7 @@
       "passes": true
     },
     {
-      "status": "done",
+      "status": "planned",
       "id": "F-MOD-013-rework-01",
       "title": "Draft Summary Report Routing and Metrics",
       "module_ref": "MOD-013",
@@ -3768,7 +3768,7 @@
       "passes": true
     },
     {
-      "status": "done",
+      "status": "planned",
       "id": "F-MOD-014-rework-01",
       "title": "Pre-Draft Lobby Restyle and Prep Tools",
       "module_ref": "MOD-014",
