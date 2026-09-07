@@ -429,6 +429,7 @@ function enqueueAutoAgentBid(
         bid_amount_minor: bidAmount,
         bid_type: 'ABSOLUTE',
       },
+      isAutoAgent: true,
     });
 
     // If accepted, trigger other AUTO_AGENT teams that just lost the lead

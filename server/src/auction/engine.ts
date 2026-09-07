@@ -258,6 +258,7 @@ export interface BidContext {
   serverReceiptTime: Date;
   sql: postgres.Sql;
   command: BidCommandPayload;
+  isAutoAgent?: boolean;
 }
 
 export interface BidResult {
@@ -268,7 +269,7 @@ export interface BidResult {
 }
 
 export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
-  const { draftId, teamId, leagueId, serverReceiptTime, sql, command } = ctx;
+  const { draftId, teamId, leagueId, serverReceiptTime, sql, command, isAutoAgent = false } = ctx;
 
   // 1. Load draft — verify RUNNING and league_id matches token
   const draftRows = await sql<[{
@@ -313,8 +314,14 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     anti_snipe_extension_ms: number;
     min_bid_minor: number;
     rebid_timer_ms: number;
+    anti_snipe_mode: string;
+    anti_snipe_qualifying_bids: number;
+    anti_snipe_penalty_duration_auctions: number;
+    anti_snipe_penalty_min_seconds_required: number;
   }]>`
-    SELECT anti_snipe_threshold_ms, anti_snipe_extension_ms, min_bid_minor, rebid_timer_ms
+    SELECT anti_snipe_threshold_ms, anti_snipe_extension_ms, min_bid_minor, rebid_timer_ms,
+           anti_snipe_mode, anti_snipe_qualifying_bids, anti_snipe_penalty_duration_auctions,
+           anti_snipe_penalty_min_seconds_required
     FROM auction_configurations
     WHERE league_id = ${draft.league_id}
     LIMIT 1
@@ -416,13 +423,18 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
-  // 6. Load DraftTeamState for the bidding team — for max_legal_bid
+  // 6. Load DraftTeamState for the bidding team — for max_legal_bid and penalty state
   const teamStateRows = await sql<[{
     remaining_budget_minor: number;
     required_remaining_spots: number;
     roster_filled_count: number;
+    anti_snipe_strike_count: number;
+    anti_snipe_penalty_auctions_remaining: number;
+    anti_snipe_penalty_min_seconds_required: number | null;
   }]>`
-    SELECT remaining_budget_minor, required_remaining_spots, roster_filled_count
+    SELECT remaining_budget_minor, required_remaining_spots, roster_filled_count,
+           anti_snipe_strike_count, anti_snipe_penalty_auctions_remaining,
+           anti_snipe_penalty_min_seconds_required
     FROM draft_team_states
     WHERE draft_id = ${draftId} AND team_id = ${teamId}
     LIMIT 1
@@ -516,6 +528,48 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
     return { accepted: false, playerAuctionId: command.player_auction_id };
   }
 
+  // 6d. Anti-snipe penalty check — penalized teams must wait until the clock is
+  // low enough before bidding again. Only enforced in ENFORCEMENT mode; WARNING
+  // mode broadcasts the penalty but allows the bid through.
+  if (teamState.anti_snipe_penalty_auctions_remaining > 0 && auction.rebid_deadline) {
+    const msToDeadline = new Date(auction.rebid_deadline as unknown as string | Date).getTime()
+      - serverReceiptTime.getTime();
+    const penaltyMinMs = (teamState.anti_snipe_penalty_min_seconds_required ?? auctionCfg.anti_snipe_penalty_min_seconds_required) * 1000;
+    if (msToDeadline > penaltyMinMs) {
+      if (auctionCfg.anti_snipe_mode === 'ENFORCEMENT') {
+        await sql`
+          INSERT INTO bid_attempts
+            (draft_id, player_auction_id, team_id, bid_amount_minor, bid_type,
+             server_receipt_time, accepted, rejection_reason)
+          VALUES
+            (${draftId}, ${command.player_auction_id}, ${teamId}, ${command.bid_amount_minor},
+             ${command.bid_type}, ${serverReceiptTime.toISOString()},
+             false, 'ANTI_SNIPE_PENALTY')
+        `;
+        broadcast(draftId, {
+          type: 'BID_REJECTED',
+          payload: {
+            player_auction_id: command.player_auction_id,
+            code: 'ANTI_SNIPE_PENALTY',
+            reason: `You must wait until ${teamState.anti_snipe_penalty_min_seconds_required ?? auctionCfg.anti_snipe_penalty_min_seconds_required}s remain before bidding`,
+          },
+        });
+        return { accepted: false, playerAuctionId: command.player_auction_id };
+      }
+      // WARNING / INFORMATIONAL: accept but notify all of penalty state
+      if (auctionCfg.anti_snipe_mode === 'WARNING') {
+        broadcast(draftId, {
+          type: 'ANTI_SNIPE_PENALTY_APPLIED',
+          payload: {
+            team_id: teamId,
+            auctions_remaining: teamState.anti_snipe_penalty_auctions_remaining,
+            min_seconds_required: teamState.anti_snipe_penalty_min_seconds_required ?? auctionCfg.anti_snipe_penalty_min_seconds_required,
+          },
+        });
+      }
+    }
+  }
+
   // 7. Anti-snipe check
   // postgres.js may return timestamptz as a string or Date depending on context;
   // normalise to Date before arithmetic.
@@ -532,8 +586,23 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
   }
 
   // 8. Atomic transaction: UPDATE player_auction + INSERT bid_attempt + INSERT draft_event
+  // + UPDATE draft_team_states strike/penalty if anti-snipe extension occurred
   let newVersion: number;
   let finalRebidDeadlineTs: number;
+  let penaltyApplied = false;
+  let newStrikeCount = teamState.anti_snipe_strike_count;
+  let newPenaltyRemaining = teamState.anti_snipe_penalty_auctions_remaining;
+  let newPenaltyMinSeconds: number | null = teamState.anti_snipe_penalty_min_seconds_required;
+
+  if (antiSnipeExtended && !isAutoAgent) {
+    newStrikeCount = teamState.anti_snipe_strike_count + 1;
+    if (newStrikeCount >= auctionCfg.anti_snipe_qualifying_bids) {
+      penaltyApplied = true;
+      newStrikeCount = 0;
+      newPenaltyRemaining = auctionCfg.anti_snipe_penalty_duration_auctions;
+      newPenaltyMinSeconds = auctionCfg.anti_snipe_penalty_min_seconds_required;
+    }
+  }
 
   try {
     await sql.begin(async (tx) => {
@@ -566,6 +635,17 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
            ${serverReceiptTime.toISOString()},
            true, null)
       `;
+
+      // UPDATE strike/penalty state if anti-snipe fired for a manual bid
+      if (antiSnipeExtended && !isAutoAgent) {
+        await tx`
+          UPDATE draft_team_states
+          SET anti_snipe_strike_count = ${newStrikeCount},
+              anti_snipe_penalty_auctions_remaining = ${newPenaltyRemaining},
+              anti_snipe_penalty_min_seconds_required = ${newPenaltyMinSeconds}
+          WHERE draft_id = ${draftId} AND team_id = ${teamId}
+        `;
+      }
 
       // INSERT draft_event
       const seq = await nextDraftEventSequence(tx, draftId);
@@ -609,6 +689,28 @@ export async function processBidCommand(ctx: BidContext): Promise<BidResult> {
       ms_remaining_at_receipt: msRemainingAtReceipt,
     },
   });
+
+  if (antiSnipeExtended) {
+    broadcast(draftId, {
+      type: 'ANTI_SNIPE_EXTENSION',
+      payload: {
+        player_auction_id: command.player_auction_id,
+        new_deadline_ms: finalRebidDeadlineTs!,
+        seconds_added: Math.round(auctionCfg.anti_snipe_extension_ms / 1000),
+      },
+    });
+  }
+
+  if (penaltyApplied) {
+    broadcast(draftId, {
+      type: 'ANTI_SNIPE_PENALTY_APPLIED',
+      payload: {
+        team_id: teamId,
+        auctions_remaining: newPenaltyRemaining,
+        min_seconds_required: newPenaltyMinSeconds!,
+      },
+    });
+  }
 
   return {
     accepted: true,
@@ -753,6 +855,7 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
 
   let auctionId: string;
   let seq: number;
+  let expiredPenaltyTeamIds: { team_id: string }[] = [];
   let nominationPayload: {
     player_auction_id: string;
     player_name: string;
@@ -840,6 +943,19 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
         `;
         nominationAudioPayload = { team_id: teamId, audio_url: audioUrl, duration_cap_ms: 5000 };
       }
+
+      // Decrement anti-snipe penalty counters. Teams hitting 0 get penalty cleared.
+      const decrementedRows = await tx<{ team_id: string; new_remaining: number }[]>`
+        UPDATE draft_team_states
+        SET anti_snipe_penalty_auctions_remaining = anti_snipe_penalty_auctions_remaining - 1,
+            anti_snipe_penalty_min_seconds_required = CASE
+              WHEN anti_snipe_penalty_auctions_remaining - 1 <= 0 THEN NULL
+              ELSE anti_snipe_penalty_min_seconds_required
+            END
+        WHERE draft_id = ${draftId} AND anti_snipe_penalty_auctions_remaining > 0
+        RETURNING team_id, (anti_snipe_penalty_auctions_remaining) AS new_remaining
+      `;
+      expiredPenaltyTeamIds = decrementedRows.filter((r) => r.new_remaining <= 0);
     });
   } catch (err) {
     console.error('[engine] NOMINATE transaction failed:', err);
@@ -857,6 +973,9 @@ export async function processNominateCommand(ctx: NominateContext): Promise<Nomi
   broadcast(draftId, { type: 'NOMINATION_STARTED', payload: nominationPayload! });
   if (nominationAudioPayload) {
     broadcast(draftId, { type: 'TEAM_NOMINATION_AUDIO', payload: nominationAudioPayload });
+  }
+  for (const { team_id } of expiredPenaltyTeamIds) {
+    broadcast(draftId, { type: 'ANTI_SNIPE_PENALTY_EXPIRED', payload: { team_id } });
   }
 
   return {

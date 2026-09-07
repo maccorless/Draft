@@ -9,6 +9,7 @@ import {
   jsonb,
   decimal,
   unique,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
@@ -173,6 +174,10 @@ export const auctionConfigurations = pgTable('auction_configurations', {
   anti_snipe_threshold_ms: integer('anti_snipe_threshold_ms').notNull(),
   anti_snipe_extension_ms: integer('anti_snipe_extension_ms').notNull(),
   min_bid_minor: integer('min_bid_minor').notNull().default(100),
+  anti_snipe_mode: varchar('anti_snipe_mode', { length: 20 }).notNull().default('INFORMATIONAL'),
+  anti_snipe_qualifying_bids: integer('anti_snipe_qualifying_bids').notNull().default(3),
+  anti_snipe_penalty_duration_auctions: integer('anti_snipe_penalty_duration_auctions').notNull().default(3),
+  anti_snipe_penalty_min_seconds_required: integer('anti_snipe_penalty_min_seconds_required').notNull().default(5),
 });
 
 export const whammyConfigs = pgTable('whammy_configs', {
@@ -277,6 +282,9 @@ export const draftTeamStates = pgTable('draft_team_states', {
   connected_at: timestamp('connected_at', { withTimezone: true }),
   nominator_match_used: boolean('nominator_match_used').notNull().default(false),
   nomination_audio_played: boolean('nomination_audio_played').notNull().default(false),
+  anti_snipe_strike_count: integer('anti_snipe_strike_count').notNull().default(0),
+  anti_snipe_penalty_auctions_remaining: integer('anti_snipe_penalty_auctions_remaining').notNull().default(0),
+  anti_snipe_penalty_min_seconds_required: integer('anti_snipe_penalty_min_seconds_required'),
 });
 
 export const playerAuctions = pgTable('player_auctions', {

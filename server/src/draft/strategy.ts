@@ -520,6 +520,136 @@ export async function registerStrategyRoutes(
       return reply.status(204).send();
     },
   );
+
+  // ── Scarcity ─────────────────────────────────────────────────────────────────
+
+  /**
+   * GET /leagues/:leagueId/drafts/:draftId/scarcity?position=WR
+   * Auth: any league member (commissioner or team owner).
+   * Returns how many teams still have an unfilled starter slot compatible with
+   * the queried position, plus tier breakdowns of remaining PENDING players.
+   */
+  server.get<{ Params: { leagueId: string; draftId: string }; Querystring: { position?: string } }>(
+    '/leagues/:leagueId/drafts/:draftId/scarcity',
+    async (req, reply) => {
+      let claims: TokenClaims;
+      try {
+        claims = await req.jwtVerify<TokenClaims>();
+      } catch {
+        return reply.status(401).send({ code: 'UNAUTHORIZED' });
+      }
+      if (claims.league_id !== req.params.leagueId) {
+        return reply.status(403).send({ code: 'FORBIDDEN' });
+      }
+
+      // Re-check auth_epoch against the right table
+      if (claims.role === 'OWNER' && claims.team_id) {
+        const [team] = await sql<[{ auth_epoch: number }]>`
+          SELECT auth_epoch FROM teams WHERE id = ${claims.team_id} LIMIT 1
+        `;
+        if (!team || team.auth_epoch !== claims.auth_epoch) {
+          return reply.status(401).send({ code: 'TOKEN_REVOKED' });
+        }
+      } else {
+        const [league] = await sql<[{ auth_epoch: number }]>`
+          SELECT auth_epoch FROM leagues WHERE id = ${req.params.leagueId} LIMIT 1
+        `;
+        if (!league || league.auth_epoch !== claims.auth_epoch) {
+          return reply.status(401).send({ code: 'TOKEN_REVOKED' });
+        }
+      }
+
+      const { draftId, leagueId } = req.params;
+      const position = (req.query.position ?? '').toUpperCase();
+      if (!position) {
+        return reply.status(400).send({ code: 'MISSING_POSITION', message: 'position query param required' });
+      }
+
+      // Get the draft's dataset for tier lookups
+      const [draftRow] = await sql<[{ dataset_id: string; league_id: string }]>`
+        SELECT dataset_id, league_id FROM drafts WHERE id = ${draftId} LIMIT 1
+      `;
+      if (!draftRow || draftRow.league_id !== leagueId) {
+        return reply.status(404).send({ code: 'NOT_FOUND' });
+      }
+
+      const source = await resolveEffectivePrimarySource(sql, draftRow.dataset_id);
+
+      // ── Compatible-slot count ──────────────────────────────────────────────
+      // Get all slot definitions for this league
+      const slotDefs = await sql<{ id: string; position: string; is_starter: boolean; slot_count: number }[]>`
+        SELECT rsd.id, rsd.position, rsd.is_starter, rsd.slot_count
+        FROM roster_slot_definitions rsd
+        JOIN roster_configurations rc ON rc.id = rsd.config_id
+        WHERE rc.league_id = ${leagueId}
+        ORDER BY rsd.is_starter DESC, rsd.priority ASC
+      `;
+
+      // Which slot ids are compatible with the queried position and are starters?
+      const compatibleStarterSlotIds = slotDefs
+        .filter((s) => {
+          if (!s.is_starter) return false;
+          const pos = s.position.toUpperCase();
+          return (
+            pos === position ||
+            pos === 'SUPERFLEX' ||
+            (pos === 'FLEX' && ['RB', 'WR', 'TE', 'RB/WR/TE'].includes(position))
+          );
+        })
+        .map((s) => s.id);
+
+      if (compatibleStarterSlotIds.length === 0) {
+        // Position has no starter slots — scarcity is 0
+        return reply.send({ league_wide_compatible_slots: 0, own_team_compatible_slots: 0, tier_players_remaining: [] });
+      }
+
+      // For each team in the draft, count filled roster_entries in these compatible slots
+      const teams = await sql<{ team_id: string }[]>`
+        SELECT team_id FROM draft_team_states WHERE draft_id = ${draftId}
+      `;
+
+      let leagueWideCompatible = 0;
+      let ownTeamCompatible = 0;
+      const ownTeamId = claims.team_id ?? null;
+
+      for (const { team_id } of teams) {
+        let compatibleSlotsForTeam = 0;
+        for (const slotId of compatibleStarterSlotIds) {
+          const slotDef = slotDefs.find((s) => s.id === slotId)!;
+          const [{ filled }] = await sql<[{ filled: number }]>`
+            SELECT COUNT(*)::int AS filled
+            FROM roster_entries
+            WHERE draft_id = ${draftId} AND team_id = ${team_id}
+              AND roster_slot_id = ${slotId} AND active = true
+          `;
+          const available = slotDef.slot_count - filled;
+          if (available > 0) compatibleSlotsForTeam += available;
+        }
+        if (compatibleSlotsForTeam > 0) leagueWideCompatible++;
+        if (team_id === ownTeamId) ownTeamCompatible = compatibleSlotsForTeam;
+      }
+
+      // ── Tier breakdown of remaining PENDING players for this position ──────
+      const tierRows = await sql<{ tier: number | null; count: number }[]>`
+        SELECT pas.tier, COUNT(*)::int AS count
+        FROM player_auctions pa
+        JOIN players p ON p.id = pa.dataset_player_id
+        LEFT JOIN player_aav_sources pas
+          ON pas.player_id = p.id AND pas.dataset_id = ${draftRow.dataset_id} AND pas.source = ${source}
+        WHERE pa.draft_id = ${draftId}
+          AND pa.status = 'PENDING'
+          AND UPPER(p.position) = ${position}
+        GROUP BY pas.tier
+        ORDER BY pas.tier ASC NULLS LAST
+      `;
+
+      const tier_players_remaining = tierRows
+        .filter((r) => r.tier !== null)
+        .map((r) => ({ tier: r.tier as number, count: r.count }));
+
+      return reply.send({ league_wide_compatible_slots: leagueWideCompatible, own_team_compatible_slots: ownTeamCompatible, tier_players_remaining });
+    },
+  );
 }
 
 // ─── Nomination Queue lookup (for auto-nomination hook in engine) ─────────────

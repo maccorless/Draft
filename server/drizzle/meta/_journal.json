@@ -85,6 +85,13 @@
       "when": 1789400000000,
       "tag": "0011_acquisitions_unique_player_auction",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1789500000000,
+      "tag": "0012_anti_snipe_penalty",
+      "breakpoints": true
     }
   ]
 }
